@@ -683,7 +683,7 @@ factory registrations, code-behind for the larger components, back/forward in ha
   never gets it (~1.4 % pixels). Deliberately not replicated.
 - Bundle: ~58 kB gzip (port) vs. ~43 kB gzip (Svelte original).
 
-# Dogfooding: FluentCMS admin (the owner's `apps/fluentcms-admin`, not committed) → Tsazor
+# Dogfooding: FluentCMS admin (an early admin port, not committed) → Tsazor
 
 A second, hand-written port of FluentCMS's admin UI against the same backend, written by a Blazor developer
 without `@tsazor/dotnet`: login with a JWT, the admin shell, content types. Its type errors (2026-10-11) were app
@@ -706,7 +706,7 @@ starts from `TsazorHttp` (`HttpClient`) and the auth lesson; neither pointed the
 (the backend boundary), and the tutorial's Blazor track names it: "Signing in" the providers and `attachJwtAuth`,
 "A typed client" the `--envelope` option.
 
-### 3. No reaction to a 401 — **added (owner's decision, Tsazor extension)**
+### 3. No reaction to a 401 — **added (decided: a Tsazor extension)**
 
 `Program.ts` reached for `http.onUnauthorized`. Neither `TsazorHttp` nor `attachJwtAuth` reacted to a 401, as
 Blazor's handlers don't (a `DelegatingHandler` of the app's own). Now `attachJwtAuth` logs out when a request that
@@ -717,7 +717,7 @@ changes nothing; a 403 never logs out.
 
 Then the admin moved to `JwtAuthenticationStateProvider` + `attachJwtAuth` (its `FluentAuthProvider` a subclass that
 adds `signIn` and the profile's role; a test of its own against a stubbed FluentCMS API). That move found 4–6
-(5 and 6 decided by the owner the next day):
+(5 and 6 decided the next day):
 
 ### 4. A real .NET token decoded as signed out — **fixed**
 
@@ -731,7 +731,7 @@ Beside it, fixed the next day: a principal counted as signed in only with a name
 authentication type is authenticated even when `Name` is null, so a token without any name claim (only `oid`, say)
 now signs in too, with an empty name.
 
-### 5. Response interceptors weren't an onion — **changed (owner: .NET's order)**
+### 5. Response interceptors weren't an onion — **changed (decided: .NET's order)**
 
 The admin's envelope interceptor throws on every non-2xx. Added before `attachJwtAuth`, the 401 never reached it
 and the logout silently didn't happen (the admin's test failed that way). `TsazorHttp` ran response interceptors
@@ -739,7 +739,7 @@ in the order added, like the request ones; .NET's handler chain is an onion — 
 response first — so "build the client, then attach auth" works there. Now `TsazorHttp` unwinds the same way
 (breaking): an interceptor added after one that throws on an error status still sees the response.
 
-### 6. Roles that only a profile knows — **added (owner: a promise, as Blazor's Task)**
+### 6. Roles that only a profile knows — **added (decided: a promise, as Blazor's Task)**
 
 FluentCMS's token carries no roles; `/api/Account/GetCurrent` says `isSuperAdmin`. The admin's subclass overrides
 `getAuthenticationStateAsync` to add the profile's role and notifies a second time once it arrives. In between,
@@ -765,7 +765,7 @@ place.)
   (`errors?: AppError[]`). Declare the envelope once, or generate the client.
 - **Workarounds outlive their gap.** The admin's interceptor said `TsazorHttp` throws a bare `Error` without the
   body; `TsazorHttpError` has carried `status` and `body` since 5.2.
-- **A token in memory doesn't survive a reload.** The admin keeps its token in `sessionStorage` (the owner's
+- **A token in memory doesn't survive a reload.** The admin keeps its token in `sessionStorage` (a deliberate
   choice, written down in its `token-store.ts`), as Blazor WebAssembly's MSAL does by default; auth.md says memory
   only. A Blazor developer expects the session to survive F5 — auth.md now names the price, and the BFF as the way
   to keep the session without a script holding the token.

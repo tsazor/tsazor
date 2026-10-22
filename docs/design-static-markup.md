@@ -1,6 +1,6 @@
 # Design draft — Static markup blocks (F1a)
 
-Status: **implemented 2026-10-04** — D-S1 to D-S5 as recommended (§7); results in §8. Roadmap: [roadmap-1.0.md](roadmap-1.0.md) step 3,
+Status: **implemented 2026-10-04** — D-S1 to D-S5 as recommended (§7); results in §8. See
 [design-svelte-features.md](design-svelte-features.md) F1a. F1b (update hints, hoisting) is a
 separate step and builds on this one.
 

@@ -1,11 +1,11 @@
 # Migration practices (working notes)
 
-Status: **collecting** (owner, 2026-10-09). The raw material for the migration guide that comes next. Each entry
+Status: **collecting** (2026-10-09). The raw material for the migration guide that comes next. Each entry
 says what you find in the Blazor app, what to do in Tsazor and why, and names the finding it comes from. The
 findings are in [port-fluentcms.md](port-fluentcms.md) (F, U), [port-findings.md](port-findings.md) and the design
 docs. The setup reference stays [migration.md](migration.md): running side by side, the codemod, the API boundary.
 
-Add an entry whenever a port, a parity suite or the owner's use teaches something a migrating team would want to
+Add an entry whenever a port, a parity suite or real use teaches something a migrating team would want to
 know first.
 
 ## How to port

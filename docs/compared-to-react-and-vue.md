@@ -80,7 +80,7 @@ lead is largest for small and mid-sized apps and shrinks as the number of compon
 ## Where React and Vue are ahead
 
 - **Server rendering.** Next.js and Nuxt render on the server and hydrate. Tsazor 1.0 renders in the browser
-  only; server rendering comes after 1.0 ([roadmap-ssr.md](roadmap-ssr.md)).
+  only; server rendering comes [after 1.0](after-1.0.md#server-side-rendering).
 - **Ecosystem.** Both have far more component libraries, examples and people who know them. Tsazor has its own
   libraries (`@tsazor/fluent`, `@tsazor/bootstrap`, charts, markdown). Any plain JS or TS library works through
   `@attach`, but React or Vue components need their own runtime beside it.

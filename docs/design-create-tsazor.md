@@ -1,6 +1,6 @@
 # Design — `npm create tsazor` (R3)
 
-Status: **decided** (2026-10-08, D-N1–D-N4 as proposed). Roadmap: [roadmap-1.0.md](roadmap-1.0.md) R3, with the S2 templates.
+Status: **decided** (2026-10-08, D-N1–D-N4 as proposed).
 
 ## Goal
 

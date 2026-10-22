@@ -1,6 +1,6 @@
 # Design: Virtualize at Blazor 11 parity
 
-Status: **decided** (owner, 2026-10-09; §7), **done** (2026-10-09, with Blazor's own E2E suite as a gate in
+Status: **decided** (2026-10-09; §7), **done** (2026-10-09, with Blazor's own E2E suite as a gate in
 `apps/blazor-parity`). This is the core step of
 [design-library-completeness.md](design-library-completeness.md). The behavior is specified, with source lines, in
 [blazor-virtualize-net11.md](blazor-virtualize-net11.md) (cited as *spec §n*).
@@ -9,7 +9,7 @@ Status: **decided** (owner, 2026-10-09; §7), **done** (2026-10-09, with Blazor'
 
 The AgentView dogfood needs a live event feed and a chat. Both are lists whose rows differ in height and that follow
 new rows at the bottom. Tsazor's `Virtualize` assumes a fixed `itemSize` and doesn't follow. The parity baseline is
-Blazor 11 (owner, 2026-10-09). There, `Virtualize` measures what it renders and has `AnchorMode.End`, so what the
+Blazor 11 (2026-10-09). There, `Virtualize` measures what it renders and has `AnchorMode.End`, so what the
 dogfood asked for is parity, not a Tsazor extension.
 
 ## 2. What Blazor 11 has and Tsazor lacks
@@ -87,7 +87,7 @@ review (R4, 2026-10-14) removed them before 1.0: `ItemContent`/`ChildContent` an
 
 ## 6. Where Tsazor deviates from Blazor 11 (D-V4)
 
-The owner chose to fix Blazor's probable bugs (spec appendix A) rather than copy them. Each deviation has a test
+Tsazor fixes Blazor's probable bugs (spec appendix A) rather than copy them. Each deviation has a test
 that shows the better behavior. Where a Blazor test asserts the bug, the port asserts the fix and says so.
 
 | # | Blazor 11 | Tsazor |
@@ -127,7 +127,7 @@ Each step ends green: unit tests, `pnpm gates`, `api:check`.
 
 ## 8. Decisions
 
-| # | Question | Decision (owner, 2026-10-09) |
+| # | Question | Decision (2026-10-09) |
 |---|---|---|
 | D-V1 | Parity baseline | **Blazor 11** (`release/11.0`) |
 | D-V2 | `Overscan` and `ItemTemplate` | Blazor's names, and the old ones stay as aliases (§4) |

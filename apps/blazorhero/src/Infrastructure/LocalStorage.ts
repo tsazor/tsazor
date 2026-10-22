@@ -1,6 +1,6 @@
 /**
  * Blazored.LocalStorage's ILocalStorageService, as much of it as BlazorHero uses: JSON values in localStorage. The
- * original keeps its JWT here so a reload stays signed in; the owner kept that for the port (docs/auth.md advises
+ * original keeps its JWT here so a reload stays signed in; the port keeps that, by decision (docs/auth.md advises
  * memory only — port-blazorhero.md). Blocked storage (a private window) reads as empty and writes nothing.
  */
 export class LocalStorage {

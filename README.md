@@ -130,6 +130,10 @@ createTsazorApp({ root: App, routes });
 | `@tsazor/markdown` | A `Markdown` component on marked, always sanitized with DOMPurify ([README](packages/markdown/README.md)) |
 | `@tsazor/charts` | Line, area, bar, donut and pie charts and sparklines as SVG in the skin's colors ([README](packages/charts/README.md)) |
 | `@tsazor/dotnet` | .NET backend bridge: OpenAPI ⇒ typed TS client (`tsazor-dotnet generate`), `HttpResult`/ProblemDetails, DataAnnotations decorators, cookie/JWT auth ([README](packages/dotnet/README.md)) |
+| `@tsazor/primitives` | .NET's value types in TypeScript: `Decimal` (with `@bind` and validation), `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid` — `@tsazor/dotnet` maps to them |
+| `@tsazor/worker` | Heavy work off the main thread: typed calls into Web Workers with cancellation, transfer and pools — Tsazor's `Task.Run` |
+| `@tsazor/spreadsheet` | A headless spreadsheet model: cells, ranges, undo, copy and paste (the extended library, see [after 1.0](docs/after-1.0.md#the-extended-library)) |
+| `create-tsazor` | `npm create tsazor@latest my-app`: an app in the shape of `dotnet new blazorwasm`, with any component library |
 | `@tsazor/cli` | `tsazor check` (typed component-usage gate) and `tsazor codemod` (`.razor` → `.tsazor`) |
 | `@tsazor/lsp` | Language server: diagnostics, hover, go-to-definition, auto-complete |
 | `@tsazor/testing` | `render()` test helper on top of happy-dom |
@@ -157,42 +161,27 @@ createTsazorApp({ root: App, routes });
 - [Debugging in DevTools](docs/debugging.md)
 - [Bundle size (where the bytes go, against React)](docs/bundle-size.md)
 - [Compared to React and Vue (what the numbers contain, how they differ)](docs/compared-to-react-and-vue.md)
-- [Port findings (Blazing Pizza)](docs/port-findings.md)
+- [Supported browsers](docs/browser-support.md) and [the stability promise](docs/support-policy.md)
+- The ports: [Blazing Pizza](docs/port-findings.md), [FluentCMS](docs/port-fluentcms.md),
+  [BlazorHero](docs/port-blazorhero.md), [fullstackhero's React admin](docs/port-fullstackhero.md)
+- [After 1.0](docs/after-1.0.md)
 
 ## Status
 
-Phases 0–5 of the [roadmap](docs/roadmap.md) are implemented (as of 2026-10-02):
+Version 1.0 is Blazor parity, measured against .NET 11. What checks it:
 
-- **Foundation and runtime core** (Phase 0, tracks A/B): code-first parser with source maps,
-  TS-AST rewriting, import model, RenderTree/diff, render queue with batches, lifecycle,
-  cascading values, parameter change detection, router/navigation, forms/@bind, Virtualize +
-  TsazorHttp.
-- **Parameter metadata and type checking** (Phase 2): metadata-driven codegen, templated
-  components with named slots and template contexts, typed shadows and `tsazor check`, a
-  project-wide language server, and the `.razor` → `.tsazor` codemod.
-- **Blazor parity: built-ins and forms** (Phase 3): ErrorBoundary, DynamicComponent,
-  MarkupString, Sections/HeadOutlet/FocusOnNavigate, EditForm semantics, validation decorators +
-  `DataAnnotationsValidator`, InputFile, SupplyParameterFromQuery, `@bind:format`, scoped DI
-  lifetimes with cycle detection.
-- **Dev server and component library** (Phase 4): HMR with invalidation and state retention,
-  the reworked Fluent library (`@tsazor/fluent`) next to the Bootstrap 5 components
-  (`@tsazor/bootstrap`).
-- **External use and .NET bridge** (Phase 5): `exports`-complete packages verified by a
-  tarball smoke gate (`node scripts/tarball-smoke.mjs`), and `@tsazor/dotnet`.
-- **Real-world ports**: Blazing Pizza (configurator, checkout, orders; gaps and learnings in
-  [docs/port-findings.md](docs/port-findings.md)) and Sleipnir Ticker (live data via the
-  generated Sleipnir TS client and SSE push, subscription survival across navigation).
-- **Tooling**: scoped CSS and code-behind with Blazor parity, DevTools debugging via inline
-  source maps (verified in a real browser over CDP), VS Code extension v0.6.0.
+- **Blazor's own tests.** `apps/blazor-parity` runs Blazor's E2E tests with their test pages, ported: forms,
+  Virtualize, QuickGrid and InputFile. The conformance suites pin the compiler's and the runtime's semantics against
+  Blazor's (rendering, lifecycle, diff).
+- **Four ported apps**, each against its unchanged backend: Blazing Pizza (the Blazor workshop), FluentCMS (Blazor
+  Server: its admin and its public site, on `@tsazor/fluent`), BlazorHero (Blazor WebAssembly on MudBlazor: every
+  page, eleven languages, right to left, a SignalR chat) and fullstackhero's React admin (Tailwind and shadcn). Every
+  gap a port found became a fix with a test; the port reports list them.
+- **The gates:** every package's tests; the browser gates in Edge, Firefox and WebKit — the tutorial, the demo under
+  a strict CSP, the gallery, both skins, axe in light and dark, the ports; a smoke test of the packed tarballs and a
+  release rehearsal through a registry (`pnpm gates`, `pnpm ci:local`).
 
-**Gates** (from [docs/handoff-2026-10-02-phase-complete.md](docs/handoff-2026-10-02-phase-complete.md),
-not re-run for this README): 1227/1227 tests (91 files) ✓ · build ✓ · tarball smoke gate ✓ ·
-LSP smokes ✓ · app E2E: Pizza 20/20, Gallery, Sleipnir, demo including `verify-hmr.mjs` 19/19 ✓ ·
-`tsazor check` 0 findings ✓.
-
-Not implemented (do not start without prior agreement): Web Components
-(`defineCustomElement`), LSP rename, publishing the packages to the npm registry (they are
-packaged and tarball-tested, but not published).
+What comes next: [after 1.0](docs/after-1.0.md).
 
 ## License
 

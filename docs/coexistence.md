@@ -22,7 +22,7 @@ same reverse proxy. Same origin is simplest (no CORS, the cookie just works, see
 [auth.md](auth.md)); subdomains of one site work too (below).
 
 Tsazor is a client-side app today. If the public frontend needs server rendering for SEO, plan
-with static prerendering or wait for SSR ([roadmap-ssr.md](roadmap-ssr.md), after 1.0).
+with static prerendering or wait for SSR ([after 1.0](after-1.0.md#server-side-rendering)).
 
 ## One contract
 

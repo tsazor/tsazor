@@ -1,6 +1,6 @@
 # Support policy
 
-Status: **decided (owner, 2026-10-14).** Roadmap item E10 ([roadmap-1.0.md](roadmap-1.0.md)), decisions D-S1 …
+Status: **decided (2026-10-14).** Decisions D-S1 …
 D-S7; the alternatives that were weighed stay noted.
 
 The [stability promise](design-principles.md#type-safety-is-a-requirement--the-stability-promise) says what stays
@@ -66,7 +66,7 @@ for, not guaranteed service levels.
 - **D-S6 — End of life is announced, not discovered.** When a major ships, this page states the end date of the
   previous one's maintenance; the date is also in the release notes. After it, the version gets nothing more.
 
-- **D-S7 — What the promise covers** (from the [API review](api-review-1.0.md), Part 1). Three tiers: **public**
+- **D-S7 — What the promise covers** (from the API review before 1.0). Three tiers: **public**
   (the app-facing APIs, the CLI's commands, flags and exit codes, the TZS codes), **ABI** (what compiled `.tsazor`
   code calls, listed in [api/abi.json](../api/abi.json) and pinned by a test, and the component manifest: additive
   only, so a library built with 1.x runs on every later 1.y), and

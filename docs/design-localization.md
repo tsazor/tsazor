@@ -241,7 +241,7 @@ on validation runs, a culture switch must re-validate: `EditContext` observes th
 same way components do (§3) and re-runs validation on notification. That keeps a form's messages
 in the new language without a full re-render.
 
-### 4a. The component library's own texts (B29, owner 2026-10-12)
+### 4a. The component library's own texts (B29, 2026-10-12)
 
 The skins' texts — a dialog's "Close", the paginator's "Page 2 of 7" and "Rows per page", the grid's
 "Loading…" and "No entries", a chip's "Remove Rye", the calendar's "Next month", the screen-reader

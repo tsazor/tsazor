@@ -1,7 +1,7 @@
 # Screen-reader audit (E9, the manual part)
 
-The automated part of E9 runs in CI: axe on every page of the gallery and the demo, in light and dark, and keyboard
-tests for the dialog, the menu and the tabs ([roadmap-1.0.md](roadmap-1.0.md), E9). What axe can't judge is what a
+The automated part of the accessibility work runs in CI: axe on every page of the gallery and the demo, in light and dark, and keyboard
+tests for the dialog, the menu and the tabs. What axe can't judge is what a
 person with a screen reader hears and can do. This checklist is that audit, against WCAG 2.2 AA, before 1.0.
 
 Expected names, roles, states and keys follow the WAI-ARIA Authoring Practices pattern named for each component.

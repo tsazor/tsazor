@@ -1,12 +1,12 @@
 # Design: a complete component library
 
-Status: **decided** (owner, 2026-10-09; §6), work starts with the core (§5). This follows
+Status: **decided** (2026-10-09; §6), work starts with the core (§5). This follows
 [design-component-library.md](design-component-library.md), whose §4 put Tier 2 after 1.0.
 
 ## 1. Why
 
-The owner, after the first dogfood assessment of a new app (AgentView, 2026-10-09): "A complete component library is
-important, otherwise you always hit a wall." And: "Without a complete library, nobody will move to Tsazor."
+After the first dogfood assessment of a new app (2026-10-09): a complete component library is important, otherwise
+you always hit a wall — and without one, nobody will move to Tsazor.
 
 The work has two purposes, as track B of the FluentCMS port had:
 - **The components themselves.** A Blazor team compares the library with MudBlazor or Fluent UI Blazor before it
@@ -101,7 +101,7 @@ The rich text editor stays in the app (the FluentCMS port embeds Quill), as in b
 ## 5. Waves
 
 Both waves come before 1.0 (D-L1). The waves set the order, not the release:
-- **A:** what a business app reaches for in its first week (AgentView, FluentCMS, the owner's company admin). That is
+- **A:** what a business app reaches for in its first week (a new app, FluentCMS, a company's admin). That is
   the twelve wave-A rows above, plus the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav; done
   2026-10-11; Icon is done).
 - **B:** the rest of the table, and `@tsazor/charts` (D-L2). Done 2026-10-11: every row of §3 is in both skins, and
@@ -116,13 +116,13 @@ Both waves come before 1.0 (D-L1). The waves set the order, not the release:
 
 ## 6. Decisions needed
 
-| # | Question | Decision (owner, 2026-10-09) |
+| # | Question | Decision (2026-10-09) |
 |---|---|---|
 | D-L1 | How much of the library before 1.0? | **Waves A and B.** 1.0 waits for the library |
 | D-L2 | Charts | The `@attach` guide in wave A; `@tsazor/charts` in wave B (SVG line, bar, area, donut, sparkline in the skins' tokens), the breadth MudBlazor ships |
 | D-L3 | Markdown | `@tsazor/markdown`: a `Markdown` component on `marked` and DOMPurify, sanitized by default. An app that shows an agent's or a user's text must not need to know about XSS |
 | D-L4 | Both skins at once? | Yes, per component, as in Tier 1. The behavior lives in the core, so the second skin is markup and CSS |
-| D-L5 | Icons | `Icon` takes any icon value (an app's own SVG). Generated packages with the full sets, tree-shaken: Fluent System Icons for Fluent, Bootstrap Icons for Bootstrap (as recommended; the owner didn't object) |
+| D-L5 | Icons | `Icon` takes any icon value (an app's own SVG). Generated packages with the full sets, tree-shaken: Fluent System Icons for Fluent, Bootstrap Icons for Bootstrap (as recommended) |
 
 ## 7. Findings
 
@@ -136,7 +136,7 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L4 | `icon()` (`@tsazor/ui`) | Icons step 6, FluentCMS's own set: most of its SVGs say `fill="none" stroke="currentColor"` on the root. `icon()` kept only the viewBox and the inner markup, so under the skins' `fill="currentColor"` the outlines were drawn filled. And its `width` lookup matched `stroke-width` | The root's fill and stroke attributes move onto a `<g>` around the content; attributes are matched as whole names (2026-10-10; `packages/ui/test/icons.test.ts`) |
 | L5 | Tests of sanitized HTML | `@tsazor/markdown`'s first tests: under happy-dom (the environment of the skins' tests and of `@tsazor/testing`'s examples) DOMPurify keeps `onerror` and drops `<p>`, so a test sees unsanitized HTML; happy-dom also fetched an `<iframe>`'s URL and ran the `onerror` | The package tests under jsdom, and the skins app's gate checks the sanitizing in Edge, Firefox and WebKit (2026-10-10). An app that tests its own Markdown output needs jsdom too (README) |
 | L6 | `@tsazor/markdown`, accessibility | axe on the skins app's Content page: a task list's checkboxes had no name, and Bootstrap's pink inline code fell to 4.26:1 on the code background | The checkbox is named by its item's text; inline code takes the text color (2026-10-10) |
-| L7 | The skins' builds | Rebuilding a skin while a dev server ran (the owner's gallery and skins servers, mine): the build removed `dist/` first, the server read the missing files in the gap, cached the errors and lost track of the new files, so it served the old skin until a restart | The builds overwrite `dist/` in place and remove only what they didn't write (2026-10-10); a running dev server picks a rebuild up |
+| L7 | The skins' builds | Rebuilding a skin while a dev server ran (the gallery's and the skins' servers): the build removed `dist/` first, the server read the missing files in the gap, cached the errors and lost track of the new files, so it served the old skin until a restart | The builds overwrite `dist/` in place and remove only what they didn't write (2026-10-10); a running dev server picks a rebuild up |
 | L8 | `@tsazor/fluent`'s copy-in CLI | Moving the CLI's closure into a module for a faster test: the package had no `bin` and its `files` left `bin/` out, so `npx @tsazor/fluent add`, as the README says, had nothing to run from npm | `"bin": { "tsazor-fluent": "./bin/fluent.mjs" }` and `bin` in `files` (2026-10-10); the tarball smoke checks the packed CLI |
 | L9 | `Slider` (both skins) | Writing the Slider: the renderer sets attributes in source order, and an `input type="range"` whose `value` comes before its `min` and `max` clamps it to the default 0–100 first (a probe in Edge, Firefox and WebKit: 220 with min 180 and max 260 became 180) | `value` comes after `min`, `max` and `step` in the markup (2026-10-10); the skins gate's Oven slider (180–260, at 220) checks it. A component with a range input of its own does the same |
 | L10 | Gates on the Bootstrap skin | The slider checks failed now and then: Bootstrap's reboot sets `scroll-behavior: smooth`, so `scrollIntoView` was still moving when the boxes were measured, and the clicks hit the wrong place | Scroll with `behavior: "instant"` before measuring (2026-10-10) |

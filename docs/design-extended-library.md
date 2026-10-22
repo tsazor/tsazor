@@ -1,10 +1,10 @@
 # Design draft — the extended library: beyond the complete library
 
-Status: **proposal** (owner direction, 2026-10-16: "an Extended library with components like
+Status: **proposal** (direction, 2026-10-16: an extended library with components like
 Radzen's — AI, Spreadsheet, Calendar, PivotDataGrid, AppTemplates and UI Blocks, and a really
-good DataGrid"). This document turns the direction into clusters, a package cut, an order of
+good DataGrid). This document turns the direction into clusters, a package cut, an order of
 work and the decisions it needs (§9); D-X2 and the RichText2 wrapper's place in the library
-(D-X9) are decided (owner, 2026-10-16), the rest are proposals. It builds on
+(D-X9) are decided (2026-10-16), the rest are proposals. It builds on
 [design-component-library.md](design-component-library.md) and
 [design-library-completeness.md](design-library-completeness.md), whose waves A and B are done:
 the complete library exists, and this is the layer above it.
@@ -17,7 +17,7 @@ Why it matters, twofold:
   document says "Radzen is a suite; it is not the target" — that stays true for the base library
   (its reference is Fluent UI Blazor, MudBlazor, Bootstrap). **For this layer Radzen is the
   reference.**
-- **The stress test.** The owner, 2026-10-16: "It is also a test for Tsazor." Each cluster stresses
+- **The stress test.** The extended library is also a test for Tsazor. Each cluster stresses
   a different core muscle (§4). The gaps this work finds are fixed with tests, as in the ports and
   the library waves; they get IDs X1, X2, … (§8).
 
@@ -25,7 +25,7 @@ Why it matters, twofold:
 
 ## 1. What the extension is not
 
-- No editor engine: rich text is the owner's **RichText2** (own project, near release as of
+- No editor engine: rich text is **RichText2** (a separate project, near release as of
   2026-10-16); Tsazor ships the wrapper component for it, not the engine (§2.7, D-X9). The
   completeness document's rule — an app embeds its editor — is superseded only by the wrapper.
 - No charts work: `@tsazor/charts` exists (D-L2). Apps that need more integrate a chart library
@@ -48,7 +48,7 @@ design-component-library.md §4 alone: a built-in column filter and density. Wha
   original (QuickGrid has none) — modeled on Radzen and MudBlazor's grid, kept QuickGrid-shaped
   where they overlap.
 - **Column resize and reorder:** pointer and keyboard (resize handles with a `Handle` role, arrow
-  keys); the state is the headless part, the handles are skin markup. Opt-in (owner 2026-10-21, the BlazorHero
+  keys); the state is the headless part, the handles are skin markup. Opt-in (2026-10-21, the BlazorHero
   port's B32): `resizableColumns` and `reorderableColumns`, both off by default, as Fluent UI Blazor's
   `ResizableColumns` and MudBlazor's `DragDropColumnReordering` — a grid shows no grips and no extra tab stops
   unless it asks.
@@ -61,7 +61,7 @@ design-component-library.md §4 alone: a built-in column filter and density. Wha
 - **Export:** CSV/TSV built in, dependency-free (D-X6); Excel export stays out unless asked for.
 - The tier-1 leftovers: a built-in string/number/date filter UI and a `density` parameter.
 
-### 2.2 Scheduler (the owner's "Calendar")
+### 2.2 Scheduler (the direction's "Calendar")
 
 The `Calendar` component exists (month grid, single date picking). The Scheduler is the
 appointment layer on top:
@@ -114,11 +114,11 @@ navigation, paste, undo, basic formatting (bold, align, number formats through
 **Status (2026-10-17):** the model is in — A1 cells and ranges, an undo stack whose step is one action (a paste
 included), copy/paste within the sheet and as TSV text. Its values live in a source (D-X11): a free sheet, or the
 app's records with the changes as patches to save — the data-driven case the target teams meet first: edit what
-came from the backend as in Excel, paste from Excel, save what changed. The chrome comes on the owner's word.
+came from the backend as in Excel, paste from Excel, save what changed. The chrome comes when it is decided.
 
 ### 2.7 Rich text — the RichText2 wrapper (done, 2026-10-16)
 
-- A `RichText` component in both skins: the wrapper the owner asked into the library. It mounts
+- A `RichText` component in both skins: the wrapper that belongs in the library (D-X9). It mounts
   RichText2 over `@attach`… — as shipped, the engine mounts itself **onto the wrapper's
   area** by the factory the app passes; `@inherits InputBase<string>` covers the two-way value,
   the EditContext validation and the area's focus element. Destroyed on dispose. The wrapper's
@@ -181,11 +181,7 @@ The dependencies set it; nothing of this layer blocks 1.0 (§7). Status:
 5. ~~**Templates and blocks** (§2.4)~~ — done (EmptyState, AuthLogin, AuthRegister,
    SettingsPane, OrdersCrud; the bootstrap CLI as D-X8).
 6. ~~**PivotDataGrid** (§2.5)~~ — done.
-7. **Spreadsheet** (§2.6) — the long pole, on the owner's word (D-X4: no formulas in v1).
-
-Open as well: the tutorial's four test failures (K.7/K.8 — before the extended session) and the
-collective of the first external integration's feedback (the untracked feedback.md) into
-[docs/migration-practices.md](migration-practices.md).
+7. **Spreadsheet** (§2.6) — the long pole, when it is decided (D-X4: no formulas in v1).
 
 ## 6. Quality bar
 
@@ -199,9 +195,9 @@ copied page must run — a copy-in smoke test per template (L8's tarball check e
 
 ## 7. Relation to 1.0
 
-The owner's 1.0 scope (2026-10-15): the complete library, the E12 primitives, BlazorHero phases
+The 1.0 scope (2026-10-15): the complete library, the E12 primitives, BlazorHero phases
 5 and 6, plus the FluentCMS port as the API-freeze signal. **This layer is post-1.0, developed
-alongside** — the owner, 2026-10-16: two lines. Line one, 1.0, proceeds untouched on its own
+alongside** (2026-10-16): two lines. Line one, 1.0, proceeds untouched on its own
 schedule; this layer grows in its gaps and never slows 1.0. The door stays open: a cluster that
 happens to be sufficiently stable when 1.0 ships can still appear at release, but that is not the
 goal. D-X2 closes accordingly; DataGrid advanced is not pulled forward by default.
@@ -224,17 +220,17 @@ Core and component gaps found while building the extended layer. Each is fixed w
 
 ## 9. Decisions needed
 
-| # | Question | Proposal (owner decides) |
+| # | Question | Proposal |
 |---|---|---|
 | D-X1 | Package cut | Clusters 2.1–2.4 in the existing packages; `@tsazor/spreadsheet` on the charts precedent (own package); templates as files in the skin packages. A separate `@tsazor/extended` package would be a second architecture next to the first — not proposed |
-| D-X2 | What is in 1.0 | **Post-1.0, developed alongside (owner, 2026-10-16).** Two lines: 1.0 is not slowed; if a cluster is stable enough at release it may still ship, but that is not the goal |
+| D-X2 | What is in 1.0 | **Post-1.0, developed alongside (2026-10-16).** Two lines: 1.0 is not slowed; if a cluster is stable enough at release it may still ship, but that is not the goal |
 | D-X3 | Scheduler recurrence | None in v1 (single-appointment model; recurring series later, with its own decision) |
 | D-X4 | Spreadsheet v1 formulas | None in v1 (editing only), formulas as their own later package |
 | D-X5 | AI provider contract | `ChatState` takes an app-supplied stream (`AsyncIterable`-shaped or event callbacks) and an `AbortSignal`; the library never opens a connection or holds a key |
 | D-X6 | Grid export | CSV/TSV in the core, dependency-free; no xlsx dependency unless asked for |
 | D-X7 | Findings prefix | X1, X2, … (L is the waves', E is the primitives') |
 | D-X8 | Copy-in for Bootstrap | A `npx` CLI like Fluent's, at least for templates |
-| D-X9 | The RichText2 wrapper in the library | **Yes (owner, 2026-10-16).** Dependency-free wrapper in both skins over a `createEditor`-shaped contract; RichText2 provides the factory, the app adds the engine |
+| D-X9 | The RichText2 wrapper in the library | **Yes (2026-10-16).** Dependency-free wrapper in both skins over a `createEditor`-shaped contract; RichText2 provides the factory, the app adds the engine |
 | D-X10 | Rich text sanitization | **Refined when shipped (2026-10-16):** `sanitize` is the wrapper's `(html) => string` parameter, none by default — a per-keystroke sanitizer mangles real editor content; the app opts in loudly (RichText2's HTMLSanitizer or its `sanitizeHtml` config). The docs' XSS note stands |
-| D-X11 | Where the spreadsheet's values live | **A source (owner, 2026-10-17), before any chrome.** `SheetModel` reads and writes through `SheetSource`: `FreeSheetSource` (any cell, text or a number) or `RecordSheetSource` over the app's records — a row per record, a column per property (read-only, typed, the column's own parse/format), edited in place, the changes as per-record patches to save (`changes()`, `accept()`). TSV text in and out (`copyText`, `pasteTextAsync`): pasting from Excel; the chrome or the app wires the clipboard events |
-| D-X12 | The extended line in the CHANGELOG | **Its own section, from now on (owner, 2026-10-17):** its API changes are public too; marked post-1.0, may still change |
+| D-X11 | Where the spreadsheet's values live | **A source (2026-10-17), before any chrome.** `SheetModel` reads and writes through `SheetSource`: `FreeSheetSource` (any cell, text or a number) or `RecordSheetSource` over the app's records — a row per record, a column per property (read-only, typed, the column's own parse/format), edited in place, the changes as per-record patches to save (`changes()`, `accept()`). TSV text in and out (`copyText`, `pasteTextAsync`): pasting from Excel; the chrome or the app wires the clipboard events |
+| D-X12 | The extended line in the CHANGELOG | **Its own section, from now on (2026-10-17):** its API changes are public too; marked post-1.0, may still change |

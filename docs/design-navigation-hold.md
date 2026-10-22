@@ -1,9 +1,9 @@
 # Design: holding the previous page on navigation (E13)
 
-Status: **done** (2026-10-09). Decided by the owner: on by default, and an app can turn it off. Port
+Status: **done** (2026-10-09). Decided: on by default, and an app can turn it off. Port
 finding F39 ([port-fluentcms.md](port-fluentcms.md)).
 
-## What the owner saw
+## What clicking through showed
 
 Switching between Home and Blogs on the FluentCMS port's public site sometimes showed dark flashes
 mid-screen, more often when switching quickly. FluentCMS's own UI didn't show them.

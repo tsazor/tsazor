@@ -20,7 +20,7 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   the scroll correction, an index). Without the marker every element is an item, as in Blazor.
 
 - **TZS040: a text field bound to a number, a Decimal or a date that can be null** (`@tsazor/compiler`, `@tsazor/lsp`,
-  `tsazor check`; the BlazorHero port's B46, owner 2026-10-22): a text input, a textarea or a select converts by the
+  `tsazor check`; the BlazorHero port's B46): a text input, a textarea or a select converts by the
   bound value's type at run time (K.7/K.8), so a field declared `number | null` (`Decimal | null`, `Date | null`) that is
   null gets the text — a string in a number field. Blazor converts by the declared type; TypeScript erases it, but the
   type layer knows it: a warning in `tsazor check` and the editor, which names the bind or the component that converts
@@ -99,20 +99,20 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **`Paginator showPageNumber`** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudDataGridPager's `ShowPageNumber`): false
   leaves out the "Page 2 of 7" between the arrows. Default true.
 
-- **A component's declaration names what it implements of its base's abstract members** (`tsazor build-lib`; owner
-  2026-10-21, found in the Radzen port): a field or a `protected` member that implements an `abstract` one (a chart
+- **A component's declaration names what it implements of its base's abstract members** (`tsazor build-lib`;
+  found in the Radzen port): a field or a `protected` member that implements an `abstract` one (a chart
   series' `kind`, a validator's `validate`) was missing from the `.d.ts`, so a consumer checking without
   `skipLibCheck` saw TS2654 in the library. It is declared by the base's own type (`kind: Series<number>["kind"]`),
   across abstract middle classes; the manifest carries `abstractMembers` and `abstractImplementations`.
 
-- **TZS039: a cascading parameter with neither a name nor a type** (`@tsazor/compiler`, `tsazor check`; owner
-  2026-10-21, pulled before 1.0 — the Radzen port had 15): `@CascadingParameter()` takes the nearest unnamed cascade,
+- **TZS039: a cascading parameter with neither a name nor a type** (`@tsazor/compiler`, `tsazor check`;
+  pulled before 1.0 — the Radzen port had 15): `@CascadingParameter()` takes the nearest unnamed cascade,
   whatever its value, where Blazor matches by the property's type. A warning in `@code` and in a component's `.ts`
   class, with the annotation's class as the quick fix (`{ type: Worksheet }`, `{ type: () => X }` for the own class,
   `{ type: Boolean }` for a primitive). The lessons "Passing values down" and "Names and types" give the type.
 
 - **A DataGrid's columns are moved and resized only when the grid asks for it** (`@tsazor/fluent`,
-  `@tsazor/bootstrap`; owner 2026-10-21, the BlazorHero port's B32): `resizableColumns` and `reorderableColumns`, both
+  `@tsazor/bootstrap`; the BlazorHero port's B32): `resizableColumns` and `reorderableColumns`, both
   off by default, as Fluent UI Blazor's `ResizableColumns` and MudBlazor's `DragDropColumnReordering`. Since the column
   work (next.2) every header had a grip and a resize handle, each a tab stop, which no reference grid has by default.
   Widths and an order set in code (`setColumnWidthAsync`, `moveColumnAsync`, a restored snapshot) apply either way.
@@ -355,8 +355,8 @@ hold up 1.0, and they are not covered by the stability promise until they say so
   `queryString` now accepts any stringifiable value (so a `Guid`/`Decimal`/… query parameter is sent as
   its string) and the `QueryStringScalar` type it widens to is exported.
 
-- **Breaking — the public API is what the stability promise covers** (`docs/support-policy.md`, D-S7; the API review,
-  `docs/api-review-1.0.md`):
+- **Breaking — the public API is what the stability promise covers** (`docs/support-policy.md`, D-S7; the API review
+  before 1.0):
   - `@tsazor/runtime`: **ComponentBase's plumbing is private.** `renderHandle`, `componentServices`,
     `stateHasChangedInternal` and the other renderer hooks are gone from components; the renderer and the runtime's
     own components reach them through `componentInternals` in `@tsazor/runtime/internal`. A component's `@code` may now
@@ -407,7 +407,7 @@ hold up 1.0, and they are not covered by the stability promise until they say so
     `AuthenticationStateProvider.peekState`, and more. `EditContext.notifyValidationStateChanged` is public (Blazor's
     API for custom validators); `EventCallback.bindWith` and `RenderTreeBuilder.reuseKeyed` stay as the compiler's
     ABI.
-- **Breaking — the API review's decisions** (`docs/api-review-1.0.md`, Part 3; owner: "alle nach Empfehlung"):
+- **Breaking — the API review's decisions** (the API review before 1.0):
   - `@tsazor/runtime` (D1): `InputBase`'s `Value`, `ValueChanged`, `ValueExpression` are `value`, `valueChanged`,
     `valueExpression`; `ValidationMessage`'s `For` is `for` (TypeScript's camelCase; markup matches parameters
     case-insensitively, so `@bind-Value` and `For="…"` stay). A custom input writes `this.value`. `LayoutComponentBase`'s

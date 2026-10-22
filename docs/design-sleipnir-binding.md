@@ -1,6 +1,6 @@
 # Design: `@tsazor/sleipnir` (track T)
 
-Status: proposal (2026-10-05). Roadmap step 5, [roadmap-sleipnir.md](roadmap-sleipnir.md) T1–T7.
+Status: proposal (2026-10-05). After 1.0 ([after-1.0.md](after-1.0.md#the-sleipnir-binding)).
 Upstream (track U) delivered in Sleipnir 1.5.0-preview: real enums and event options in the
 codegen (U3, PR #42), connection state, error category, `onUnauthenticated` and subscription
 signals in the client (U4, PR #43). U1 (validation metadata in discovery) and U2 (server

@@ -1247,7 +1247,7 @@ Tsazor today: `packages/runtime/src/data/virtualize.ts` (248 lines, cited as `ts
 | RefreshData semantics | resets average, look-ahead, prepend detection, no render on success | recompute + fetch | §5.6 |
 | Prepend/append detection, `ItemComparer` | yes | no | §5.5 |
 | Anchoring | native `overflow-anchor` with guards, manual path for tables/Safari, snapshot/restore, drift correction | none | §6 |
-| AnchorMode / follow | Start/End/both, follow state machine | none | §6.3 — Tsazor's planned "sticking to the bottom" extension (docs/design-library-completeness.md:92, docs/roadmap-1.0.md:57) **is now Blazor parity** (`AnchorMode.End`) |
+| AnchorMode / follow | Start/End/both, follow state machine | none | §6.3 — Tsazor's planned "sticking to the bottom" extension (docs/design-library-completeness.md:92) **is now Blazor parity** (`AnchorMode.End`) |
 | Home/End, convergence, tabindex | yes | no | §4.8-4.9 |
 | Tables | `display: table-row` spacers, manual anchoring | spacer tag only | §4.1, §6.5 |
 | InitialItemIndex, ScrollToItem | yes | no | §7 |

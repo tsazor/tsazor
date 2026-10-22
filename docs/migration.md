@@ -86,7 +86,7 @@ API already — they skip this step.
   tab); anything that must survive a reload goes to the server or to storage.
 - **Contracts.** Expose the endpoints with OpenAPI (`AddOpenApi()`) and generate the client with
   `@tsazor/dotnet`: DTO changes on the server become compile errors in the pages. Sleipnir
-  commands are an alternative for teams that use it ([roadmap-sleipnir.md](roadmap-sleipnir.md)).
+  commands are an alternative for teams that use it ([after 1.0](after-1.0.md#the-sleipnir-binding)).
 - **Secrets the server held.** A Blazor Server app may call a backend with credentials the browser
   never saw: an API token, the user's JWT. The browser must not hold them either. Put a BFF in
   front: it keeps the user's token in an HttpOnly session cookie and adds both tokens to the

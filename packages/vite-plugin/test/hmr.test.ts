@@ -233,11 +233,11 @@ describe("planInvalidation: semantics", () => {
 describe("TransformRegistry: Windows paths case-insensitive", () => {
   it("finds entries regardless of spelling (backslashes vs. POSIX, upper/lower case)", () => {
     const registry = new TransformRegistry();
-    const recorded = "D:\\Own\\Tsazor\\App\\Pages\\Home.tsazor";
-    registry.recordTransform(recorded, metadata({ unresolvedTags: ["HmrBadge"] }), ["D:/Own/Tsazor/App/Shared/Badge.tsazor"]);
+    const recorded = "D:\\Work\\Shop\\App\\Pages\\Home.tsazor";
+    registry.recordTransform(recorded, metadata({ unresolvedTags: ["HmrBadge"] }), ["D:/Work/Shop/App/Shared/Badge.tsazor"]);
 
-    expect(registry.get("d:/own/tsazor/app/PAGES/Home.tsazor")).toBeDefined();
-    expect(registry.consumersOf("d:\\own\\tsazor\\app\\shared\\badge.tsazor")).toEqual([recorded]);
+    expect(registry.get("d:/work/shop/app/PAGES/Home.tsazor")).toBeDefined();
+    expect(registry.consumersOf("d:\\work\\shop\\app\\shared\\badge.tsazor")).toEqual([recorded]);
     expect(registry.filesWithUnresolvedTag("hmrbadge")).toEqual([recorded]);
     expect(registry.hasLayoutNameOf("mainlayout")).toBe(false);
     registry.recordDynamic(recorded, metadata({ layout: "FancyLayout" }), false);
