@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.9 (2026-10-22)
+
 - **Read-only inputs** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's and Fluent UI Blazor's `ReadOnly`, the
   BlazorHero port's B48): `readOnly` on `TextInput`, `TextArea` and `NumberInput` sets the native `readonly` — the
   value stays focusable, selectable and submitted, where `disabled` greys it out and leaves the tab order. On
