@@ -1,11 +1,11 @@
 @* Client/Pages/Utilities/AuditTrails.razor(.cs): the signed-in user's trails, searched (in the table name, and in the
    old and the new values when asked) and limited to a date range in the browser, exported. The original opens one
-   trail's details as a child row (MudTable ChildRowContent); the DataGrid has none (B44), so the open trail's details
-   follow the grid — one at a time, as ShowBtnPress keeps them. The date range is a DateRangePicker
+   trail's details as a child row (MudTable ChildRowContent): the grid's detail row (B44), one at a time
+   (detailsMode="single"), as ShowBtnPress keeps them. The date range is a DateRangePicker
    (MudDateRangePicker, B45); its Clear is the original's picker action. *@
 @page "/audit-trails"
 @authorize({ policy: "Permissions.AuditTrails.View" })
-@import { GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import { DataGrid, GridSort, PaginationState, Toaster } from "@tsazor/fluent"
 @import { CultureService } from "@tsazor/runtime"
 @import type { DateRange } from "@tsazor/fluent"
 @import type { AuditResponse } from "../../Application/Misc"
@@ -45,79 +45,81 @@
             </div>
         </div>
     }
-    <DataGrid items="@filteredTrails" pagination="@pagination" striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Audit Trails")">
-        <PropertyColumn property="(trail) => trail.id" title="@L("Id")" sortable />
-        <TemplateColumn title="@L("Table Name")" sortBy="@byTableName" Context="trail">
-            <Highlighter text="@trail.tableName" highlightedText="@searchString" />
-        </TemplateColumn>
-        <TemplateColumn title="@L("Date")" sortBy="@byDate" Context="trail">
-            <div class="bh-audit-dates">
-                <Chip text='@(`${L("Local")} : ${formatGeneral(utcOf(trail.dateTime), culture.current)}`)' />
-                <Chip text='@(`${L("UTC")} : ${formatUtc(trail.dateTime)}`)' />
+    <DataGrid @ref="grid" items="@filteredTrails" pagination="@pagination" itemKey="@((trail: AuditResponse) => trail.id)" detailsMode="single" striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Audit Trails")">
+        <ChildContent>
+            <PropertyColumn property="(trail) => trail.id" title="@L("Id")" sortable />
+            <TemplateColumn title="@L("Table Name")" sortBy="@byTableName" Context="trail">
+                <Highlighter text="@trail.tableName" highlightedText="@searchString" />
+            </TemplateColumn>
+            <TemplateColumn title="@L("Date")" sortBy="@byDate" Context="trail">
+                <div class="bh-audit-dates">
+                    <Chip text='@(`${L("Local")} : ${formatGeneral(utcOf(trail.dateTime), culture.current)}`)' />
+                    <Chip text='@(`${L("UTC")} : ${formatUtc(trail.dateTime)}`)' />
+                </div>
+            </TemplateColumn>
+            <PropertyColumn property="(trail) => trail.type" title="@L("Type")" sortable />
+            <TemplateColumn title="" align="end" Context="trail">
+                <Button size="small" iconEnd="@Icons.ChevronDown" aria-expanded="@(isOpen(trail) ? "true" : "false")" aria-controls="@(isOpen(trail) ? grid?.detailsId(trail) : null)" onClick="@(() => grid?.toggleDetailsAsync(trail))">
+                    @(isOpen(trail) ? L("Hide") : L("Show")) @L("Trail Details")
+                </Button>
+            </TemplateColumn>
+        </ChildContent>
+        <DetailContent Context="trail">
+            <div class="bh-audit-details" role="group" aria-label='@(`${L("Details for Trail ID")} : ${trail.id}`)'>
+                <Alert intent="info">@L("Details for Trail ID") : <strong>@trail.id</strong></Alert>
+                <table class="bh-audit-details__table">
+                    <tbody>
+                        @if (trail.affectedColumns) {
+                            <tr>
+                                <th scope="row">@L("Columns Affected")</th>
+                                <td>
+                                    @foreach (const column of splitValues(trail.affectedColumns, "[", "]")) {
+                                        <Chip text="@column" />
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        <tr>
+                            <th scope="row">@L("Primary Key")</th>
+                            <td><Chip text="@splitValues(trail.primaryKey, "{", "}").join(", ")" /></td>
+                        </tr>
+                        @if (trail.oldValues) {
+                            <tr>
+                                <th scope="row">@L("Old Values")</th>
+                                <td>
+                                    @foreach (const value of splitValues(trail.oldValues, "{", "}")) {
+                                        <Chip intent="warning">
+                                            @if (searchInOldValues) {
+                                                <Highlighter text="@value" highlightedText="@searchString" />
+                                            } else {
+                                                @value
+                                            }
+                                        </Chip>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (trail.newValues) {
+                            <tr>
+                                <th scope="row">@L("New Values")</th>
+                                <td>
+                                    @foreach (const value of splitValues(trail.newValues, "{", "}")) {
+                                        <Chip intent="success">
+                                            @if (searchInNewValues) {
+                                                <Highlighter text="@value" highlightedText="@searchString" />
+                                            } else {
+                                                @value
+                                            }
+                                        </Chip>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-        </TemplateColumn>
-        <PropertyColumn property="(trail) => trail.type" title="@L("Type")" sortable />
-        <TemplateColumn title="" align="end" Context="trail">
-            <Button size="small" iconEnd="@Icons.ChevronDown" aria-expanded="@(openTrailId === trail.id ? "true" : "false")" onClick="@(() => showBtnPress(trail.id))">
-                @(openTrailId === trail.id ? L("Hide") : L("Show")) @L("Trail Details")
-            </Button>
-        </TemplateColumn>
+        </DetailContent>
     </DataGrid>
-    @if (openTrail !== undefined) {
-        <Card class="bh-audit-details" ariaLabel='@(`${L("Details for Trail ID")} : ${openTrail.id}`)'>
-            <Alert intent="info">@L("Details for Trail ID") : <strong>@openTrail.id</strong></Alert>
-            <table class="bh-audit-details__table">
-                <tbody>
-                    @if (openTrail.affectedColumns) {
-                        <tr>
-                            <th scope="row">@L("Columns Affected")</th>
-                            <td>
-                                @foreach (const column of splitValues(openTrail.affectedColumns, "[", "]")) {
-                                    <Chip text="@column" />
-                                }
-                            </td>
-                        </tr>
-                    }
-                    <tr>
-                        <th scope="row">@L("Primary Key")</th>
-                        <td><Chip text="@splitValues(openTrail.primaryKey, "{", "}").join(", ")" /></td>
-                    </tr>
-                    @if (openTrail.oldValues) {
-                        <tr>
-                            <th scope="row">@L("Old Values")</th>
-                            <td>
-                                @foreach (const value of splitValues(openTrail.oldValues, "{", "}")) {
-                                    <Chip intent="warning">
-                                        @if (searchInOldValues) {
-                                            <Highlighter text="@value" highlightedText="@searchString" />
-                                        } else {
-                                            @value
-                                        }
-                                    </Chip>
-                                }
-                            </td>
-                        </tr>
-                    }
-                    @if (openTrail.newValues) {
-                        <tr>
-                            <th scope="row">@L("New Values")</th>
-                            <td>
-                                @foreach (const value of splitValues(openTrail.newValues, "{", "}")) {
-                                    <Chip intent="success">
-                                        @if (searchInNewValues) {
-                                            <Highlighter text="@value" highlightedText="@searchString" />
-                                        } else {
-                                            @value
-                                        }
-                                    </Chip>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </Card>
-    }
     <div class="bh-table-footer">
         <div class="bh-table-footer__switches">
             <Switch label="@L("Dense")" @bind-Value="dense" />
@@ -137,7 +139,8 @@
     private searchInNewValues = false;
     /** MudDateRangePicker's DateRange: ISO dates, either end open. */
     private dateRange: DateRange | null = null;
-    private openTrailId: number | undefined;
+    /** The grid, whose detail row is the open trail's (ShowBtnPress, one at a time). */
+    private grid?: DataGrid<AuditResponse>;
     private dense = false;
     private striped = true;
     private bordered = false;
@@ -148,10 +151,6 @@
 
     private readonly byTableName = GridSort.byAscending((trail: AuditResponse) => trail.tableName);
     private readonly byDate = GridSort.byAscending((trail: AuditResponse) => trail.dateTime);
-
-    private get openTrail(): AuditResponse | undefined {
-        return this.trails.find((trail) => trail.id === this.openTrailId);
-    }
 
     /** Search: the table name, the old and the new values when asked; then the date range, the end day whole (U14). */
     private get filteredTrails(): AuditResponse[] {
@@ -202,9 +201,9 @@
         return trimmed.split(",").map((part) => part.replace(/"/g, " ").trim());
     }
 
-    /** ShowBtnPress: this trail's details, the others closed. */
-    private showBtnPress(id: number): void {
-        this.openTrailId = this.openTrailId === id ? undefined : id;
+    /** ShowDetails: whether the trail's details show (ShowBtnPress toggles them in the grid, the others closed). */
+    private isOpen(trail: AuditResponse): boolean {
+        return this.grid?.isDetailsOpen(trail) === true;
     }
 
     private async exportToExcelAsync(): Promise<void> {

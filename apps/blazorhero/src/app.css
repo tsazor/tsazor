@@ -552,8 +552,10 @@ h1:focus {
     gap: var(--fui-spacing-xs);
 }
 
+/* A trail's details in its detail row (MudTable ChildRowContent). */
 .bh-audit-details {
-    margin-top: var(--fui-spacing-m);
+    display: grid;
+    gap: var(--fui-spacing-s);
 }
 
 .bh-audit-details__table th {

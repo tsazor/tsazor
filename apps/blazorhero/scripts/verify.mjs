@@ -454,6 +454,16 @@ async function documents(page, stamp) {
     const details = page.locator(".bh-audit-details");
     await details.getByText("Details for Trail ID").waitFor();
     check((await details.innerText()).includes("Primary Key"), "the audit trails: searched by table name, a trail's details");
+    // The details are the grid's detail row (MudTable ChildRowContent, B44): below their row, one at a time.
+    const detailRows = page.locator("tr.fui-datagrid__detail");
+    const firstToggle = page.getByRole("button", { name: "Hide Trail Details" });
+    const controlled = await firstToggle.getAttribute("aria-controls");
+    check((await detailRows.count()) === 1 && controlled !== null && (await detailRows.first().getAttribute("id")) === controlled, "a trail's details are its detail row, the button controls it (aria-controls)");
+    if ((await page.getByRole("button", { name: "Show Trail Details" }).count()) > 0) {
+      await page.getByRole("button", { name: "Show Trail Details" }).first().click();
+      await page.waitForFunction((id) => document.getElementById(id) === null, controlled);
+      check((await detailRows.count()) === 1 && (await page.getByRole("button", { name: "Hide Trail Details" }).count()) === 1, "another trail's details close the first (one at a time, as ShowBtnPress)");
+    }
     await axe(page, "the audit trails with a trail's details");
     // The date range (MudDateRangePicker, B45): a range that starts in the future finds no trail; Clear brings them back.
     const trailButtons = page.getByRole("button", { name: /Trail Details$/ });
