@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.10 (2026-10-22)
+
 - **DataGrid detail rows** (`@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`, `@tsazor/runtime`; MudDataGrid's
   `ChildRowContent` and `HierarchyColumn`, MudTable's `ChildRowContent`; the BlazorHero port's B44): `detailContent`
   (`<DetailContent Context="order">`) renders below its row, in a row of its own across every column, while the row's
