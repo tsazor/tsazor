@@ -68,6 +68,7 @@
   },
   "dependencies": {
     "@tsazor/markdown": "workspace:*",
+    "@tsazor/primitives": "workspace:*",
     "@tsazor/ui": "workspace:*"
   },
   "peerDependencies": {

@@ -1,6 +1,7 @@
 @page "/forms"
 @import type { InputFileChangeEventArgs } from "@tsazor/runtime"
 @import { PatternMask } from "@tsazor/ui"
+@import type { Decimal } from "@tsazor/primitives"
 @import { formatFileSize, uploadTo, type FileUploadErrorEventArgs, type FileUploadEventArgs } from "@tsazor/bootstrap"
 
 <Typography Variant="h1">Forms</Typography>
@@ -17,6 +18,7 @@
         <option value="rye">Rye</option>
     </Select>
     <NumberInput Label="Loaves" Min="1" Max="10" @bind-Value="order.loaves" />
+    <DecimalInput Label="Deposit" Help="Optional, in euros." Format="F2" @bind-Value="order.deposit" />
     <DateInput Label="Pick-up date" Min="2026-01-01" @bind-Value="order.pickup" />
     <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="order.slicing" />
     <TextArea Label="Note" Rows="2" @bind-Value="order.note" />
@@ -212,7 +214,7 @@
         this.wizardStatus = `Ordered for ${this.wizardOrder.name}.`;
     }
 
-    private order = { name: "", bread: "", loaves: 1, pickup: "", slicing: "whole", note: "", terms: false, reminder: false };
+    private order = { name: "", bread: "", loaves: 1, deposit: null as Decimal | null, pickup: "", slicing: "whole", note: "", terms: false, reminder: false };
     private status = "";
     private readonly slicing = [
         { value: "whole", label: "Whole" },

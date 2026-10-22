@@ -317,7 +317,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | **The skins' own repository at 1.0** | Lockstep (one version for every package) and the skins' own versions after the move: when do they move? |
 | ~~**The rc on npm**~~ | **Decided 2026-10-15:** release candidates only in the local registry; npm gets 1.0.0 first |
 | **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
-| **A `Decimal` field in the skins** (BlazorHero B42) | `NumberInput` is number-only: a generic `NumberInput<TValue>` (`FluentNumberField<TValue>`, `MudNumericField<T>`) or a `DecimalInput`? A generic one changes an existing component's type |
+| ~~**A `Decimal` field in the skins** (BlazorHero B42)~~ | **Decided and done 2026-10-22:** a `DecimalInput` (TypeScript erases a generic `NumberInput<TValue>`'s type argument) |
 | **A typed `Select`** (B43) | `Select` binds a string: a `Select<TValue>` with typed options (`FluentSelect<TOption>`, `MudSelect<T>`) — the same question of an existing component's type |
 | **DataGrid detail rows** (B44) | MudTable's `ChildRowContent`, MudDataGrid's `HierarchyColumn`: the API, with virtualization and grouping |
 | **A DateRangePicker** (B45) | MudDateRangePicker; the Calendar already selects a range |

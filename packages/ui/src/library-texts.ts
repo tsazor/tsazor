@@ -115,6 +115,8 @@ export const libraryTextDefaults = catalog({
   "dateField.day": "DD",
   "timeField.hour": "hh",
   "timeField.minute": "mm",
+  // A number field whose text is no number (Blazor InputNumber's ParsingErrorMessage, "The {0} field must be a number.").
+  "numberField.notANumber": "The {field} field must be a number.",
 
   "colorPicker.label": "Color",
   "colorPicker.button": "Choose color",

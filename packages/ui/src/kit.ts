@@ -42,6 +42,7 @@ export {
 export { swatchPalette, wheelPalette, wheelRowSizes } from "./color-palettes.js";
 export { carouselLabelsFrom, carouselRotates, carouselStep, carouselSwipe } from "./carousel.js";
 export { maskInput, toMask } from "./mask.js";
+export { localizeNumberText, numberSeparators } from "./number-text.js";
 export { overflowFit } from "./overflow.js";
 export {
   edgeEnabledOption,

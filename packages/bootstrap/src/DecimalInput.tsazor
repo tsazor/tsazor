@@ -1,0 +1,126 @@
+@** A Bootstrap field for a `Decimal` (@tsazor/primitives; `.form-control`, InputBase — bind a `Decimal | null` with
+    @bind-Value): Blazor's InputNumber<decimal>, MudBlazor's MudNumericField<decimal>. A text field
+    (inputmode="decimal") in the locale's separators — "1234,5" or "1.234,5" in de-DE — whose value is exact: no
+    floating point, the scale kept ("19.90" stays two places). An empty field is null. Text that is no number keeps
+    the value and stays in the field, and the field gets its parsing message (Blazor's ParsingErrorMessage): the form
+    doesn't submit until it is fixed. `format` writes the value as .NET formats a decimal ("F2", "N2", "0.00");
+    `contentBefore` and `contentAfter` make it an input group (a currency sign). Validation state and message as
+    with TextInput. *@
+@import { Decimal } from "@tsazor/primitives"
+@import { formatValue, type ValidationMessageStore } from "@tsazor/runtime"
+@import { libraryTexts } from "@tsazor/ui"
+@import { FieldState, localizeNumberText } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+@inherits InputBase<Decimal | null>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    @if (contentBefore || contentAfter) {
+        @* Bootstrap's input group: the slots' own classes (.input-group-text) style them. *@
+        <div class="input-group">
+            @contentBefore
+            <input @ref="element" id="@field.id(id)" type="text" inputmode="decimal" value="@displayValue" placeholder="@placeholder" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+            @contentAfter
+        </div>
+    } else {
+        <input @ref="element" id="@field.id(id)" type="text" inputmode="decimal" value="@displayValue" placeholder="@placeholder" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    }
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
+    /** The field's label (clicking it focuses the input). */
+    @Parameter() label?: string;
+    /** A hint below the input, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    /** Disables the input. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** Marks the input as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** The locale of the separators ("de-DE"; MudBlazor's `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
+    @Parameter() locale?: string;
+    /** How the value is written, as .NET formats a decimal: "F2", "N2" (with groups), "0.00" (Blazor's `@bind:format`, MudBlazor's `Format`). By default its own digits, the scale kept. */
+    @Parameter() format?: string;
+    /** The message for text that is no number (Blazor's `ParsingErrorMessage`; `{0}` is the field's label). Default: the library text "The {field} field must be a number.". */
+    @Parameter() parsingErrorMessage?: string;
+    /** Content before the input in a Bootstrap input group — an `.input-group-text` with a currency sign (MudBlazor's start adornment). */
+    @Parameter() contentBefore?: RenderFragment;
+    /** Content after the input in the group — an `.input-group-text` with a unit (MudBlazor's end adornment). */
+    @Parameter() contentAfter?: RenderFragment;
+
+    private readonly t = libraryTexts();
+    private readonly field = new FieldState("tz-decimal");
+    /** Blazor's _parsingValidationMessages: this field's own store, for text that is no number. */
+    private parsingMessages?: ValidationMessageStore;
+
+    private get resolvedLocale(): string {
+        return this.locale ?? this.t.locale;
+    }
+
+    /** The value's exact digits (or its format), in the locale's separators. */
+    private get displayValue(): string {
+        const value = this.currentValue;
+        if (value === null || value === undefined) return "";
+        return localizeNumberText(formatValue(value, this.format), this.resolvedLocale);
+    }
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    /** Blazor's CurrentValueAsString setter: empty is null, a number in the locale's grammar the value, else the parsing message. */
+    private handleChange(e: Event): void {
+        const text = (e.target as HTMLInputElement).value;
+        const value = text.trim() === "" ? null : Decimal.parse(text, this.resolvedLocale);
+        if (value === null && text.trim() !== "") {
+            this.parsingFailed();
+            return;
+        }
+        this.clearParsingMessage();
+        this.currentValue = value;
+    }
+
+    /** The value stays, the text stays in the field (the rendered value didn't change), the field gets the message. */
+    private parsingFailed(): void {
+        if (!this.editContext || !this.valueExpression) return;
+        if (this.parsingMessages === undefined) {
+            this.parsingMessages = this.editContext.createValidationMessageStore();
+            // Blazor's Dispose: an input that goes takes its parsing message with it.
+            this.disposeSignal.addEventListener("abort", () => this.parsingMessages?.clear());
+        }
+        const field = this.label ?? this.valueExpression;
+        const message = this.parsingErrorMessage?.replace("{0}", field) ?? this.t("numberField.notANumber", { field });
+        this.parsingMessages.clear(this.valueExpression);
+        this.parsingMessages.add(this.valueExpression, message);
+        this.editContext.notifyFieldChanged(this.valueExpression, this.value);
+    }
+
+    private clearParsingMessage(): void {
+        if (this.parsingMessages !== undefined && this.valueExpression) this.parsingMessages.clear(this.valueExpression);
+    }
+}

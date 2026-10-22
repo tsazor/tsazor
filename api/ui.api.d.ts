@@ -672,6 +672,7 @@ export declare const libraryTextDefaults: {
     readonly "dateField.day": string;
     readonly "timeField.hour": string;
     readonly "timeField.minute": string;
+    readonly "numberField.notANumber": string;
     readonly "colorPicker.label": string;
     readonly "colorPicker.button": string;
     readonly "colorPicker.swatch": string;

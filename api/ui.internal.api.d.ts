@@ -295,6 +295,9 @@ export declare function libraryPlural(localizer: StringLocalizer, text: LibraryP
 // libraryText
 export declare function libraryText(localizer: StringLocalizer, text: LibraryText, params?: Record<string, unknown>): string;
 
+// localizeNumberText
+export declare function localizeNumberText(invariant: string, locale: string): string;
+
 // logicalArrowKey
 export declare function logicalArrowKey(key: string, rtl: boolean): string;
 
@@ -333,6 +336,12 @@ export declare function normalizeHexColor(text: string): HexColor | undefined;
 
 // normalizeIsoTime
 export declare function normalizeIsoTime(text: string): IsoTime | undefined;
+
+// numberSeparators
+export declare function numberSeparators(locale: string): {
+    decimal: string;
+    group: string;
+};
 
 // overflowFit
 export declare function overflowFit(sizes: readonly number[], available: number, more: number, gap?: number): number;

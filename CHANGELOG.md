@@ -5,6 +5,20 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`DecimalInput`** (`@tsazor/fluent`, `@tsazor/bootstrap`; Blazor's `InputNumber<decimal?>`, `FluentNumberField<decimal?>`,
+  `MudNumericField<decimal?>`; the BlazorHero port's B42): a field for a `Decimal | null` (`@tsazor/primitives`) — a
+  text field (`inputmode="decimal"`) in the locale's separators, exact (no floating point, the scale kept), null when
+  empty. Text that is no number stays in the field and puts its parsing message on the field (Blazor's
+  `ParsingErrorMessage`, the library text `numberField.notANumber`), so the form doesn't submit; it goes with the
+  input. `format` ("F2", "N2"), `locale`, `readOnly`, `contentBefore`/`contentAfter`. A generic `NumberInput<TValue>`
+  would not know the type at run time when the field starts empty: TypeScript erases it. The skins depend on
+  `@tsazor/primitives` now; the kit has `localizeNumberText` and `numberSeparators`.
+- **A culture's numbers parse without group separators too** (`@tsazor/primitives` `Decimal.parse`, `@tsazor/runtime`
+  `@bind:culture`): "1234,5" in de-DE, as .NET's `NumberStyles.Number` — only "1.234,5" parsed before. A culture whose
+  group separator is a space (fr-FR's U+202F) takes the plain space, and one whose minus is U+2212 (sv-SE) takes the
+  hyphen too (.NET's `AllowHyphenDuringParsing`); the culture's own minus sign is read at all now (it never was, so
+  "−1,5" failed in sv-SE).
+
 ## 1.0.0-next.9 (2026-10-22)
 
 - **Read-only inputs** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's and Fluent UI Blazor's `ReadOnly`, the

@@ -257,6 +257,16 @@ try {
     say(description.includes("As it should appear on the order.") && description.includes("Enter a name."), `form: help and message describe the field (${description})`);
     const formViolations = await axe(page);
     say(formViolations.length === 0, `axe /forms with the messages${formViolations.length ? `: ${formViolations.join(" | ")}` : ""}`);
+    // DecimalInput (B42): text that is no number stays, with its parsing message; a number takes its format.
+    const deposit = page.getByLabel("Deposit");
+    await deposit.fill("2,50 EUR");
+    await deposit.dispatchEvent("change");
+    await page.waitForFunction(() => document.body.textContent?.includes("The Deposit field must be a number."));
+    say((await deposit.inputValue()) === "2,50 EUR" && (await deposit.getAttribute("aria-invalid")) === "true", "decimal: text that is no number stays, with its parsing message (aria-invalid)");
+    await deposit.fill("2.5");
+    await deposit.dispatchEvent("change");
+    await page.waitForFunction(() => !document.body.textContent?.includes("The Deposit field must be a number."));
+    say((await deposit.inputValue()) === "2.50", `decimal: the number in its format, F2 (${await deposit.inputValue()})`);
     await name.fill("Marta");
     await name.dispatchEvent("change");
     await page.getByLabel("Bread").selectOption("rye");

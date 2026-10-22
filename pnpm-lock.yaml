@@ -477,6 +477,9 @@ importers:
       '@tsazor/markdown':
         specifier: workspace:*
         version: link:../../packages/markdown
+      '@tsazor/primitives':
+        specifier: workspace:*
+        version: link:../../packages/primitives
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -654,6 +657,9 @@ importers:
       '@tsazor/markdown':
         specifier: workspace:*
         version: link:../markdown
+      '@tsazor/primitives':
+        specifier: workspace:*
+        version: link:../primitives
       '@tsazor/ui':
         specifier: workspace:*
         version: link:../ui
@@ -830,6 +836,9 @@ importers:
       '@tsazor/markdown':
         specifier: workspace:*
         version: link:../markdown
+      '@tsazor/primitives':
+        specifier: workspace:*
+        version: link:../primitives
       '@tsazor/ui':
         specifier: workspace:*
         version: link:../ui

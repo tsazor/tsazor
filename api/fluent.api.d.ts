@@ -453,6 +453,23 @@ export default class DatePicker extends InputBase<string> {
     ariaLabel?: string;
 }
 
+// DecimalInput
+export default class DecimalInput extends InputBase<Decimal | null> {
+    label?: string;
+    help?: string;
+    placeholder?: string;
+    disabled: boolean;
+    readOnly: boolean;
+    required: boolean;
+    id?: string;
+    ariaLabel?: string;
+    locale?: string;
+    format?: string;
+    parsingErrorMessage?: string;
+    contentBefore?: RenderFragment;
+    contentAfter?: RenderFragment;
+}
+
 // Dialog
 export default class Dialog extends ComponentBase {
     isOpen?: boolean;
