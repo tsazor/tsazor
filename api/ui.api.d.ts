@@ -261,6 +261,12 @@ export declare class DataGridModel<T> {
     dispose(): void;
 }
 
+// DateRange
+export interface DateRange {
+    readonly start?: IsoDate;
+    readonly end?: IsoDate;
+}
+
 // DayTime
 export interface DayTime {
     date: IsoDate;
@@ -666,6 +672,10 @@ export declare const libraryTextDefaults: {
     readonly "calendar.previousYears": string;
     readonly "calendar.nextYears": string;
     readonly "datePicker.button": string;
+    readonly "dateRangePicker.button": string;
+    readonly "dateRangePicker.start": string;
+    readonly "dateRangePicker.end": string;
+    readonly "dateField.notADate": string;
     readonly "timePicker.button": string;
     readonly "dateField.year": string;
     readonly "dateField.month": string;

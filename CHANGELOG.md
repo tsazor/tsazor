@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`DateRangePicker`** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's `MudDateRangePicker`; the BlazorHero port's
+  B45): a `DateRange | null` of ISO dates (`{ start, end }`, either end open) — two fields as the locale writes a date,
+  and a range Calendar in a dialog: a picked start, then a picked end close it; the start picked again makes a range
+  of that one day. A typed range is put in order, both fields empty is null, and text that is no date keeps the range
+  and puts the field's parsing message on it (the library text `dateField.notADate`), so the form doesn't submit.
+  `placeholderStart`/`placeholderEnd`, `minDate`/`maxDate`, `disabledDateFunc`, `locale`, `readOnly`, the DatePicker's
+  other calendar parameters. `DateRange` is public in `@tsazor/ui` (the skins re-export it); the kit has
+  `nextPickerDraft` and `orderedRange`.
+
 - **`Select` with typed options** (`@tsazor/fluent`, `@tsazor/bootstrap`; Fluent UI Blazor's `FluentSelect<TOption>`,
   `MudSelect<T>`; the BlazorHero port's B43): `items`, `optionText`, `optionKey`, `optionDisabled` and
   `@bind-selectedOption` — the choice is the option itself (an enum member, a number, an object), nothing parsed: each

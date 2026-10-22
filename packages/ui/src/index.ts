@@ -32,6 +32,7 @@ export {
   type CalendarLabels,
   type CalendarSelectMode,
   type CalendarView,
+  type DateRange,
   type IsoDate,
 } from "./calendar.js";
 export {

@@ -2,6 +2,7 @@
 @import type { InputFileChangeEventArgs } from "@tsazor/runtime"
 @import { PatternMask } from "@tsazor/ui"
 @import type { Decimal } from "@tsazor/primitives"
+@import type { DateRange } from "@tsazor/ui"
 @import { Shape } from "../shape"
 @import { formatFileSize, uploadTo, type FileUploadErrorEventArgs, type FileUploadEventArgs } from "@tsazor/bootstrap"
 
@@ -82,11 +83,12 @@
             <DatePicker Label="Pickup day" Locale="en-US" MinDate="2026-10-05" MaxDate="2026-12-20" DisabledDateFunc="@closedOnSundays" Help="We bake Monday to Saturday." @bind-Value="pickupDay" />
             <DatePicker Label="Liefertag" Locale="de-DE" ButtonLabel="Datum wählen" Labels="@germanLabels" @bind-Value="deliveryDay" />
             <DatePicker Label="Billing month" Locale="en-US" View="months" @bind-Value="billingMonth" />
+            <DateRangePicker Label="Closed for holidays" Locale="en-US" @bind-Value="closure" />
         </div>
         <Calendar AriaLabel="Holidays" Locale="en-US" SelectMode="range" PickerMonth="2026-12-01" @bind-SelectedDates="holidays" />
     </div>
     <Typography Variant="caption">
-        Pickup <span class="date-pickup">@pickupDay</span>, delivery <span class="date-delivery">@deliveryDay</span>, billing <span class="date-billing">@billingMonth</span>, holidays <span class="date-holidays">@holidays.join(", ")</span>.
+        Pickup <span class="date-pickup">@pickupDay</span>, delivery <span class="date-delivery">@deliveryDay</span>, billing <span class="date-billing">@billingMonth</span>, holidays <span class="date-holidays">@holidays.join(", ")</span>, closed <span class="date-closure">@(closure === null ? "never" : `${closure.start ?? "…"} to ${closure.end ?? "…"}`)</span>.
     </Typography>
 </section>
 
@@ -180,6 +182,8 @@
     private readonly lunchBreak = (time: string): boolean => time >= "12:00:00" && time < "13:00:00";
     private deliveryDay = "2026-10-10";
     private billingMonth = "2026-10-01";
+    /** A DateRangePicker (B45): ISO dates, either end open; null for none. */
+    private closure: DateRange | null = null;
     private holidays: string[] = [];
     private readonly closedOnSundays = (date: string): boolean => new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
     private readonly sendToServer = uploadTo("/api/upload");

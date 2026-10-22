@@ -1,0 +1,213 @@
+@** A Bootstrap date range picker (an `.input-group` of two `.form-control`s and a button; MudBlazor's
+    MudDateRangePicker; InputBase — bind a `DateRange | null` with @bind-Value): the start and the end as the locale
+    writes a date ("10/5/2026"; ISO works too), and a button that opens a range Calendar in a dialog — a picked start,
+    then a picked end close it (the start again: a range of that one day). The range is ISO dates
+    (`{ start: "2026-10-05", end: "2026-10-09" }`), which no time zone shifts; a typed one is put in order, an open end
+    stays open, both fields empty is null. Text that is no date keeps the range and puts the field's parsing message on
+    it, so the form doesn't submit. Alt+ArrowDown in a field opens the calendar. Validation state and message as with
+    TextInput — the same parameters as the Fluent skin's DateRangePicker. *@
+@import {
+    anchoredPosition, createLayer, dismissible, focusTrap, libraryTexts, topLayer, type CalendarLabels, type DateRange,
+    type IsoDate,
+} from "@tsazor/ui"
+@import { dateFieldPlaceholder, datesOfRange, FieldState, formatPickerValue, nextPickerDraft, orderedRange, parsePickerValue } from "@tsazor/ui/kit"
+@import type { ValidationMessageStore } from "@tsazor/runtime"
+@import { withClass } from "./attributes"
+@import { Calendar3 } from "./core-icons"
+
+@inherits InputBase<DateRange | null>
+
+<div class="mb-3 tz-date-range-picker">
+    @if (this.label) {
+        <label class="form-label" id="@this.labelId" for="@this.field.id(this.id)">@this.label</label>
+    }
+    <div class="input-group" role="group" aria-labelledby="@(this.label ? this.labelId : null)" aria-label="@(this.label ? null : this.ariaLabel)" @ref="fieldBox">
+        <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" placeholder="@(this.placeholderStart ?? this.placeholderText)" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@t("dateRangePicker.start")" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.startText" @onchange="this.startTyped" @onkeydown="this.fieldKeydown" />
+        <span class="input-group-text" aria-hidden="true">–</span>
+        <input id="@this.endId" type="text" autocomplete="off" placeholder="@(this.placeholderEnd ?? this.placeholderText)" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@t("dateRangePicker.end")" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.endText" @onchange="this.endTyped" @onkeydown="this.fieldKeydown" />
+        <button type="button" class="btn btn-outline-secondary" aria-label="@(this.buttonLabel ?? t("dateRangePicker.button"))" title="@(this.buttonLabel ?? t("dateRangePicker.button"))" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar3" /></button>
+    </div>
+    @if (this.open) {
+        <div class="tz-date-picker__popup dropdown-menu show" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("dateRangePicker.button"))" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
+            <Calendar selectMode="range" selectedDates="@this.calendarDates" selectedDatesChanged="@this.picked" minDate="@this.minDate" maxDate="@this.maxDate" disabledDateFunc="@this.disabledDateFunc" locale="@this.locales" firstDayOfWeek="@this.firstDayOfWeek" displayToday="@this.displayToday" labels="@this.labels" />
+        </div>
+    }
+    @if (this.help) {
+        <div class="form-text" id="@this.field.helpId(this.id)">@this.help</div>
+    }
+    @if (this.message) {
+        <div class="invalid-feedback d-block" id="@this.field.messageId(this.id)">@this.message</div>
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The field's label (clicking it focuses the start). */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to both fields for screen readers. */
+    @Parameter() help?: string;
+    /** The start field's placeholder; by default the locale's pattern ("MM/DD/YYYY"; `PlaceholderStart`). */
+    @Parameter() placeholderStart?: string;
+    /** The end field's placeholder; by default the locale's pattern (`PlaceholderEnd`). */
+    @Parameter() placeholderEnd?: string;
+    /** The first day that can be picked (ISO). */
+    @Parameter() minDate?: IsoDate;
+    /** The last day that can be picked (ISO). */
+    @Parameter() maxDate?: IsoDate;
+    /** Rules out single days in the calendar (`DisabledDateFunc`). */
+    @Parameter() disabledDateFunc?: (date: IsoDate) => boolean;
+    /** The locale of the text and the calendar ("de-DE"; `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
+    @Parameter() locale?: string;
+    /** The week's first day, 0 (Sunday) to 6, instead of the locale's (MudBlazor's `FirstDayOfWeek`). */
+    @Parameter() firstDayOfWeek?: number;
+    /** The calendar marks today (default). */
+    @Parameter() displayToday: boolean = true;
+    /** The calendar buttons' texts (English by default). */
+    @Parameter() labels?: Partial<CalendarLabels>;
+    /** The button's and the dialog's name. */
+    @Parameter() buttonLabel?: string;
+    /** Raised with true when the calendar opens and false when it closes (`OnCalendarOpen`). */
+    @Parameter() onCalendarOpen?: EventCallback<boolean>;
+    /** The message for text that is no date (`{0}` is the field's label). Default: the library text "The {field} field must be a date.". */
+    @Parameter() parsingErrorMessage?: string;
+    /** Disables the fields and the button. */
+    @Parameter() disabled: boolean = false;
+    /** Shows the range without letting it change (the fields' native readonly, no calendar). */
+    @Parameter() readOnly: boolean = false;
+    /** Marks both fields as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The start field's id (the end's adds "-end"); generated when omitted. */
+    @Parameter() id?: string;
+    /** The fields' group's accessible name when there is no label. */
+    @Parameter() ariaLabel?: string;
+
+    private readonly field = new FieldState("tz-date-range-picker");
+    private open = false;
+    /** The range while the calendar is open: its start alone until the end is picked. */
+    private draft: DateRange = {};
+    private fieldBox?: HTMLDivElement;
+    private button?: HTMLButtonElement;
+    /** Blazor's _parsingValidationMessages: this field's own store, for text that is no date. */
+    private parsingMessages?: ValidationMessageStore;
+
+    /** The trap and the dismiss handling are one overlay layer (inside a Dialog, Escape closes the calendar first). */
+    private readonly layer = createLayer();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
+    private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
+    private readonly trap = focusTrap({ layer: this.layer, initialFocus: (popup) => popup.querySelector<HTMLElement>("[role=grid] [tabindex='0']") });
+
+    private get locales(): string {
+        return this.locale ?? this.t.locale;
+    }
+
+    private get labelId(): string {
+        return `${this.field.id(this.id)}-label`;
+    }
+
+    private get endId(): string {
+        return `${this.field.id(this.id)}-end`;
+    }
+
+    private get placeholderText(): string {
+        return dateFieldPlaceholder(this.locales, this.t);
+    }
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private get startText(): string {
+        const start = this.currentValue?.start;
+        return start === undefined ? "" : formatPickerValue(start, "days", this.locales);
+    }
+
+    private get endText(): string {
+        const end = this.currentValue?.end;
+        return end === undefined ? "" : formatPickerValue(end, "days", this.locales);
+    }
+
+    /** The days the calendar marks: the draft's while it is open. */
+    private get calendarDates(): IsoDate[] {
+        return datesOfRange(this.draft);
+    }
+
+    private startTyped(e: Event): void {
+        this.typed((e.target as HTMLInputElement).value, true);
+    }
+
+    private endTyped(e: Event): void {
+        this.typed((e.target as HTMLInputElement).value, false);
+    }
+
+    /** A field's text: empty clears that end, a date sets it (the range in order), anything else is the parsing message. */
+    private typed(text: string, start: boolean): void {
+        const date = text.trim() === "" ? undefined : parsePickerValue(text, "days", this.locales);
+        if (date === undefined && text.trim() !== "") {
+            this.parsingFailed();
+            return;
+        }
+        this.parsingMessages?.clear(this.valueExpression ?? "");
+        const current = this.currentValue;
+        this.currentValue = start ? orderedRange(date, current?.end) : orderedRange(current?.start, date);
+    }
+
+    /** The range stays, the text stays in the field (the rendered value didn't change), the field gets the message. */
+    private parsingFailed(): void {
+        if (!this.editContext || !this.valueExpression) return;
+        if (this.parsingMessages === undefined) {
+            this.parsingMessages = this.editContext.createValidationMessageStore();
+            this.disposeSignal.addEventListener("abort", () => this.parsingMessages?.clear());
+        }
+        const field = this.label ?? this.valueExpression;
+        const message = this.parsingErrorMessage?.replace("{0}", field) ?? this.t("dateField.notADate", { field });
+        this.parsingMessages.clear(this.valueExpression);
+        this.parsingMessages.add(this.valueExpression, message);
+        this.editContext.notifyFieldChanged(this.valueExpression, this.value);
+    }
+
+    private async fieldKeydown(e: KeyboardEvent): Promise<void> {
+        if (e.key !== "ArrowDown" || !e.altKey || this.open || this.disabled || this.readOnly) return;
+        e.preventDefault();
+        await this.setOpen(true);
+    }
+
+    private async toggle(): Promise<void> {
+        await this.setOpen(!this.open);
+    }
+
+    private async close(): Promise<void> {
+        await this.setOpen(false);
+    }
+
+    private async setOpen(open: boolean): Promise<void> {
+        if (this.open === open) return;
+        this.open = open;
+        if (open) this.draft = { ...(this.currentValue ?? {}) };
+        this.stateHasChanged();
+        await this.onCalendarOpen?.invokeAsync(open);
+    }
+
+    /** The calendar's range: the draft until its end is picked, then the value, and the calendar closes. */
+    private readonly picked = async (dates: IsoDate[]): Promise<void> => {
+        const next = nextPickerDraft(this.draft, dates);
+        this.draft = next.draft;
+        if (!next.complete) {
+            this.stateHasChanged();
+            return;
+        }
+        this.parsingMessages?.clear(this.valueExpression ?? "");
+        this.currentValue = next.draft;
+        await this.setOpen(false);
+        this.button?.focus();
+    };
+}

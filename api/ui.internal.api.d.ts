@@ -328,6 +328,12 @@ export declare function nextEnabledOption(from: number, step: 1 | -1, disabled: 
 // nextMultipleDates
 export declare function nextMultipleDates(selected: readonly IsoDate[], clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): IsoDate[];
 
+// nextPickerDraft
+export declare function nextPickerDraft(draft: DateRange, dates: readonly IsoDate[]): {
+    draft: DateRange;
+    complete: boolean;
+};
+
 // nextWizardStep
 export declare function nextWizardStep(disabled: readonly boolean[], from: number): number;
 
@@ -345,6 +351,9 @@ export declare function numberSeparators(locale: string): {
 
 // optionAtValue
 export declare function optionAtValue<T>(items: readonly T[], value: string): T | null;
+
+// orderedRange
+export declare function orderedRange(start: IsoDate | undefined, end: IsoDate | undefined): DateRange | null;
 
 // overflowFit
 export declare function overflowFit(sizes: readonly number[], available: number, more: number, gap?: number): number;

@@ -453,6 +453,31 @@ export default class DatePicker extends InputBase<string> {
     ariaLabel?: string;
 }
 
+// DateRange: re-exported from @tsazor/ui
+
+// DateRangePicker
+export default class DateRangePicker extends InputBase<DateRange | null> {
+    label?: string;
+    help?: string;
+    placeholderStart?: string;
+    placeholderEnd?: string;
+    minDate?: IsoDate;
+    maxDate?: IsoDate;
+    disabledDateFunc?: (date: IsoDate) => boolean;
+    locale?: string;
+    firstDayOfWeek?: number;
+    displayToday: boolean;
+    labels?: Partial<CalendarLabels>;
+    buttonLabel?: string;
+    onCalendarOpen?: EventCallback<boolean>;
+    parsingErrorMessage?: string;
+    disabled: boolean;
+    readOnly: boolean;
+    required: boolean;
+    id?: string;
+    ariaLabel?: string;
+}
+
 // DecimalInput
 export default class DecimalInput extends InputBase<Decimal | null> {
     ariaLabel?: string;

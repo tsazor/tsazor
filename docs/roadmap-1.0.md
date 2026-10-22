@@ -320,7 +320,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**A `Decimal` field in the skins** (BlazorHero B42)~~ | **Decided and done 2026-10-22:** a `DecimalInput` (TypeScript erases a generic `NumberInput<TValue>`'s type argument) |
 | ~~**A typed `Select`** (B43)~~ | **Decided and done 2026-10-22:** `items`, `optionText` and `@bind-selectedOption` on the same `Select` (`@typeparam TOption = string`, so the string way stays) |
 | **DataGrid detail rows** (B44) | MudTable's `ChildRowContent`, MudDataGrid's `HierarchyColumn`: the API, with virtualization and grouping |
-| **A DateRangePicker** (B45) | MudDateRangePicker; the Calendar already selects a range |
+| ~~**A DateRangePicker** (B45)~~ | **Decided and done 2026-10-22:** `DateRangePicker` in both skins, a `DateRange \| null` of ISO dates |
 | **`@bind` by the declared type** (B46) | A `Decimal \| null` (or `number \| null`) that starts as null binds the text: the compiler knows the declared type and could hand the converter over — a behavior change of K.7/K.8's documented rule |
 | ~~**Cleanup**~~ | **Done 2026-10-15:** `apps/fluentcms-admin` deleted (`apps/fluentcms` replaced it); the fullstackhero containers, their images and volumes removed (owner) |
 

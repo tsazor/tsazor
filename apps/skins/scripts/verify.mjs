@@ -416,6 +416,26 @@ try {
     say(true, "calendar: two clicks pick a range");
     await holidays.getByRole("button", { name: "December 2026" }).click();
     say(await holidays.getByRole("gridcell", { name: "December 2026" }).isVisible(), "calendar: the title zooms out to the months");
+    // DateRangePicker (B45): two typed ends in order; the range calendar takes a start, then an end, and closes.
+    const closure = dates.getByRole("group", { name: "Closed for holidays" });
+    await closure.getByLabel("Start date").fill("12/31/2026");
+    await closure.getByLabel("Start date").press("Tab");
+    await closure.getByLabel("End date").fill("12/24/2026");
+    await closure.getByLabel("End date").press("Tab");
+    await dateIs("closure", "2026-12-24 to 2026-12-31");
+    say((await closure.getByLabel("Start date").inputValue()) === "12/24/2026", "date range picker: typed ends, put in order");
+    await closure.getByRole("button", { name: "Choose dates" }).click();
+    const rangeDialog = page.getByRole("dialog", { name: "Choose dates" });
+    await rangeDialog.waitFor();
+    say((await rangeDialog.locator("td[aria-selected=true]").count()) === 8, "date range picker: the calendar opens on the range, its days marked");
+    const rangeViolations = await axe(page);
+    say(rangeViolations.length === 0, `axe /forms with the range calendar open${rangeViolations.length ? `: ${rangeViolations.join(" | ")}` : ""}`);
+    await rangeDialog.getByRole("gridcell", { name: "Monday, December 7, 2026" }).click();
+    say(await rangeDialog.isVisible(), "date range picker: a picked start keeps the calendar open");
+    await rangeDialog.getByRole("gridcell", { name: "Wednesday, December 9, 2026" }).click();
+    await rangeDialog.waitFor({ state: "detached" });
+    await dateIs("closure", "2026-12-07 to 2026-12-09");
+    say(true, "date range picker: the end picked, the range is set and the calendar closes");
 
     /* Time picker: the locale's text, the list of times with its keys (the focus stays in the field), ruled-out times,
        typing, German, the browser's own input. */

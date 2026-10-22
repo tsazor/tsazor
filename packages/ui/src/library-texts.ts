@@ -108,6 +108,11 @@ export const libraryTextDefaults = catalog({
   "calendar.previousYears": "Previous years",
   "calendar.nextYears": "Next years",
   "datePicker.button": "Choose date",
+  "dateRangePicker.button": "Choose dates",
+  "dateRangePicker.start": "Start date",
+  "dateRangePicker.end": "End date",
+  // A date field whose text is no date (the DateRangePicker; Blazor InputDate's ParsingErrorMessage).
+  "dateField.notADate": "The {field} field must be a date.",
   "timePicker.button": "Choose time",
   // A date or time field's placeholder, in the locale's order: "DD.MM.YYYY" (German writes "TT.MM.JJJJ").
   "dateField.year": "YYYY",

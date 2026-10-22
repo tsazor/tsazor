@@ -45,7 +45,7 @@ Radzen (charts, scheduler, HTML editor, pivot grid) is a suite. It is not the ta
 
 **In both skins (Tier 1, done):** Accordion, Alert, Badge, Breadcrumb, Button, ButtonGroup, Card, Checkbox, Collapse,
 DataGrid (PropertyColumn, TemplateColumn, Paginator, Virtualize), DateInput (native), Dialog, Divider, Drawer,
-FileInput, Form, FormField, Grid, Icon (since 2026-10-09; the full sets, see the Icons row), ListGroup, Menu/Dropdown, Navbar, NumberInput, DecimalInput (2026-10-22), Pagination, Popover, Progress,
+FileInput, Form, FormField, Grid, Icon (since 2026-10-09; the full sets, see the Icons row), ListGroup, Menu/Dropdown, Navbar, NumberInput, DecimalInput (2026-10-22), DateRangePicker (2026-10-22), Pagination, Popover, Progress,
 RadioGroup, Select, Skeleton, Spinner, Stack, Switch, Table, Tabs, TextArea, TextInput, Toast, Tooltip, Typography.
 
 **Only in `@tsazor/fluent`:** Indicator and Spacer; a Bootstrap app takes a Badge and the margin utilities instead.

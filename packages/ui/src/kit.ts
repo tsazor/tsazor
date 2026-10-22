@@ -44,6 +44,7 @@ export { carouselLabelsFrom, carouselRotates, carouselStep, carouselSwipe } from
 export { maskInput, toMask } from "./mask.js";
 export { localizeNumberText, numberSeparators } from "./number-text.js";
 export { optionAtValue, selectedOptionIndex } from "./select-items.js";
+export { nextPickerDraft, orderedRange } from "./date-range.js";
 export { overflowFit } from "./overflow.js";
 export {
   edgeEnabledOption,
