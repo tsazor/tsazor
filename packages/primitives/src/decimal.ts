@@ -72,16 +72,24 @@ function parseInvariant(text: string): Decimal | null {
 
 /** A culture's grammar (separators from `Intl`), normalized to invariant and parsed there. */
 function parseCulture(text: string, culture: string): Decimal | null {
-  const parts = new Intl.NumberFormat(culture).formatToParts(1234567.891);
+  // A negative sample: only then do the parts carry the culture's minus sign.
+  const parts = new Intl.NumberFormat(culture).formatToParts(-1234567.891);
   const group = parts.find((part) => part.type === "group")?.value ?? "";
   const decimal = parts.find((part) => part.type === "decimal")?.value ?? ".";
   const minus = parts.find((part) => part.type === "minusSign")?.value ?? "-";
   const escaped = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const groupPattern = group === "" ? "" : `\\d{1,3}(?:${escaped(group)}\\d{3})*`;
-  const shape = new RegExp(`^\\s*(${escaped(minus)})?${groupPattern || "\\d+"}(?:${escaped(decimal)}\\d+)?\\s*$`);
+  // The group separators are optional (.NET's NumberStyles.Number: "1234,5" and "1.234,5" alike), and a space-like
+  // one (fr-FR's U+202F) also matches the plain space people type; a culture whose minus is U+2212 (sv-SE) takes the
+  // hyphen too (.NET's AllowHyphenDuringParsing).
+  const spaceGroup = /^\s$/u.test(group);
+  const separator = spaceGroup ? `[${escaped(group)} ]` : escaped(group);
+  const integral = group === "" ? "\\d+" : `(?:\\d{1,3}(?:${separator}\\d{3})+|\\d+)`;
+  const sign = minus === "-" ? "-" : `(?:${escaped(minus)}|-)`;
+  const shape = new RegExp(`^\\s*(${sign})?${integral}(?:${escaped(decimal)}\\d+)?\\s*$`, "u");
   const source = text.trim();
   if (!shape.test(source)) return null;
-  const normalized = source.split(minus).join("-").split(group).join("").split(decimal).join(".");
+  const withoutGroups = group === "" ? source : source.split(group).join("").split(spaceGroup ? " " : group).join("");
+  const normalized = withoutGroups.split(minus).join("-").split(decimal).join(".");
   return parseInvariant(normalized);
 }
 

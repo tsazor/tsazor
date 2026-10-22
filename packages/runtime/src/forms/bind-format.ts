@@ -175,29 +175,31 @@ export function parseValue(text: string, format: string | undefined, culture?: s
 /** A number in the culture's grammar (separators from Intl); null when the text does not match it. */
 function parseNumberCulture(text: string, info: CultureInfo): string | number | Date | null {
   if (text.trim().length === 0) return null;
-  const parts = info.numberFormat().formatToParts(1234567.891);
+  // A negative sample: only then do the parts carry the culture's minus sign.
+  const parts = info.numberFormat().formatToParts(-1234567.891);
   const group = parts.find((part) => part.type === "group")?.value ?? "";
   const decimal = parts.find((part) => part.type === "decimal")?.value ?? ".";
   const minus = parts.find((part) => part.type === "minusSign")?.value ?? "-";
-  // The culture's accepted shape: an optional sign, digits with the culture's
-  // group separators, and its decimal separator. Anything else (e.g. the
-  // invariant "1,234.5" in de-DE, where "," is not the group separator) is a
-  // parse failure, like .NET's culture-bound TryParse.
   const escaped = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // The culture's accepted shape: an optional sign, digits with the culture's
-  // group separators, and its decimal separator. Anything else (e.g. the
-  // invariant "1,234.5" in de-DE, where "," is not the group separator) is a
-  // parse failure, like .NET's culture-bound TryParse. A locale without a
-  // group separator takes plain digits.
-  const groupPattern = group === "" ? "" : `\\d{1,3}(?:${escaped(group)}\\d{3})*`;
-  const shape = new RegExp(`^\\s*(${escaped(minus)})?${groupPattern || "\\d+"}(?:${escaped(decimal)}\\d+)?\\s*$`);
+  // The culture's accepted shape: an optional sign, digits — with the culture's
+  // group separators or without (.NET's NumberStyles.Number: "1234,5" and
+  // "1.234,5" alike; a space-like separator, fr-FR's U+202F, also matches the
+  // plain space people type) — and its decimal separator; a culture whose minus
+  // is U+2212 (sv-SE) takes the hyphen too (.NET's AllowHyphenDuringParsing).
+  // Anything else (the invariant "1,234.5" in de-DE, where "," is not the group
+  // separator) is a parse failure, like .NET's culture-bound TryParse. A locale
+  // without a group separator takes plain digits.
+  const spaceGroup = /^\s$/u.test(group);
+  const separator = spaceGroup ? `[${escaped(group)} ]` : escaped(group);
+  const integral = group === "" ? "\\d+" : `(?:\\d{1,3}(?:${separator}\\d{3})+|\\d+)`;
+  const sign = minus === "-" ? "-" : `(?:${escaped(minus)}|-)`;
+  const shape = new RegExp(`^\\s*(${sign})?${integral}(?:${escaped(decimal)}\\d+)?\\s*$`, "u");
   const source = text.trim();
   if (!shape.test(source)) return null;
-  const normalized = source
+  const withoutGroups = group === "" ? source : source.split(group).join("").split(spaceGroup ? " " : group).join("");
+  const normalized = withoutGroups
     .split(minus)
     .join("-")
-    .split(group)
-    .join("")
     .split(decimal)
     .join(".");
   const parsed = Number(normalized);

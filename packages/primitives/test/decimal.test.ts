@@ -57,6 +57,19 @@ describe("Decimal", () => {
     expect(Decimal.parse("1,234.5", "de-DE")).toBeNull();
   });
 
+  it("takes a culture's text without group separators too, as .NET's NumberStyles.Number", () => {
+    expect(Decimal.parse("1234,5", "de-DE")!.toString()).toBe("1234.5");
+    expect(Decimal.parse("1234567,89", "de-DE")!.toString()).toBe("1234567.89");
+    // Grouped, the groups must be whole: "12.34,5" is no number in de-DE.
+    expect(Decimal.parse("12.34,5", "de-DE")).toBeNull();
+    // fr-FR groups with U+202F; the plain space people type works too.
+    expect(Decimal.parse("1 234,5", "fr-FR")!.toString()).toBe("1234.5");
+    expect(Decimal.parse("1 234,5", "fr-FR")!.toString()).toBe("1234.5");
+    // sv-SE's minus is U+2212; the hyphen works too (.NET's AllowHyphenDuringParsing).
+    expect(Decimal.parse("−1,5", "sv-SE")!.toString()).toBe("-1.5");
+    expect(Decimal.parse("-1,5", "sv-SE")!.toString()).toBe("-1.5");
+  });
+
   it("formats through Intl and serializes as a string", () => {
     expect(Decimal.from("71.36").format("de-DE", { style: "currency", currency: "EUR" })).toContain("71,36");
     expect(Decimal.from("19.99").toNumber()).toBe(19.99);

@@ -32,6 +32,16 @@ describe("Decimal @bind", () => {
     expect((parsed as Decimal).equals("1234.50")).toBe(true);
   });
 
+  it("takes the culture's text without group separators too (.NET's NumberStyles.Number), a Decimal and a number alike", () => {
+    expect((parseBindValue("1234,50", Decimal.zero, undefined, "de-DE") as Decimal).equals("1234.50")).toBe(true);
+    expect(parseBindValue("1234,5", 0, undefined, "de-DE")).toBe(1234.5);
+    expect(parseBindValue("1.234,5", 0, undefined, "de-DE")).toBe(1234.5);
+    expect(parseBindValue("1 234,5", 0, undefined, "fr-FR")).toBe(1234.5);
+    expect(parseBindValue("-1,5", 0, undefined, "sv-SE")).toBe(-1.5);
+    expect(parseBindValue("−1,5", 0, undefined, "sv-SE")).toBe(-1.5);
+    expect(parseBindValue("12.34,5", 0, undefined, "de-DE")).toBeNull();
+  });
+
   it("keeps the previous value on empty or unparseable text (null)", () => {
     expect(parseBindValue("", Decimal.zero)).toBeNull();
     expect(parseBindValue("garbage", Decimal.zero)).toBeNull();
