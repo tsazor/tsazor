@@ -1177,6 +1177,13 @@ try {
   await swagger.waitForLoadState();
   check((await swagger.title()) === "Swagger UI", "Swagger opens from the backend, past the app's routing");
   await swagger.close();
+  // Hangfire's dashboard links within itself by query alone (the overview's day and week: `/jobs?period=week`).
+  const [jobs] = await Promise.all([context.waitForEvent("page"), page.getByRole("link", { name: "Hangfire" }).click()]);
+  await jobs.waitForLoadState();
+  const overview = await jobs.title();
+  await jobs.goto(new URL("/jobs?period=week", jobs.url()).href);
+  check(overview.includes("BlazorHero Jobs") && (await jobs.title()).includes("BlazorHero Jobs"), `Hangfire opens from the backend, its week too (${await jobs.title()})`);
+  await jobs.close();
   check(new URL(page.url()).pathname === "/", "the app stays where it was");
 
   // The hub: connected with the token in the query string, as the original's connection is.

@@ -90,6 +90,9 @@ render in the browser.
 - **Proxy to the API's HTTPS endpoint.** With `UseHttpsRedirection`, the HTTP endpoint answers a 307 to HTTPS — another
   origin, so the browser drops the `Authorization` header and every signed-in call fails. Aspire hands the HTTPS
   endpoint to a JavaScript app (`VITE_API_BASE_URL`); point the dev server's proxy there (fullstackhero F21).
+- **Proxy the backend's own pages with their queries.** Vite matches a proxy pattern against the URL with its query,
+  so `^/jobs(/|$)` misses `/jobs?period=week` — Hangfire's dashboard links within itself by query — and the app's
+  router answers "not found". End such a pattern with `([/?]|$)` (BlazorHero B53).
 - **Keep a mocked E2E suite away from a running backend.** Specs that mock with `page.route` assume nothing answers the
   rest; with the backend up, an unmocked call meets the real API (a 401 for the test's made-up token signs the app
   out). Give the suite a dev server of its own whose proxy goes nowhere (F23).
