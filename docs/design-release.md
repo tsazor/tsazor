@@ -1,17 +1,16 @@
 # Design: publishing (R2) and the release rehearsal
 
-Status: decided 2026-10-12 (owner: D-P1, D-P2). Roadmap item R2 ([roadmap-1.0.md](roadmap-1.0.md)), with the
-provenance part of E3.
+Status: decided 2026-10-12 (D-P1, D-P2), with the provenance part of the supply-chain work.
 
 ## Decisions
 
-- **D-P1 — Lockstep versions (owner).** Every published package — the `@tsazor/*` packages and `create-tsazor` —
+- **D-P1 — Lockstep versions.** Every published package — the `@tsazor/*` packages and `create-tsazor` —
   carries the same version. They are built, tested and released together, and the starter pins all of them, so a
   user never has to match a version matrix (as with Angular or Vue's core packages). Until 1.0: prereleases
   `1.0.0-next.N` under the dist-tag `next`, then `1.0.0-rc.N`, then `1.0.0`. The VS Code extension
   (`packages/vscode`, the marketplace) keeps its own version; `@tsazor/conformance` stays private.
-- **D-P2 — Prereleases go to a local registry only (owner).** While the repository is private, nothing goes to npm:
-  prereleases land in a [Verdaccio](https://verdaccio.org/) registry on the developer's machine, and the owner's apps
+- **D-P2 — Prereleases go to a local registry only.** While the repository is private, nothing goes to npm:
+  prereleases land in a [Verdaccio](https://verdaccio.org/) registry on the developer's machine, and the maintainers' apps
   install from there as users will from npm. npm sees the first version on release day, from the public repository
   `tsazor/tsazor` (the GitHub org and the empty private repository exist since 2026-10-08).
 - **D-P3 — A script of our own, no changesets.** Lockstep with one hand-written `CHANGELOG.md` leaves changesets
@@ -92,5 +91,11 @@ exists. So the first release goes through the workflow with a short-lived granul
 works with it in a public repository); then each package gets its Trusted Publisher (`tsazor/tsazor`,
 `release.yml`), and the token is deleted.
 
-Open for release day: which files the curated first commit of `tsazor/tsazor` carries (not the handoffs and
-internal notes).
+## The first public commit (decided 2026-10-22)
+
+`tsazor/tsazor` starts with one commit: HEAD without the working notes, no history. `node scripts/public-tree.mjs
+--verify` exports that tree and checks it — nothing of the private work in its files (a path on this machine, the
+old repository, a handoff, an internal roadmap, a note about the owner), every relative Markdown link to a file in
+the tree, and install, build and test in it. Left out: the handoffs, the September review and its roadmap, the
+roadmaps (the public one is [after-1.0.md](after-1.0.md)), the API review's working document and `spikes/`. The
+port reports stay: they show what the ports found and how each gap was fixed.
