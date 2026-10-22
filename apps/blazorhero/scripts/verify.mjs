@@ -455,6 +455,18 @@ async function documents(page, stamp) {
     await details.getByText("Details for Trail ID").waitFor();
     check((await details.innerText()).includes("Primary Key"), "the audit trails: searched by table name, a trail's details");
     await axe(page, "the audit trails with a trail's details");
+    // The date range (MudDateRangePicker, B45): a range that starts in the future finds no trail; Clear brings them back.
+    const trailButtons = page.getByRole("button", { name: /Trail Details$/ });
+    const before = await trailButtons.count();
+    const range = page.getByRole("group", { name: "Date Range For Searching" });
+    await range.getByLabel("Start date").fill("2099-01-01");
+    await range.getByLabel("Start date").press("Tab");
+    await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((button) => /Trail Details$/.test(button.textContent.trim())));
+    const shownStart = await range.getByLabel("Start date").inputValue();
+    await page.getByRole("button", { name: "Clear", exact: true }).click();
+    await trailButtons.first().waitFor();
+    check(before > 0 && shownStart !== "2099-01-01" && shownStart.includes("2099") && (await trailButtons.count()) === before, `the trails' date range is a DateRangePicker (B45): a typed start, written as the locale writes it (${shownStart}), filters; Clear brings every trail back`);
+    await axe(page, "the audit trails with their date range");
   } finally {
     rmSync(downloads, { recursive: true, force: true });
     const found = await api(page, "GET", `/api/documents?pageNumber=1&pageSize=50&searchString=${stamp}`).catch(() => ({ data: [] }));

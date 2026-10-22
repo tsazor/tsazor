@@ -539,9 +539,11 @@ h1:focus {
     margin-bottom: var(--fui-spacing-m);
 }
 
-.bh-audit-range summary {
-    cursor: pointer;
-    padding: var(--fui-spacing-xs) 0;
+/* MudDateRangePicker with its Clear action: the picker and the button side by side. */
+.bh-audit-range {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--fui-spacing-s);
 }
 
 .bh-audit-dates {

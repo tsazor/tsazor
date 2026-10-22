@@ -1,12 +1,13 @@
 @* Client/Pages/Utilities/AuditTrails.razor(.cs): the signed-in user's trails, searched (in the table name, and in the
    old and the new values when asked) and limited to a date range in the browser, exported. The original opens one
    trail's details as a child row (MudTable ChildRowContent); the DataGrid has none (B44), so the open trail's details
-   follow the grid — one at a time, as ShowBtnPress keeps them. The date range is a range Calendar in a disclosure
-   (MudDateRangePicker has no counterpart, B45). *@
+   follow the grid — one at a time, as ShowBtnPress keeps them. The date range is a DateRangePicker
+   (MudDateRangePicker, B45); its Clear is the original's picker action. *@
 @page "/audit-trails"
 @authorize({ policy: "Permissions.AuditTrails.View" })
 @import { GridSort, PaginationState, Toaster } from "@tsazor/fluent"
 @import { CultureService } from "@tsazor/runtime"
+@import type { DateRange } from "@tsazor/fluent"
 @import type { AuditResponse } from "../../Application/Misc"
 @import { formatGeneral } from "../../Extensions/Dates"
 @import { downloadBase64, fileStamp } from "../../Extensions/Files"
@@ -34,11 +35,10 @@
     </div>
     @if (canSearchAuditTrails) {
         <div class="bh-audit-search">
-            <details class="bh-audit-range">
-                <summary>@L("Date Range For Searching")@if (dateRange.length > 0) {<text>: @rangeText</text>}</summary>
-                <Calendar selectMode="range" @bind-selectedDates="dateRange" />
-                <Button size="small" appearance="transparent" onClick="@(() => dateRange = [])">@L("Clear")</Button>
-            </details>
+            <div class="bh-audit-range">
+                <DateRangePicker label="@L("Date Range For Searching")" @bind-Value="dateRange" />
+                <Button size="small" appearance="transparent" onClick="@(() => dateRange = null)">@L("Clear")</Button>
+            </div>
             <div class="bh-table-footer__switches">
                 <Switch label="@L("Search in Old Values")" @bind-Value="searchInOldValues" />
                 <Switch label="@L("Search in New Values")" @bind-Value="searchInNewValues" />
@@ -135,8 +135,8 @@
     private searchString = "";
     private searchInOldValues = false;
     private searchInNewValues = false;
-    /** The range Calendar's days (ISO dates): the start, and the end once picked. */
-    private dateRange: string[] = [];
+    /** MudDateRangePicker's DateRange: ISO dates, either end open. */
+    private dateRange: DateRange | null = null;
     private openTrailId: number | undefined;
     private dense = false;
     private striped = true;
@@ -153,14 +153,10 @@
         return this.trails.find((trail) => trail.id === this.openTrailId);
     }
 
-    private get rangeText(): string {
-        return this.dateRange.map((day) => this.culture.current.formatDate(new Date(`${day}T00:00`), { year: "numeric", month: "numeric", day: "numeric" })).join(" – ");
-    }
-
     /** Search: the table name, the old and the new values when asked; then the date range, the end day whole (U14). */
     private get filteredTrails(): AuditResponse[] {
         const search = this.searchString.trim().toLowerCase();
-        const [start, end] = this.dateRange;
+        const { start, end } = this.dateRange ?? {};
         const from = start === undefined ? undefined : new Date(`${start}T00:00`);
         const to = end === undefined ? undefined : new Date(`${end}T23:59:59.999`);
         return this.trails.filter((trail) => {
