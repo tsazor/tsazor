@@ -315,7 +315,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 |---|---|
 | ~~**X4**~~ | **Decided 2026-10-15:** E12's types before 1.0, the mapping on by default (see above) |
 | **The skins' own repository at 1.0** | Lockstep (one version for every package) and the skins' own versions after the move: when do they move? |
-| ~~**The rc on npm**~~ | **Decided 2026-10-15:** release candidates only in the local registry; npm gets 1.0.0 first |
+| ~~**The rc on npm**~~ | **Decided 2026-10-15:** release candidates only in the local registry; npm gets 1.0.0 first. **Changed 2026-10-27:** `1.0.0-rc.1` goes to npm in .NET 11's release window (.NET Conf, 2026-11-10), the repository public with it; 1.0.0 follows when E9 and the rc's feedback are done |
 | **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
 | ~~**A `Decimal` field in the skins** (BlazorHero B42)~~ | **Decided and done 2026-10-22:** a `DecimalInput` (TypeScript erases a generic `NumberInput<TValue>`'s type argument) |
 | ~~**A typed `Select`** (B43)~~ | **Decided and done 2026-10-22:** `items`, `optionText` and `@bind-selectedOption` on the same `Select` (`@typeparam TOption = string`, so the string way stays) |
@@ -339,8 +339,9 @@ from Blazor" and a codemod chapter on the Blazor track; files in the lesson edit
 ### Release steps (design-release.md)
 
 1. The items above; the proposals that change behavior decided before the release candidate.
-2. `1.0.0-next.N` (`pnpm release:version`, `pnpm release:local`); the owner's apps run on it; then `1.0.0-rc.N` — in the
-   local registry only (owner 2026-10-15): npm's first publish, which also sets `latest`, is 1.0.0.
+2. `1.0.0-next.N` (`pnpm release:version`, `pnpm release:local`); the owner's apps run on it; then `1.0.0-rc.1` — npm's
+   first publish (owner 2026-10-27), which also sets `latest`, in .NET 11's release window (target 2026-11-10). Steps 3–5
+   come before it; E9 may still be open.
 3. The full CI by hand (check, e2e, engines), then `main`.
 4. The curated first commit to `tsazor/tsazor`, the repository public; its settings: private vulnerability reporting,
    Pages (`PAGES_ENABLED`), `RELEASE_ENABLED`, the `npm` environment, a short-lived `NPM_TOKEN`.
