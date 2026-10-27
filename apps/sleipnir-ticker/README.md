@@ -44,7 +44,7 @@ pnpm --filter sleipnir-ticker codegen   # starts the API itself if needed, gener
 
 | Part | Contents |
 |---|---|
-| `api/` | ASP.NET Core (net9.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated via `IObservable<TickerSnapshot>`), `TickerFeed` singleton, `BinanceTickerSource`/`SyntheticTickerSource` behind `ITickerSource` |
+| `api/` | ASP.NET Core (net10.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated via `IObservable<TickerSnapshot>`), `TickerFeed` singleton, `BinanceTickerSource`/`SyntheticTickerSource` behind `ITickerSource` |
 | `src/TickerStore.ts` | App-wide store: 1 SSE subscription for the app's lifetime; pages `this.observe(this.Store)` in `onInitialized` (re-render per change, unsubscribed on dispose) |
 | `src/Pages/` | `/` live dashboard (price, 24h stats, sparkline, event log) · `/history` ring-buffer table |
 | `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — scoped CSS isolation) · `EventLog.tsazor` |

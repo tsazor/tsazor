@@ -44,7 +44,7 @@ function ensureClone() {
 
 function ensureBuild() {
   if (existsSync(dll)) return;
-  console.log("backend: building FluentCMS (.NET 9)");
+  console.log("backend: building FluentCMS");
   run("dotnet", ["build", path.join(host, "FluentCMS.csproj"), "--nologo", "-v", "q"], clone);
 }
 
@@ -135,6 +135,8 @@ async function main() {
         // 17:04:05" on a German machine). Its Blazor Server UI parsed them back on the same server; a browser
         // can't know that culture. Invariant: "06/06/2024 17:04:05" everywhere (port-fluentcms.md, U2).
         DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "true",
+        // Upstream targets net9.0, an STS release; it runs on the installed .NET 10 (or later) instead.
+        DOTNET_ROLL_FORWARD: "Major",
       },
     });
     child.on("exit", (code) => process.exit(code ?? 0));
