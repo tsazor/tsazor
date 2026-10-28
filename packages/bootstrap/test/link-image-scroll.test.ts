@@ -94,6 +94,10 @@ describe("ScrollToTop", () => {
         b.addAttribute(2, "style", "height: 100px; overflow: auto");
         b.openElement(3, "div");
         b.addAttribute(4, "style", "height: 2000px");
+        b.openElement(10, "a");
+        b.addAttribute(11, "href", "#start");
+        b.addContent(12, "Start");
+        b.closeElement();
         b.closeElement();
         b.closeElement();
         b.openComponent(5, ScrollToTop);
@@ -116,8 +120,11 @@ describe("ScrollToTop", () => {
     await idle();
     expect(positions).toEqual([500]);
     expect(button()!.getAttribute("aria-label")).toBe("Back to top");
+    button()!.focus();
     button()!.click();
     await idle();
+    // The button hides at the top; a keyboard user goes on from there, not from the body.
+    expect(document.activeElement).toBe(scroller.querySelector("a"));
     await new Promise((resolve) => setTimeout(resolve, 0));
     scroller.dispatchEvent(new Event("scroll"));
     await idle();

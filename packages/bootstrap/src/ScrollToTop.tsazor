@@ -5,7 +5,7 @@
     ScrollToTop. *@
 @import { withClass } from "./attributes"
 @import { ArrowUp } from "./core-icons"
-@import { libraryTexts } from "@tsazor/ui"
+@import { focusableElements, focusElement, libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
     <button type="button" @attributes="@this.buttonAttributes" @onclick="this.toTop">
@@ -78,8 +78,15 @@
     }
 
     private async toTop(e: MouseEvent): Promise<void> {
+        const button = (e.target as Element | null)?.closest("button");
         await this.onClick?.invokeAsync(e);
         const instant = this.scrollBehavior === "instant" || matchMedia("(prefers-reduced-motion: reduce)").matches;
-        this.scroller.scrollTo({ top: 0, behavior: instant ? "instant" : "smooth" });
+        const scroller = this.scroller;
+        scroller.scrollTo({ top: 0, behavior: instant ? "instant" : "smooth" });
+        // At the top the button hides and would take the focus with it: a keyboard user goes on from the top.
+        if (button && button === document.activeElement) {
+            const top = scroller === document.scrollingElement || scroller === document.documentElement ? document.body : scroller;
+            focusElement(focusableElements(top).find((element) => element !== button));
+        }
     }
 }
