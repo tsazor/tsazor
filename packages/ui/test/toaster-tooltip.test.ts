@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Toaster, tooltip } from "../src/index";
+import { Toaster, dismissible, tooltip } from "../src/index";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
@@ -87,5 +87,29 @@ describe("tooltip", () => {
     cleanup();
     expect(document.getElementById(id)).toBeNull();
     expect(button.getAttribute("aria-describedby")).toBe("hint");
+  });
+
+  it("takes Escape ahead of the dialog it sits in: the first closes the tooltip, the next the dialog", () => {
+    const dialog = document.createElement("div");
+    const button = document.createElement("button");
+    dialog.append(button);
+    document.body.append(dialog);
+    const reasons: string[] = [];
+    // The dialog listens first, as it opened first.
+    const closeDialog = dismissible({ onDismiss: (reason) => reasons.push(reason) })(dialog) as () => void;
+    const cleanup = tooltip("Delete the order")(button) as () => void;
+    const tip = document.getElementById(button.getAttribute("aria-describedby")!)!;
+
+    button.focus();
+    button.dispatchEvent(new FocusEvent("focusin"));
+    const escape = (): boolean => button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    escape();
+    expect(tip.hidden).toBe(true);
+    expect(reasons).toEqual([]);
+    escape();
+    expect(reasons).toEqual(["escape"]);
+
+    cleanup();
+    closeDialog();
   });
 });

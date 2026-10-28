@@ -95,9 +95,12 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
     clearTimeout(hideTimer);
     showTimer = setTimeout(show, options.delay ?? 300);
   };
-  const onKeydown = (event: KeyboardEvent): void => {
+  // On the window, capturing: ahead of a dialog's or menu's own Escape on the document, so Escape takes the tooltip
+  // away and leaves the dialog open.
+  const view = document.defaultView ?? document;
+  const onKeydown = (event: Event): void => {
     // Dismissable (WCAG 1.4.13): Escape closes it without moving focus.
-    if (event.key === "Escape" && shown) {
+    if ((event as KeyboardEvent).key === "Escape" && shown) {
       event.stopPropagation();
       hide();
     }
@@ -110,7 +113,7 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
   element.addEventListener("pointerleave", scheduleHide);
   element.addEventListener("focusin", show);
   element.addEventListener("focusout", hide);
-  document.addEventListener("keydown", onKeydown, true);
+  view.addEventListener("keydown", onKeydown, true);
 
   return () => {
     hide();
@@ -119,7 +122,7 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
     element.removeEventListener("pointerleave", scheduleHide);
     element.removeEventListener("focusin", show);
     element.removeEventListener("focusout", hide);
-    document.removeEventListener("keydown", onKeydown, true);
+    view.removeEventListener("keydown", onKeydown, true);
     const current = (element.getAttribute("aria-describedby") ?? "").split(" ").filter((value) => value && value !== id);
     if (current.length > 0) element.setAttribute("aria-describedby", current.join(" "));
     else element.removeAttribute("aria-describedby");
