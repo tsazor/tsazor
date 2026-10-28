@@ -117,6 +117,24 @@ describe("Carousel", () => {
     expect(shown()).toEqual(["Sourdough"]);
   });
 
+  it("a pointer outside it ends the hover, without a pointerleave (WebKit, after the button's icon was replaced)", async () => {
+    vi.useFakeTimers();
+    const { idle, root, shown } = await carousel({ autoCycleTime: 1000 });
+    root().dispatchEvent(new PointerEvent("pointerenter"));
+    await idle();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(shown()).toEqual(["Rye"]);
+    root().querySelector("button")!.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    await idle();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(shown()).toEqual(["Rye"]);
+    document.body.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    await idle();
+    await vi.advanceTimersByTimeAsync(1000);
+    await idle();
+    expect(shown()).toEqual(["Spelt"]);
+  });
+
   it("with reduced motion asked for it starts stopped, and the start button turns the slides", async () => {
     vi.useFakeTimers();
     const original = window.matchMedia;

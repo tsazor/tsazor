@@ -127,6 +127,7 @@
 
     dispose(): void {
         clearTimeout(this.timer);
+        this.hoverEnd?.abort();
     }
 
     /** @internal CarouselItem joins; its place is its index. */
@@ -180,12 +181,30 @@
         this.paused = !this.paused;
     }
 
-    private enter(): void {
+    /** Ends the hover on a pointerover outside the carousel, while it lasts. */
+    private hoverEnd?: AbortController;
+
+    /**
+     * WebKit misses the carousel's pointerleave when the element under the pointer is replaced — the stop and start
+     * button's icon is, on a click — and the slides then never turned again; a pointerover outside it ends the hover too.
+     */
+    private enter(e: PointerEvent): void {
         this.hovered = true;
+        const section = e.currentTarget as Element | null;
+        if (section === null || this.hoverEnd !== undefined) return;
+        this.hoverEnd = new AbortController();
+        const outside = (over: PointerEvent): void => {
+            if (over.target instanceof Node && section.contains(over.target)) return;
+            this.leave();
+            this.stateHasChanged();
+        };
+        document.addEventListener("pointerover", outside, { signal: this.hoverEnd.signal });
     }
 
     private leave(): void {
         this.hovered = false;
+        this.hoverEnd?.abort();
+        this.hoverEnd = undefined;
     }
 
     private focusIn(): void {
