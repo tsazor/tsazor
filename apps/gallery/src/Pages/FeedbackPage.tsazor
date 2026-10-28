@@ -4,7 +4,7 @@
 <p class="intro">
     Toasts come from the <code>Toaster</code> service: any component injects it and calls
     <code>show()</code>; one <code>ToastRegion</code> shows them. Toasts auto-dismiss after their
-    timeout (paused while the pointer is over them); danger toasts use <code>role="alert"</code>.
+    timeout (paused while the pointer is over them); one with an action stays until closed; danger toasts use <code>role="alert"</code>.
     ToastPanel below is a real nested component injecting the service.
 </p>
 

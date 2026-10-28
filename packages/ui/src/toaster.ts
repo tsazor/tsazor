@@ -8,7 +8,10 @@ export interface ToastOptions {
   message?: string;
   /** Color role. Default `info`; `danger` toasts are announced assertively. */
   intent?: Intent;
-  /** Milliseconds until the toast closes itself; 0 keeps it until closed. Default 5000. */
+  /**
+   * Milliseconds until the toast closes itself; 0 keeps it until closed. Default 5000 — and 0 with an `action`: a
+   * button that vanishes on a timer can't be reached in time from the keyboard or a screen reader (WCAG 2.2.1).
+   */
   timeout?: number;
   /** A button besides Close ("Chat?" opens the chat): the toast closes after its click. */
   action?: ToastAction;
@@ -60,7 +63,7 @@ export class Toaster {
   /** Shows a toast; returns its id. */
   show(options: ToastOptions): number {
     const id = this.next++;
-    const timeout = Math.max(0, options.timeout ?? 5000);
+    const timeout = Math.max(0, options.timeout ?? (options.action ? 0 : 5000));
     const entry: Entry = { id, title: options.title, message: options.message, intent: options.intent ?? "info", action: options.action, timeout, remaining: timeout, started: Date.now(), timer: undefined };
     this.entries = [...this.entries, entry];
     this.start(entry);

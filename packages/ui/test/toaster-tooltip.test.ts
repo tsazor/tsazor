@@ -33,6 +33,14 @@ describe("Toaster", () => {
     expect(toaster.toasts).toHaveLength(0);
   });
 
+  it("keeps a toast with an action until it is closed, unless it names a timeout", () => {
+    const toaster = new Toaster();
+    toaster.show({ message: "Hi from John", action: { label: "Chat?", onClick: () => undefined } });
+    toaster.show({ message: "Undo?", action: { label: "Undo", onClick: () => undefined }, timeout: 3000 });
+    vi.advanceTimersByTime(60_000);
+    expect(toaster.toasts.map((toast) => toast.message)).toEqual(["Hi from John"]);
+  });
+
   it("runs a toast's action and closes it (MudBlazor's snackbar Action: \"Chat?\" opens the chat)", async () => {
     const toaster = new Toaster();
     const opened: string[] = [];
