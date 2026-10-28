@@ -343,7 +343,8 @@ type IconValue,
     /** A virtualized table says how many rows it has (screen readers see only the rendered ones). */
     private get rowCount(): number | null {
         if (!this.virtualize) return null;
-        const total = this.items !== undefined ? this.items.length : this.totalCount;
+        // The rows the grid shows: a filter leaves fewer than the items.
+        const total = this.items !== undefined ? this.model.sortedItems.length : this.totalCount;
         return total === undefined ? null : total + 1;
     }
 

@@ -592,6 +592,28 @@ describe("DataGrid virtualize", () => {
     expect(container.querySelector("tbody > tr:nth-child(2) td:nth-child(2)")!.textContent).toBe("C0001");
   });
 
+  it("counts the rows a filter leaves, not all the items", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: many, virtualize: true, itemSize: 40 }, (b) => {
+        component(b, 0, PropertyColumn, { property: customer, filterable: true });
+      }),
+    );
+    await settle(renderer);
+    container.querySelector<HTMLButtonElement>("thead th .fui-datagrid__options")!.click();
+    await settle(renderer);
+    const select = container.querySelector<HTMLSelectElement>(".fui-datagrid__filter-operator")!;
+    select.value = "equals";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(renderer);
+    const input = container.querySelector<HTMLInputElement>(".fui-datagrid__filter-value")!;
+    input.value = "C1000";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await settle(renderer);
+    container.querySelector<HTMLButtonElement>(".fui-datagrid__filter-actions button:first-child")!.click();
+    await settle(renderer);
+    expect(container.querySelector("table")!.getAttribute("aria-rowcount")).toBe("2");
+  });
+
   it("asks the ItemsProvider for the window in view, sorted", async () => {
     const requests: GridItemsProviderRequest<Order>[] = [];
     const provider = (request: GridItemsProviderRequest<Order>) => {
