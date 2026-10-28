@@ -56,11 +56,20 @@ class Shell extends ComponentBase {
     b.addAttribute(2, "navOpenChanged", EventCallback.bind(this, (next: boolean) => {
       this.open = next;
     }));
-    b.addAttribute(3, "header", (inner: RenderTreeBuilder) => inner.addContent(0, "Blazor Hero"));
+    b.addAttribute(3, "header", (inner: RenderTreeBuilder) => {
+      inner.openElement(0, "button");
+      inner.addAttribute(1, "class", "toggle");
+      inner.addContent(2, "Menu");
+      inner.closeElement();
+      inner.addContent(3, "Blazor Hero");
+    });
     if (Shell.withNav) b.addAttribute(4, "nav", (inner: RenderTreeBuilder) => {
       inner.openElement(0, "nav");
       inner.addAttribute(1, "aria-label", "Main");
-      inner.addContent(2, "Home");
+      inner.openElement(2, "a");
+      inner.addAttribute(3, "href", "/");
+      inner.addContent(4, "Home");
+      inner.closeElement();
       inner.closeElement();
     });
     b.addAttribute(5, "childContent", (inner: RenderTreeBuilder) => {
@@ -87,7 +96,7 @@ describe("AppLayout", () => {
     const { container } = await mount();
     const root = container.firstElementChild!;
     expect([...root.children].map((child) => child.tagName.toLowerCase())).toEqual(["header", "div", "main"]);
-    expect(root.querySelector("header")!.textContent).toBe("Blazor Hero");
+    expect(root.querySelector("header")!.textContent).toBe("MenuBlazor Hero");
     expect(column(container).querySelector("nav[aria-label=Main]")).not.toBeNull();
     expect(container.querySelector("main h1")!.textContent).toBe("Dashboard");
     expect(column(container).hidden).toBe(false);
@@ -128,6 +137,26 @@ describe("AppLayout", () => {
       await renderer.settle();
       expect(column(container).hidden).toBe(true);
       expect(Shell.last!.open).toBe(false);
+    }
+  });
+
+  it("Escape with the focus in the column gives it back to what opened it, else the header's first control", async () => {
+    windowWidth(600);
+    const { container, ...renderer } = await mount();
+    const toggle = container.querySelector<HTMLButtonElement>(".toggle")!;
+    for (const from of [toggle, null]) {
+      Shell.last!.open = true;
+      Shell.last!.stateHasChanged();
+      await renderer.settle();
+      const link = column(container).querySelector("a")!;
+      if (from) from.focus();
+      else (document.activeElement as HTMLElement | null)?.blur();
+      link.focus();
+      container.firstElementChild!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await renderer.settle();
+      expect(column(container).hidden).toBe(true);
+      // Hidden, the column would take the focus with it to the body.
+      expect(document.activeElement).toBe(toggle);
     }
   });
 

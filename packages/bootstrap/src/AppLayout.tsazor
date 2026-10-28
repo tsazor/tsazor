@@ -6,13 +6,14 @@
     header over the content (a signed-out page). The header is Bootstrap's primary color, dark-themed so its buttons and
     links stay light. *@
 @import { withClass } from "./attributes"
+@import { focusableElements, focusElement } from "@tsazor/ui"
 
 <div @attributes="@this.rootAttributes" @onkeydown="this.keydown">
     @if (this.header) {
-        <header class="tz-app-layout__header bg-primary" data-bs-theme="dark">@this.header</header>
+        <header class="tz-app-layout__header bg-primary" data-bs-theme="dark" @ref="headerElement">@this.header</header>
     }
     @if (this.nav) {
-        <div class="tz-app-layout__nav bg-body border-end" hidden="@(!this.open)">@this.nav</div>
+        <div class="tz-app-layout__nav bg-body border-end" hidden="@(!this.open)" @ref="navElement" @onfocusin="this.navEntered">@this.nav</div>
     }
     <main class="tz-app-layout__main" @onclick="this.contentClicked">@this.childContent</main>
 </div>
@@ -59,6 +60,24 @@
         return typeof matchMedia === "function" && matchMedia(AppLayout.narrowQuery).matches;
     }
 
+    private headerElement?: HTMLElement;
+    private navElement?: HTMLElement;
+    /** Where the focus came from into the column (its toggle, mostly). */
+    private returnFocus?: HTMLElement;
+
+    private navEntered(e: FocusEvent): void {
+        const from = e.relatedTarget;
+        if (from instanceof HTMLElement && !this.navElement?.contains(from)) this.returnFocus = from;
+    }
+
+    /** The column is about to be hidden with the focus in it: back to where it came from, else the header's first control. */
+    private leaveNav(): void {
+        const nav = this.navElement;
+        if (!nav?.contains(nav.ownerDocument.activeElement)) return;
+        if (focusElement(this.returnFocus)) return;
+        focusElement(this.headerElement ? focusableElements(this.headerElement)[0] : undefined);
+    }
+
     private async keydown(e: KeyboardEvent): Promise<void> {
         if (e.key === "Escape" && this.open && this.narrow()) await this.change(false);
     }
@@ -69,6 +88,7 @@
 
     private async change(open: boolean): Promise<void> {
         if (this.open === open) return;
+        if (!open) this.leaveNav();
         this.open = open;
         this.stateHasChanged();
         await this.navOpenChanged?.invokeAsync(open);
