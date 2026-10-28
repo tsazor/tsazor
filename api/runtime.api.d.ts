@@ -1367,8 +1367,12 @@ export declare class ValidationMessage extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     editContext?: EditContext;
     private editContextUnsubscribe?;
+    private readonly messageId;
+    private registered?;
     protected onInitialized(): void;
+    protected onParametersSet(): void;
     dispose(): void;
+    private unregister;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     private sequenceCounter;
     private beginRender;

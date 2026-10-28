@@ -51,7 +51,10 @@ Also:
    (handoff-2026-10-27-rc1.md, "Decisions"): toasts with an action stay until closed; `aria-invalid` as soon as the
    field shows invalid, the message still deferred; runtime inputs tie their ValidationMessage with
    `aria-describedby`; disabled menu items stay focusable (`aria-disabled`); single-character hotkeys documented with
-   `enabled` as the way to turn them off. To be done this week, on the laptop.
+   `enabled` as the way to turn them off. **Done 2026-10-28**, each with a test: toasts `6fbcfa1`; menu items
+   `3967340` (rovingFocus `skipDisabled`, the gallery gate stops on the item now); hotkeys `703c9a5` (the parameter is
+   `disabled`); `aria-invalid` `ea05799` (FieldState.aria takes `invalid`); ValidationMessage ids and the inputs
+   `aria-describedby` — the commit after `ea05799` (Blazor parity gate: 521 passed).
 3. **The VS Code extension** (`packages/vscode`, grammar + our LSP — the Svelte-style extension exists already):
    publish it with rc.1 on the Marketplace and Open VSX, or attach the `.vsix` to the GitHub release? The roadmap
    has the Marketplace after 1.0; with the repository public at rc.1, people will look for it.
@@ -82,7 +85,8 @@ Started:
 Looked at, left open:
 
 - DecimalInput ↑/↓: a feature (step, min/max, decimal arithmetic on a text field), not a fix — after rc.1.
-- Rating at 0: clearing works (a click or Space on the value's star); the audit note says no more — what was meant?
+- Rating at 0: checked 2026-10-28, no finding — clearing (a click or Space on the value's star), the keys from 0
+  (→ 1, ← stays, End 5, focus on the star), `readOnly` (a click puts the check back), RatingDisplay "Rated 0 out of 5".
 - A virtualized DataGrid's detail rows have no `aria-rowindex` (the data and placeholder rows do), and
   `aria-rowcount` doesn't count them. Options: `role="presentation"` on the detail row (its content stays, the cell
   semantics go) or a row index scheme that counts open details. A semantics choice — not made.

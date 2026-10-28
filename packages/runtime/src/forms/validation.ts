@@ -4,9 +4,25 @@ import { CascadingParameter, Parameter } from "../components/parameter-metadata.
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { EditContext } from "./edit-context.js";
 
+/** Per form, the field → the id prefix of the ValidationMessage that shows its messages. */
+const messageIds = new WeakMap<EditContext, Map<string, string>>();
+let lastMessageId = 0;
+
+/**
+ * @internal The ids of the message elements a ValidationMessage shows for `field` — what the field's input names in
+ * `aria-describedby`; none without a ValidationMessage for it.
+ */
+export function validationMessageIds(context: EditContext, field: string): string[] {
+  const prefix = messageIds.get(context)?.get(field);
+  if (prefix === undefined) return [];
+  return context.getValidationMessages(field).map((_, index) => `${prefix}-${index}`);
+}
+
 /**
  * Blazor's ValidationMessage<T>: shows validation messages for one field.
  * v1 deviation: `For` is a plain field name string (Blazor uses an expression).
+ * Addition: each message has an id, and the field's input names them in `aria-describedby` (Blazor's markup leaves
+ * the message unconnected — a screen reader on the field doesn't hear why it is invalid).
  */
 export class ValidationMessage extends ComponentBase {
   /** Field name to display messages for (matches the form's validator keys). */
@@ -17,6 +33,8 @@ export class ValidationMessage extends ComponentBase {
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
 
   private editContextUnsubscribe?: () => void;
+  private readonly messageId = `validation-message-${++lastMessageId}`;
+  private registered?: { context: EditContext; field: string };
 
   protected override onInitialized(): void {
     if (this.editContext) {
@@ -24,10 +42,28 @@ export class ValidationMessage extends ComponentBase {
     }
   }
 
+  protected override onParametersSet(): void {
+    if (this.registered?.context === this.editContext && this.registered?.field === this.for) return;
+    this.unregister();
+    if (!this.editContext || !this.for) return;
+    let ids = messageIds.get(this.editContext);
+    if (ids === undefined) messageIds.set(this.editContext, (ids = new Map()));
+    ids.set(this.for, this.messageId);
+    this.registered = { context: this.editContext, field: this.for };
+  }
+
   /** Stops listening to the EditContext's change notifications. */
   dispose(): void {
     this.editContextUnsubscribe?.();
     this.editContextUnsubscribe = undefined;
+    this.unregister();
+  }
+
+  private unregister(): void {
+    if (this.registered === undefined) return;
+    const ids = messageIds.get(this.registered.context);
+    if (ids?.get(this.registered.field) === this.messageId) ids.delete(this.registered.field);
+    this.registered = undefined;
   }
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
@@ -35,8 +71,9 @@ export class ValidationMessage extends ComponentBase {
     if (!this.editContext || !this.for) return;
     const messages = this.editContext.getValidationMessages(this.for);
     if (messages.length === 0) return;
-    for (const message of messages) {
+    for (const [index, message] of messages.entries()) {
       b.openElement(this.nextSequence(), "span");
+      b.addAttribute(this.nextSequence(), "id", `${this.messageId}-${index}`);
       b.addAttribute(this.nextSequence(), "class", "validation-message");
       for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
         b.addAttribute(this.nextSequence(), name, value as never);

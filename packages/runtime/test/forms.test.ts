@@ -141,6 +141,11 @@ describe("EditForm + Input* components", () => {
     expect(input.className).toBe("modified invalid");
     // Blazor's InputBase: aria-invalid="true" while the field has messages.
     expect(input.getAttribute("aria-invalid")).toBe("true");
+    // Addition: the input names its ValidationMessage, so a screen reader on the field hears why.
+    expect(message?.id).toMatch(/^validation-message-\d+-0$/);
+    expect(input.getAttribute("aria-describedby")).toBe(message?.id);
+    // The age field has no ValidationMessage: nothing to name.
+    expect(document.querySelector("input[type=number]")?.hasAttribute("aria-describedby")).toBe(false);
     expect(page().model.email).toBe("not-an-email");
 
     input.value = "me@tsazor.dev";
@@ -150,6 +155,7 @@ describe("EditForm + Input* components", () => {
     expect(document.querySelector("span.validation-message")).toBeNull();
     expect(input.className).toBe("modified valid");
     expect(input.hasAttribute("aria-invalid")).toBe(false);
+    expect(input.hasAttribute("aria-describedby")).toBe(false);
   });
 
   it("coerces number and checkbox values", async () => {

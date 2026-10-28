@@ -3,6 +3,7 @@ import { CascadingParameter, Parameter } from "../components/parameter-metadata.
 import { EventCallback } from "../components/event-callback.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { EditContext } from "./edit-context.js";
+import { validationMessageIds } from "./validation.js";
 import { componentInternals } from "../components/component-internals.js";
 
 /**
@@ -86,14 +87,19 @@ export abstract class InputBase<TValue> extends ComponentBase {
    * none — not even the caller's — while it has none. For a component that inherits an input and renders its own
    * markup: `<input @attributes="@attributesWithValidation" class="@cssClass" …>`. (Deviation: Blazor changes
    * AdditionalAttributes itself; here they stay the caller's, so a skin that shows the invalid state only after a
-   * submit decides that itself.) Outside an EditForm, the attributes as given.
+   * submit decides that itself.) Addition: `aria-describedby` names the messages a ValidationMessage shows for the
+   * field, after the caller's own ids. Outside an EditForm, the attributes as given.
    */
   protected get attributesWithValidation(): Record<string, unknown> | undefined {
     const attributes = this.additionalAttributes;
     if (!this.editContext || !this.valueExpression) return attributes;
     const hasAriaInvalid = attributes !== undefined && "aria-invalid" in attributes;
     if (this.editContext.getValidationMessages(this.valueExpression).length > 0) {
-      return hasAriaInvalid ? attributes : { ...attributes, "aria-invalid": "true" };
+      const withInvalid = hasAriaInvalid ? attributes : { ...attributes, "aria-invalid": "true" };
+      const messageIds = validationMessageIds(this.editContext, this.valueExpression);
+      if (messageIds.length === 0) return withInvalid;
+      const own = typeof attributes?.["aria-describedby"] === "string" ? (attributes["aria-describedby"] as string) : "";
+      return { ...withInvalid, "aria-describedby": [own, ...messageIds].filter(Boolean).join(" ") };
     }
     if (!hasAriaInvalid) return attributes;
     const { "aria-invalid": _removed, ...rest } = attributes!;
