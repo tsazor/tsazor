@@ -60,18 +60,18 @@ async function renderGrid(attrs: Attrs) {
 }
 
 describe("DataGrid detail rows", () => {
-  it("show a row's details below it, the toggle expanded and controlling them; a second click closes them", async () => {
+  it("show a row's details below it, the toggle expanded and controlling them, its label unchanged; a second click closes them", async () => {
     const { container, toggle, click, lines } = await renderGrid({ items: orders });
     expect(lines()).toEqual(["Marta", "Jonas", "Lena"]);
     expect(toggle("Show details of order 2").getAttribute("aria-expanded")).toBe("false");
     await click("Show details of order 2");
     expect(lines()).toEqual(["Marta", "Jonas", "> Lines of Jonas", "Lena"]);
-    const open = toggle("Hide details of order 2");
+    const open = toggle("Show details of order 2");
     expect(open.getAttribute("aria-expanded")).toBe("true");
     const detailRow = container.querySelector(".tz-grid-detail")!;
     expect(open.getAttribute("aria-controls")).toBe(detailRow.id);
     expect(detailRow.querySelector("td")!.getAttribute("colspan")).toBe("2");
-    await click("Hide details of order 2");
+    await click("Show details of order 2");
     expect(lines()).toEqual(["Marta", "Jonas", "Lena"]);
     expect(toggle("Show details of order 2").hasAttribute("aria-controls")).toBe(false);
   });

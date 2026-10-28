@@ -36,7 +36,8 @@ export const libraryTextDefaults = catalog({
   "dataGrid.selectAll": "Select all rows",
   "dataGrid.selected": "Selected",
   "dataGrid.selectRow": "Select row {row}",
-  // A DetailsColumn's toggle (MudDataGrid's HierarchyColumn): its row's name when the column gives one.
+  // A DetailsColumn's toggle (MudDataGrid's HierarchyColumn): its row's name when the column gives one. The label
+  // stays while the details show (aria-expanded says so); the hide texts are no longer used.
   "dataGrid.showDetails": "Show details",
   "dataGrid.hideDetails": "Hide details",
   "dataGrid.showDetailsOf": "Show details of {name}",

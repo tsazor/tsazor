@@ -1,7 +1,7 @@
 @** A Bootstrap DataGrid column of toggles for the rows' details (MudDataGrid's HierarchyColumn): a button per row that opens and
     closes the row's detail row — the grid's `detailContent` —, with aria-expanded, and aria-controls while the details
     show. `rowName` names the row in the toggle's label ("Show details of Order 42"), so each toggle says whose details
-    it opens. Place it inside a DataGrid with a detailContent; `detailsMode="single"` keeps one open at a time. *@
+    it opens; the label stays while they show (a disclosure button: aria-expanded says open or closed). Place it inside a DataGrid with a detailContent; `detailsMode="single"` keeps one open at a time. *@
 @typeparam TGridItem
 @import { DataGridModel, libraryTexts } from "@tsazor/ui"
 @import { ChevronRight } from "./core-icons"
@@ -36,9 +36,9 @@
         return (b: RenderTreeBuilder) => {
             const open = grid.isDetailsOpen(item);
             const name = this.rowName?.(item);
-            const label = name === undefined
-                ? this.t(open ? "dataGrid.hideDetails" : "dataGrid.showDetails")
-                : this.t(open ? "dataGrid.hideDetailsOf" : "dataGrid.showDetailsOf", { name });
+            // One label, open or not: "Hide details, expanded" would say the state twice, and a name that changes
+            // on the press reads as a different button.
+            const label = name === undefined ? this.t("dataGrid.showDetails") : this.t("dataGrid.showDetailsOf", { name });
             b.openElement(0, "button");
             b.addAttribute(1, "type", "button");
             b.addAttribute(2, "class", open ? "btn btn-sm btn-link p-1 tz-grid-details-toggle tz-grid-details-toggle-open" : "btn btn-sm btn-link p-1 tz-grid-details-toggle");

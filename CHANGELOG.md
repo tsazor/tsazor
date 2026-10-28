@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A DetailsColumn's toggle keeps its label** (`@tsazor/fluent`, `@tsazor/bootstrap`): "Show details of order 42"
+  open or closed — `aria-expanded` says which (the APG's disclosure button). It had turned "Hide details of …" while
+  open, so a screen reader said "Hide details, expanded". The library texts `dataGrid.hideDetails` and
+  `dataGrid.hideDetailsOf` are no longer used; they stay, so an override of them still type-checks.
+
 ## 1.0.0-next.10 (2026-10-22)
 
 - **DataGrid detail rows** (`@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`, `@tsazor/runtime`; MudDataGrid's
