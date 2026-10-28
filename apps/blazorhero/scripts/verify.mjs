@@ -469,10 +469,11 @@ async function documents(page, stamp) {
     const trailButtons = page.getByRole("button", { name: /Trail Details$/ });
     const before = await trailButtons.count();
     const range = page.getByRole("group", { name: "Date Range For Searching" });
-    await range.getByLabel("Start date").fill("2099-01-01");
-    await range.getByLabel("Start date").press("Tab");
+    const rangeStart = range.getByRole("textbox", { name: /Start date$/ });
+    await rangeStart.fill("2099-01-01");
+    await rangeStart.press("Tab");
     await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((button) => /Trail Details$/.test(button.textContent.trim())));
-    const shownStart = await range.getByLabel("Start date").inputValue();
+    const shownStart = await rangeStart.inputValue();
     await page.getByRole("button", { name: "Clear", exact: true }).click();
     await trailButtons.first().waitFor();
     check(before > 0 && shownStart !== "2099-01-01" && shownStart.includes("2099") && (await trailButtons.count()) === before, `the trails' date range is a DateRangePicker (B45): a typed start, written as the locale writes it (${shownStart}), filters; Clear brings every trail back`);

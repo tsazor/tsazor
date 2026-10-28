@@ -60,6 +60,18 @@ describe("DateRangePicker", () => {
     expect([start.getAttribute("aria-label"), end.getAttribute("aria-label")]).toEqual(["Start date", "End date"]);
     const group = container.querySelector("[role=group]")!;
     expect(document.getElementById(group.getAttribute("aria-labelledby")!)?.textContent).toBe("Trip");
+    // Each end is named by the field's label and its own name ("Trip Start date"), and described by the format.
+    const label = container.querySelector("label")!;
+    expect(start.getAttribute("aria-labelledby")).toBe(`${label.id} ${start.id}`);
+    expect(end.getAttribute("aria-labelledby")).toBe(`${label.id} ${end.id}`);
+    for (const input of [start, end]) expect(document.getElementById(input.getAttribute("aria-describedby")!)?.textContent).toBe("Format DD.MM.YYYY");
+  });
+
+  it("without a label, each end is named by the group's ariaLabel and its own name", async () => {
+    const { container, start } = await renderPicker({ dates: null }, { label: undefined, ariaLabel: "Stay" });
+    const group = container.querySelector("[role=group]")!;
+    expect(group.getAttribute("aria-label")).toBe("Stay");
+    expect(start.getAttribute("aria-labelledby")).toBe(`${group.id} ${start.id}`);
   });
 
   it("takes typed ends, in order; an open end stays open, both empty is null", async () => {

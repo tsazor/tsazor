@@ -20,12 +20,13 @@
     @if (this.label) {
         <label class="fui-input__label" id="@this.labelId" for="@this.field.id(this.id)">@this.label</label>
     }
-    <div class="fui-date-range-picker__field" role="group" aria-labelledby="@(this.label ? this.labelId : null)" aria-label="@(this.label ? null : this.ariaLabel)" @ref="fieldBox">
+    <div class="fui-date-range-picker__field" id="@this.groupId" role="group" aria-labelledby="@(this.label ? this.labelId : null)" aria-label="@(this.label ? null : this.ariaLabel)" @ref="fieldBox">
         <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" @attributes="@this.startAttributes" value="@this.startText" @onchange="this.startTyped" @onkeydown="this.fieldKeydown" />
         <span class="fui-date-range-picker__dash" aria-hidden="true">–</span>
         <input id="@this.endId" type="text" autocomplete="off" @attributes="@this.endAttributes" value="@this.endText" @onchange="this.endTyped" @onkeydown="this.fieldKeydown" />
         <button type="button" class="fui-date-picker__button" aria-label="@(this.buttonLabel ?? t("dateRangePicker.button"))" title="@(this.buttonLabel ?? t("dateRangePicker.button"))" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar20Regular" /></button>
     </div>
+    <span class="fui-visually-hidden" id="@this.formatHintId">@this.formatHint</span>
     @if (this.open) {
         <div class="fui-date-picker__popup" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("dateRangePicker.button"))" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
             <Calendar selectMode="range" selectedDates="@this.calendarDates" selectedDatesChanged="@this.picked" minDate="@this.minDate" maxDate="@this.maxDate" disabledDateFunc="@this.disabledDateFunc" locale="@this.locales" firstDayOfWeek="@this.firstDayOfWeek" displayToday="@this.displayToday" labels="@this.labels" />
@@ -136,7 +137,32 @@
         return datesOfRange(this.draft);
     }
 
-    private attributesFor(name: string, placeholder: string | undefined): Record<string, unknown> {
+    /** The typed format, described to a screen reader: the placeholder says it only while the field is empty. */
+    private get formatHint(): string | undefined {
+        return this.t("datePicker.format", { pattern: dateFieldPlaceholder(this.locales, this.t) });
+    }
+
+    private get formatHintId(): string {
+        return `${this.field.id(this.id)}-format`;
+    }
+
+    /** The field's aria (invalid, help, message) with the format hint among the descriptions. */
+    private withFormatHint(aria: Record<string, string | undefined>): Record<string, string | undefined> {
+        if (this.formatHint === undefined) return aria;
+        return { ...aria, "aria-describedby": [aria["aria-describedby"], this.formatHintId].filter(Boolean).join(" ") };
+    }
+
+    /** What names the field — the label, else the group's ariaLabel (by the group's id) — before an input's own name. */
+    private labelledBy(selfId: string): string | undefined {
+        const by = this.label ? this.labelId : this.ariaLabel ? this.groupId : undefined;
+        return by === undefined ? undefined : `${by} ${selfId}`;
+    }
+
+    private get groupId(): string {
+        return `${this.field.id(this.id)}-group`;
+    }
+
+    private attributesFor(name: string, placeholder: string | undefined, selfId: string): Record<string, unknown> {
         const cls = this.validity === "invalid" ? "fui-input fui-input--invalid" : this.validity === "valid" ? "fui-input fui-input--valid" : "fui-input";
         return withAttributes({
             class: cls,
@@ -145,16 +171,17 @@
             readonly: this.readOnly ? true : undefined,
             required: this.required ? true : undefined,
             "aria-label": name,
-            ...this.field.aria(this.message, !!this.help, this.id),
+            "aria-labelledby": this.labelledBy(selfId),
+            ...this.withFormatHint(this.field.aria(this.message, !!this.help, this.id, this.validity === "invalid")),
         }, this.additionalAttributes);
     }
 
     private get startAttributes(): Record<string, unknown> {
-        return this.attributesFor(this.t("dateRangePicker.start"), this.placeholderStart);
+        return this.attributesFor(this.t("dateRangePicker.start"), this.placeholderStart, this.field.id(this.id));
     }
 
     private get endAttributes(): Record<string, unknown> {
-        return this.attributesFor(this.t("dateRangePicker.end"), this.placeholderEnd);
+        return this.attributesFor(this.t("dateRangePicker.end"), this.placeholderEnd, this.endId);
     }
 
     private startTyped(e: Event): void {

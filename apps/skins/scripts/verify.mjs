@@ -418,12 +418,15 @@ try {
     say(await holidays.getByRole("gridcell", { name: "December 2026" }).isVisible(), "calendar: the title zooms out to the months");
     // DateRangePicker (B45): two typed ends in order; the range calendar takes a start, then an end, and closes.
     const closure = dates.getByRole("group", { name: "Closed for holidays" });
-    await closure.getByLabel("Start date").fill("12/31/2026");
-    await closure.getByLabel("Start date").press("Tab");
-    await closure.getByLabel("End date").fill("12/24/2026");
-    await closure.getByLabel("End date").press("Tab");
+    // Each end is named by the field and its own name.
+    const closureStart = closure.getByRole("textbox", { name: "Closed for holidays Start date", exact: true });
+    const closureEnd = closure.getByRole("textbox", { name: "Closed for holidays End date", exact: true });
+    await closureStart.fill("12/31/2026");
+    await closureStart.press("Tab");
+    await closureEnd.fill("12/24/2026");
+    await closureEnd.press("Tab");
     await dateIs("closure", "2026-12-24 to 2026-12-31");
-    say((await closure.getByLabel("Start date").inputValue()) === "12/24/2026", "date range picker: typed ends, put in order");
+    say((await closureStart.inputValue()) === "12/24/2026", "date range picker: typed ends, put in order");
     await closure.getByRole("button", { name: "Choose dates" }).click();
     const rangeDialog = page.getByRole("dialog", { name: "Choose dates" });
     await rangeDialog.waitFor();

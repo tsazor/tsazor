@@ -26,6 +26,9 @@
         <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" placeholder="@this.placeholderText" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
         <button type="button" class="btn btn-outline-secondary" aria-label="@(this.buttonLabel ?? t("datePicker.button"))" title="@(this.buttonLabel ?? t("datePicker.button"))" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar3" /></button>
     </div>
+    @if (this.formatHint) {
+        <span class="visually-hidden" id="@this.formatHintId">@this.formatHint</span>
+    }
     @if (this.open) {
         <div class="tz-date-picker__popup dropdown-menu show" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("datePicker.button"))" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
             <Calendar value="@this.calendarValue" valueChanged="@this.picked" view="@this.view" minDate="@this.minDate" maxDate="@this.maxDate" disabledDateFunc="@this.disabledDateFunc" disabledCheckAllDaysOfMonthYear="@this.disabledCheckAllDaysOfMonthYear" disabledSelectable="@this.disabledSelectable" dayFormat="@this.dayFormat" locale="@this.locales" firstDayOfWeek="@this.firstDayOfWeek" displayToday="@this.displayToday" daysTemplate="@this.daysTemplate" labels="@this.labels" />
@@ -121,6 +124,21 @@
         return parseIsoDate(value) ? value : undefined;
     }
 
+    /** The typed format, described to a screen reader: the placeholder says it only while the field is empty. */
+    private get formatHint(): string | undefined {
+        return this.view !== "days" ? undefined : this.t("datePicker.format", { pattern: dateFieldPlaceholder(this.locales, this.t) });
+    }
+
+    private get formatHintId(): string {
+        return `${this.field.id(this.id)}-format`;
+    }
+
+    /** The field's aria (invalid, help, message) with the format hint among the descriptions. */
+    private withFormatHint(aria: Record<string, string | undefined>): Record<string, string | undefined> {
+        if (this.formatHint === undefined) return aria;
+        return { ...aria, "aria-describedby": [aria["aria-describedby"], this.formatHintId].filter(Boolean).join(" ") };
+    }
+
     private get placeholderText(): string | undefined {
         if (this.placeholder !== undefined) return this.placeholder;
         if (this.view === "years") return this.t("dateField.year");
@@ -133,7 +151,7 @@
     }
 
     private get inputAttributes(): Record<string, unknown> {
-        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+        return { ...this.withFormatHint(this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid")), ...this.additionalAttributes };
     }
 
     private handleChange(e: Event): void {

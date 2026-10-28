@@ -18,6 +18,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   failed show under the progress ("big.csv: The maximum size allowed is reached"; library text `fileUpload.fileError`),
   besides raising `onFileError` as before. The run's status is always in the page, so its first text is announced
   too, and the file input's `aria-describedby` points at it.
+- **Date fields describe their format; a range's ends say whose they are** (both skins): a DatePicker (days) and a
+  DateRangePicker describe the typed format ("Format MM/DD/YYYY", library text `datePicker.format`) — the placeholder
+  says it only while the field is empty. A DateRangePicker's ends are named by the field's label (or its
+  `ariaLabel`) and their own name: "Trip Start date", not "Start date" for every range on the page.
 
 ## 1.0.0-next.10 (2026-10-22)
 

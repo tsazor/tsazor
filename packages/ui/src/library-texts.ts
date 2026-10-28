@@ -128,6 +128,8 @@ export const libraryTextDefaults = catalog({
   "calendar.previousYears": "Previous years",
   "calendar.nextYears": "Next years",
   "datePicker.button": "Choose date",
+  // A date field's typed format, described to a screen reader (the placeholder says it only while the field is empty).
+  "datePicker.format": "Format {pattern}",
   "dateRangePicker.button": "Choose dates",
   "dateRangePicker.start": "Start date",
   "dateRangePicker.end": "End date",

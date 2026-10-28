@@ -702,6 +702,7 @@ export declare const libraryTextDefaults: {
     readonly "calendar.previousYears": string;
     readonly "calendar.nextYears": string;
     readonly "datePicker.button": string;
+    readonly "datePicker.format": string;
     readonly "dateRangePicker.button": string;
     readonly "dateRangePicker.start": string;
     readonly "dateRangePicker.end": string;

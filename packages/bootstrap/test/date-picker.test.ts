@@ -56,6 +56,8 @@ describe("DatePicker", () => {
     const { input, button, result } = await mount();
     expect(input.value).toBe("10/10/2026");
     expect(input.placeholder).toBe("MM/DD/YYYY");
+    // The placeholder says the format only while the field is empty: a description says it always.
+    expect(document.getElementById(input.getAttribute("aria-describedby")!)?.textContent).toBe("Format MM/DD/YYYY");
     expect(result.container.querySelector("label")!.htmlFor).toBe(input.id);
     expect(button.getAttribute("aria-label")).toBe("Choose date");
     expect(button.getAttribute("aria-expanded")).toBe("false");

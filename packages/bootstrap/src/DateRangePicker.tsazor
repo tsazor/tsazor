@@ -21,12 +21,13 @@
     @if (this.label) {
         <label class="form-label" id="@this.labelId" for="@this.field.id(this.id)">@this.label</label>
     }
-    <div class="input-group" role="group" aria-labelledby="@(this.label ? this.labelId : null)" aria-label="@(this.label ? null : this.ariaLabel)" @ref="fieldBox">
-        <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" placeholder="@(this.placeholderStart ?? this.placeholderText)" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@t("dateRangePicker.start")" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.startText" @onchange="this.startTyped" @onkeydown="this.fieldKeydown" />
+    <div class="input-group" id="@this.groupId" role="group" aria-labelledby="@(this.label ? this.labelId : null)" aria-label="@(this.label ? null : this.ariaLabel)" @ref="fieldBox">
+        <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" placeholder="@(this.placeholderStart ?? this.placeholderText)" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@t("dateRangePicker.start")" aria-labelledby="@this.labelledBy(this.field.id(this.id))" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.startText" @onchange="this.startTyped" @onkeydown="this.fieldKeydown" />
         <span class="input-group-text" aria-hidden="true">–</span>
-        <input id="@this.endId" type="text" autocomplete="off" placeholder="@(this.placeholderEnd ?? this.placeholderText)" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@t("dateRangePicker.end")" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.endText" @onchange="this.endTyped" @onkeydown="this.fieldKeydown" />
+        <input id="@this.endId" type="text" autocomplete="off" placeholder="@(this.placeholderEnd ?? this.placeholderText)" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@t("dateRangePicker.end")" aria-labelledby="@this.labelledBy(this.endId)" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.endText" @onchange="this.endTyped" @onkeydown="this.fieldKeydown" />
         <button type="button" class="btn btn-outline-secondary" aria-label="@(this.buttonLabel ?? t("dateRangePicker.button"))" title="@(this.buttonLabel ?? t("dateRangePicker.button"))" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar3" /></button>
     </div>
+    <span class="visually-hidden" id="@this.formatHintId">@this.formatHint</span>
     @if (this.open) {
         <div class="tz-date-picker__popup dropdown-menu show" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("dateRangePicker.button"))" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
             <Calendar selectMode="range" selectedDates="@this.calendarDates" selectedDatesChanged="@this.picked" minDate="@this.minDate" maxDate="@this.maxDate" disabledDateFunc="@this.disabledDateFunc" locale="@this.locales" firstDayOfWeek="@this.firstDayOfWeek" displayToday="@this.displayToday" labels="@this.labels" />
@@ -109,6 +110,31 @@
         return `${this.field.id(this.id)}-end`;
     }
 
+    /** The typed format, described to a screen reader: the placeholder says it only while the field is empty. */
+    private get formatHint(): string | undefined {
+        return this.t("datePicker.format", { pattern: dateFieldPlaceholder(this.locales, this.t) });
+    }
+
+    private get formatHintId(): string {
+        return `${this.field.id(this.id)}-format`;
+    }
+
+    /** The field's aria (invalid, help, message) with the format hint among the descriptions. */
+    private withFormatHint(aria: Record<string, string | undefined>): Record<string, string | undefined> {
+        if (this.formatHint === undefined) return aria;
+        return { ...aria, "aria-describedby": [aria["aria-describedby"], this.formatHintId].filter(Boolean).join(" ") };
+    }
+
+    /** What names the field — the label, else the group's ariaLabel (by the group's id) — before an input's own name. */
+    private labelledBy(selfId: string): string | undefined {
+        const by = this.label ? this.labelId : this.ariaLabel ? this.groupId : undefined;
+        return by === undefined ? undefined : `${by} ${selfId}`;
+    }
+
+    private get groupId(): string {
+        return `${this.field.id(this.id)}-group`;
+    }
+
     private get placeholderText(): string {
         return dateFieldPlaceholder(this.locales, this.t);
     }
@@ -123,7 +149,7 @@
     }
 
     private get inputAttributes(): Record<string, unknown> {
-        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+        return { ...this.withFormatHint(this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid")), ...this.additionalAttributes };
     }
 
     private get startText(): string {
