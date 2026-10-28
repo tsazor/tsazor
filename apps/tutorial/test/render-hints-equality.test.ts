@@ -51,7 +51,7 @@ async function render(files: Files, renderHints: boolean): Promise<{ html: strin
 }
 
 /** Generated element ids (`tz-input-13`) count on across the two renders in this process: compare them by shape. */
-const sameIds = (html: string): string => html.replace(/\b((?:tz|fui)-[a-z]+(?:-[a-z]+)*)-\d+\b/g, "$1-n");
+const sameIds = (html: string): string => html.replace(/\b((?:tz|fui|validation)-[a-z]+(?:-[a-z]+)*)-\d+\b/g, "$1-n");
 
 describe("H1 — stable event handlers render the same DOM as a closure per render", () => {
   let hoistedTotal = 0;

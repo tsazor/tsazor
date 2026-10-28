@@ -481,7 +481,10 @@ describe("validation-messages", () => {
     click(m);
     await m.settle();
     const html = m.html();
-    expect(html).toContain('<span class="validation-message">The name field is required.</span>');
+    // The span has an id the input names in aria-describedby (an addition to Blazor's markup).
+    const id = /<span id="(validation-message-\d+-0)" class="validation-message">The name field is required\.<\/span>/.exec(html)?.[1];
+    expect(id).toBeDefined();
+    expect(html).toContain(`aria-describedby="${id}"`);
     expect(html).not.toContain("Reserved:");
     m.dispose();
   });

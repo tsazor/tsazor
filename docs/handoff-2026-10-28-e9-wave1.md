@@ -48,6 +48,11 @@ Also:
   (Verdaccio: publish as `next`, SBOM, `npm create tsazor` with @tsazor/fluent and --dotnet, install, check, build,
   test) — **all green**. Every JS export has its `types` condition, first.
 
+- After the five decisions: `pnpm gates` all 35 green on `e88cf02`. The root `pnpm test` (2970) doesn't run the
+  apps' own suites — `public-tree --verify` (`pnpm -r test`) does, and caught the tutorial's two markup tests behind
+  the ValidationMessage ids and the workspace's generated runtime manifest behind its doc (`e6677be` and the commit
+  after it). Before a release: `pnpm -r --filter "./apps/**" test` as well.
+
 ## Owner, open
 
 1. `git push origin roadmap/phase-0`, then CI → Run workflow (ci:local needs WSL, not on this laptop).

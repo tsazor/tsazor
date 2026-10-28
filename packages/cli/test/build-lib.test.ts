@@ -362,7 +362,8 @@ describe("buildLibrary (D9)", () => {
     const refused = await buildLibrary({ packageDir: outside, internal: ["Part"], log: () => {} });
     expect(refused.errors.map((error) => error.file)).toEqual(["extra/inferred.ts"]);
     expect(refused.errors[0]!.message).toContain("no declaration: not part of the project's program — annotate the exported types");
-  });
+    // Two TypeScript programs: a second alone, over vitest's 5 s with every package testing at once.
+  }, 60_000);
 
   it("exports a name the `exports` option exports once — an automatic second export was a module that doesn't load", async () => {
     const root = await library({
