@@ -13,7 +13,7 @@ Status: decided 2026-10-12 (D-P1, D-P2), with the provenance part of the supply-
   prereleases land in a [Verdaccio](https://verdaccio.org/) registry on the developer's machine, and the maintainers' apps
   install from there as users will from npm. npm sees the first version on release day, from the public repository
   `tsazor/tsazor` (the GitHub org and the empty private repository exist since 2026-10-08).
-  **Changed 2026-10-27 (owner):** `1.0.0-rc.1` is npm's first version, published in .NET 11's release window (.NET
+  **Changed 2026-10-27:** `1.0.0-rc.1` is npm's first version, published in .NET 11's release window (.NET
   Conf, 2026-11-10 to 12), and the repository goes public with it. The `next.N` stay local. A package's first publish
   sets `latest` too, so `latest` is the rc until 1.0.0 replaces it.
 - **D-P3 — A script of our own, no changesets.** Lockstep with one hand-written `CHANGELOG.md` leaves changesets
