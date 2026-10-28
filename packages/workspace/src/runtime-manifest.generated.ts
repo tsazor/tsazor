@@ -2338,7 +2338,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The enclosing form's EditContext (cascaded by EditForm)."
         }
       ],
-      "doc": "Blazor's ValidationMessage<T>: shows validation messages for one field.\nv1 deviation: `For` is a plain field name string (Blazor uses an expression).",
+      "doc": "Blazor's ValidationMessage<T>: shows validation messages for one field.\nv1 deviation: `For` is a plain field name string (Blazor uses an expression).\nAddition: each message has an id, and the field's input names them in `aria-describedby` (Blazor's markup leaves\nthe message unconnected — a screen reader on the field doesn't hear why it is invalid).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
