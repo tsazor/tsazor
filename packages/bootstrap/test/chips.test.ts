@@ -170,4 +170,18 @@ describe("Chip alone", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(closed).toEqual([7]);
   });
+
+  it("a chip whose text is its content names its close button by what it shows", async () => {
+    const tag = await chip((b) => {
+      b.addAttribute(1, "childContent", (inner: RenderTreeBuilder) => {
+        inner.openElement(0, "strong");
+        inner.addContent(1, "Urgent");
+        inner.closeElement();
+        inner.addContent(2, " today");
+      });
+      b.addAttribute(2, "onClose", EventCallback.unbound(() => {}));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(tag.querySelector(".btn-close")!.getAttribute("aria-label")).toBe("Remove Urgent today");
+  });
 });

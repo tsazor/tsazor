@@ -1,7 +1,7 @@
 @** A chip in Bootstrap's look (Bootstrap has none; MudBlazor's MudChip, the Fluent skin's parameters): a pill for a
     filter, a tag or a choice. In a ChipSet it is selected by a click (a toggle button, `aria-pressed`); alone it is a
     label, a button (onClick), a link (`href`) or a toggle (`@bind-selected`). With `onClose` (or the set's
-    allClosable) it has a close button (`.btn-close`), and Delete or Backspace closes it. `intent` and `appearance`
+    allClosable) it has a close button (`.btn-close`, "Remove {text}", the text it shows when it has none), and Delete or Backspace closes it. `intent` and `appearance`
     (subtle by default) color it, `size` small | medium, `shape` circular (default) | rounded. *@
 @typeparam TValue
 @import { ChipSetModel, type Appearance, type IconValue, type Intent } from "@tsazor/ui"
@@ -9,7 +9,7 @@
 @import { backgroundColor, textColor } from "./vocabulary"
 @import { libraryTexts } from "@tsazor/ui"
 
-<span data-chip @attributes="@withClass(this.chipClass, additionalAttributes)">
+<span data-chip @attributes="@withClass(this.chipClass, additionalAttributes)" @ref="root">
     @if (href) {
         <a class="@this.primaryClass" href="@(this.isDisabled ? null : href)" target="@target" rel="@this.linkRel" aria-disabled="@(this.isDisabled ? "true" : null)" @onkeydown="handleKeydown">
             <ChipContent icon="@icon" avatarContent="@avatarContent" text="@this.label" childContent="@childContent" />
@@ -24,7 +24,7 @@
         </span>
     }
     @if (this.closable) {
-        <button type="button" class="btn-close align-self-center me-2" style="font-size: 0.625em" data-bs-theme="@(this.onFill ? "dark" : null)" aria-label="@t("remove", { name: this.label })" disabled="@this.isDisabled" @onclick="close" @onkeydown="handleKeydown"></button>
+        <button type="button" class="btn-close align-self-center me-2" style="font-size: 0.625em" data-bs-theme="@(this.onFill ? "dark" : null)" aria-label="@t("remove", { name: this.removeName })" disabled="@this.isDisabled" @onclick="close" @onkeydown="handleKeydown"></button>
     }
 </span>
 
@@ -70,6 +70,25 @@
     @CascadingParameter({ type: ChipSetModel }) set?: ChipSetModel<TValue>;
 
     private unsubscribe?: () => void;
+
+    /** The chip's element: a chip whose text is its content reads the remove button's name from there. */
+    private root?: HTMLElement;
+
+    /** The text a chip without `text` (or a value) shows, read after a render: the remove button names it. */
+    private shownText = "";
+
+    /** What the remove button names: the text, else what the chip shows. */
+    private get removeName(): string {
+        return this.label !== "" ? this.label : this.shownText;
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.closable || this.label !== "") return;
+        const shown = this.root?.querySelector("[data-chip-text]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+        if (shown === this.shownText) return;
+        this.shownText = shown;
+        this.stateHasChanged();
+    }
 
     protected override onInitialized(): void {
         this.unsubscribe = this.set?.subscribe(() => this.stateHasChanged());

@@ -10,7 +10,7 @@
 } else if (icon) {
     <Icon value="@icon" size="16" class="fui-chip__icon" />
 }
-<span class="fui-chip__text">@if (childContent) {@childContent} else {@text}</span>
+<span class="fui-chip__text" data-chip-text>@if (childContent) {@childContent} else {@text}</span>
 
 @code {
     @Parameter() checked = false;
