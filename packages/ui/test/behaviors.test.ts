@@ -46,6 +46,22 @@ describe("focusTrap", () => {
     expect(document.activeElement).toBe(dialog);
     expect(dialog.getAttribute("tabindex")).toBe("-1");
   });
+
+  it("wraps at the last visible element: one hidden by CSS isn't a stop", () => {
+    const host = html(
+      `<style>.collapsed { display: none }</style><div id="dialog"><button id="a">a</button><input id="b">` +
+        `<div class="collapsed"><button id="c">c</button></div><button id="d" style="visibility: hidden">d</button></div>`,
+    );
+    const dialog = host.querySelector<HTMLElement>("#dialog")!;
+    const cleanup = focusTrap()(dialog) as () => void;
+
+    host.querySelector<HTMLElement>("#b")!.focus();
+    expect(key(document.activeElement!, "Tab").defaultPrevented).toBe(true);
+    expect(document.activeElement?.id).toBe("a");
+    key(document.activeElement!, "Tab", { shiftKey: true });
+    expect(document.activeElement?.id).toBe("b");
+    cleanup();
+  });
 });
 
 describe("dismissible", () => {

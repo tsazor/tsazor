@@ -16,12 +16,20 @@ const FOCUSABLE = [
 /**
  * The keyboard-focusable elements inside `container`, in tab order (DOM
  * order; positive tabindex is not reordered — avoid it). Elements with
- * `tabindex="-1"`, inside `inert` or hidden by `hidden` are left out.
+ * `tabindex="-1"`, inside `inert`, hidden by `hidden` or by CSS (`display: none`, `visibility: hidden`) are left out —
+ * a focus trap whose last stop is a hidden button would let Tab out.
  */
 export function focusableElements(container: ParentNode): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (element) => element.tabIndex >= 0 && element.getAttribute("tabindex") !== "-1" && !element.closest("[inert],[hidden]"),
+    (element) =>
+      element.tabIndex >= 0 && element.getAttribute("tabindex") !== "-1" && !element.closest("[inert],[hidden]") && isRendered(element),
   );
+}
+
+/** Not hidden by CSS. A detached element counts as rendered: there is no style to ask. */
+function isRendered(element: HTMLElement): boolean {
+  if (!element.isConnected || typeof element.checkVisibility !== "function") return true;
+  return element.checkVisibility({ visibilityProperty: true });
 }
 
 /** Focuses `element` without scrolling the page, when it can take focus. */
