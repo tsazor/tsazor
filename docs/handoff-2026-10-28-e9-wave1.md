@@ -105,6 +105,22 @@ Started:
   hidden (`dcdec55`).
 - A Chip whose text is its content names its close button by what it shows (`0842a6a`).
 - A Carousel under reduced motion starts stopped, and its start button turns the slides (`08587d2`, skins gate).
+- A ColorPicker's hsv square says the color it makes (`e3d5234`); a ColorPickerInput with `hideTextInput` is named
+  by its label and carries the field's help, message and invalid state (`f9666b0`).
+- A Slider on a labelled tick says the tick's label (`605cd2a`).
+- A Wizard's done steps say "completed" (`bf5a537`).
+- A FileUpload shows and announces its errors; its status is always in the page, so the first text is heard too
+  (`c8144ff`, skins gate).
+- A RichText's `ariaLabel` names the engine's editing surface; the area is a named group, or the textbox when the
+  engine edits on it (`b1b8db5`, showcase smoke).
+- Date fields describe their format; a DateRangePicker's ends are "Trip Start date" (`b797895`; skins gate, and the
+  BlazorHero gate's date range check passed — its language phase imports a `.ts` file, which Node 22.12 on this
+  laptop can't without `--experimental-strip-types`; BlazorHero isn't a CI gate).
+- A ListGroupItem says active (aria-current) and disabled (aria-disabled), and a disabled link loses its href
+  (`77f1bf6`).
+- The demo and skins apps have FocusOnNavigate, and their result texts are `role="status"` (`6dbc460`).
+- Library texts added: `colorPicker.squareColorValue`, `wizard.completed`, `fileUpload.fileError`,
+  `datePicker.format` (CHANGELOG, Unreleased).
 
 Looked at, left open:
 
