@@ -957,6 +957,7 @@ export interface RovingFocusOptions {
     loop?: boolean;
     onMove?: (index: number, item: HTMLElement) => void;
     typeahead?: boolean;
+    skipDisabled?: boolean;
 }
 
 // ScheduleAppointment

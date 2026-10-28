@@ -53,11 +53,11 @@
     private readonly toggleId = uniqueId("tz-dropdown");
     private readonly menuId = `${this.toggleId}-menu`;
 
-    private readonly keys = rovingFocus({ items: "[role=menuitem]", orientation: "vertical", typeahead: true });
+    private readonly keys = rovingFocus({ items: "[role=menuitem]", orientation: "vertical", typeahead: true, skipDisabled: false });
     private readonly dismiss = dismissible({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
     private readonly position = anchoredPosition({ anchor: () => this.toggleButton, placement: () => this.placement });
     private readonly focusFirst = (menu: HTMLElement): void => {
-        const items = menu.querySelectorAll<HTMLElement>("[role=menuitem]:not([disabled])");
+        const items = menu.querySelectorAll<HTMLElement>("[role=menuitem]:not([aria-disabled=true])");
         (this.openAtEnd ? items[items.length - 1] : items[0])?.focus({ preventScroll: true });
     };
 

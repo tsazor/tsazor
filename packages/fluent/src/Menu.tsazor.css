@@ -60,7 +60,7 @@
   box-shadow: inset 0 0 0 2px var(--fui-control-focus-stroke);
 }
 
-.fui-menu__item:disabled {
+.fui-menu__item[aria-disabled="true"] {
   color: var(--fui-foreground-disabled);
   background: transparent;
   cursor: not-allowed;

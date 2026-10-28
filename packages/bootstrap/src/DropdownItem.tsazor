@@ -5,16 +5,16 @@
 @import type Dropdown from "./Dropdown.tsazor"
 <li role="none">
     @if (href !== undefined && !disabled) {
-        <a class="@(iconStart || iconEnd ? "dropdown-item d-flex align-items-center gap-2" : "dropdown-item")" role="menuitem" tabindex="-1" href="@href" target="@target" rel="@rel" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</a>
+        <a class="@itemClass" role="menuitem" tabindex="-1" href="@href" target="@target" rel="@rel" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</a>
     } else {
-        <button class="@(iconStart || iconEnd ? "dropdown-item d-flex align-items-center gap-2" : "dropdown-item")" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</button>
+        <button class="@(disabled ? `${itemClass} disabled` : itemClass)" type="button" role="menuitem" tabindex="-1" aria-disabled="@(disabled ? "true" : null)" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</button>
     }
 </li>
 
 @code {
     /** Fired when the item is chosen. */
     @Parameter() onSelect?: EventCallback<MouseEvent>;
-    /** Greys the item out; the arrow keys skip it. */
+    /** Greys the item out: it does nothing, and stays focusable (`aria-disabled`) so a screen reader still hears it. */
     @Parameter() disabled: boolean = false;
     /** The item's label. */
     @Parameter() childContent?: RenderFragment;
@@ -30,11 +30,16 @@
     /** Resolved from the nearest Dropdown ancestor; selection closes the menu. */
     @CascadingParameter({ name: "Dropdown" }) dropdown?: Dropdown;
 
+    private get itemClass(): string {
+        return this.iconStart || this.iconEnd ? "dropdown-item d-flex align-items-center gap-2" : "dropdown-item";
+    }
+
     private get rel(): string | undefined {
         return this.target === "_blank" ? "noopener" : undefined;
     }
 
     private handleClick(e: MouseEvent): Promise<void> | undefined {
+        if (this.disabled) return undefined;
         const selected = this.onSelect?.invokeAsync(e);
         this.dropdown?.close(true);
         return selected;

@@ -166,6 +166,17 @@ describe("rovingFocus", () => {
     expect(moves).toEqual([1, 0, 1]);
   });
 
+  it("with skipDisabled false, stops on an aria-disabled item (a menu's), never on a native disabled one", () => {
+    const host = html(`<ul id="menu"><li role="menuitem" tabindex="-1">Copy</li><li role="menuitem" tabindex="-1" aria-disabled="true">Refund</li><button role="menuitem" tabindex="-1" disabled>Void</button><li role="menuitem" tabindex="-1">Archive</li></ul>`);
+    rovingFocus({ items: "[role=menuitem]", orientation: "vertical", skipDisabled: false })(host.querySelector<HTMLElement>("#menu")!);
+    const items = [...host.querySelectorAll<HTMLElement>("[role=menuitem]")];
+    items[0]!.focus();
+    key(items[0]!, "ArrowDown");
+    expect(document.activeElement).toBe(items[1]);
+    key(items[1]!, "ArrowDown");
+    expect(document.activeElement).toBe(items[3]);
+  });
+
   it("jumps by typed letters when typeahead is on", () => {
     const host = html(`<ul id="menu"><li role="menuitem" tabindex="-1">Copy</li><li role="menuitem" tabindex="-1">Paste</li><li role="menuitem" tabindex="-1">Print</li></ul>`);
     rovingFocus({ items: "[role=menuitem]", orientation: "vertical", typeahead: true })(host.querySelector<HTMLElement>("#menu")!);

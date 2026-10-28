@@ -18,12 +18,17 @@ export interface RovingFocusOptions {
   onMove?: (index: number, item: HTMLElement) => void;
   /** Move to the next item whose text starts with the typed letters. Default false (menus: true). */
   typeahead?: boolean;
+  /**
+   * Skip disabled items. Default true; menus pass false: their disabled items stay focusable (`aria-disabled`), so a
+   * screen reader still hears what the menu offers (WAI-ARIA APG). A native `disabled` item can't take focus either way.
+   */
+  skipDisabled?: boolean;
 }
 
 /**
  * Arrow-key navigation in a composite widget (WAI-ARIA APG: tabs, menus,
  * toolbars, listboxes): arrows move focus between the items, Home and End
- * jump to the first and last one, disabled items are skipped. The tab stop
+ * jump to the first and last one, disabled items are skipped (unless `skipDisabled` is false). The tab stop
  * itself is the component's markup — render `tabindex="0"` on the current
  * item and `"-1"` on the others (roving tabindex).
  *
@@ -48,7 +53,7 @@ export function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement
       // Right to left: ArrowLeft goes to the next item (WAI-ARIA APG).
       const key = logicalArrowKey(event.key, orientation !== "vertical" && isRightToLeft(element));
       const items = [...element.querySelectorAll<HTMLElement>(options.items)].filter(
-        (item) => !item.hasAttribute("disabled") && item.getAttribute("aria-disabled") !== "true",
+        (item) => !item.hasAttribute("disabled") && (options.skipDisabled === false || item.getAttribute("aria-disabled") !== "true"),
       );
       if (items.length === 0) return;
       const active = element.ownerDocument.activeElement;

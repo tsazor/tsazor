@@ -204,7 +204,12 @@ async function main() {
     check((await focusedText()) === "Copy", "menu: ArrowDown opens it on the first item");
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowDown");
-    check((await focusedText()) === "Archive", "menu: the arrow keys skip the disabled item");
+    const onDisabled = await page.evaluate(() => document.activeElement?.getAttribute("aria-disabled"));
+    check((await focusedText()) === "Refund" && onDisabled === "true", "menu: the arrow keys stop on the disabled item (aria-disabled, WAI-ARIA APG)");
+    await page.keyboard.press("Enter");
+    check((await page.locator("[role=menu]").count()) === 1 && (await page.textContent(".menu-choice")) === "Nothing chosen yet.", "menu: Enter on the disabled item does nothing");
+    await page.keyboard.press("ArrowDown");
+    check((await focusedText()) === "Archive", "menu: ArrowDown moves on past it");
     const menuViolations = await axe(page);
     check(menuViolations.length === 0, `axe /overlays with the menu open${menuViolations.length ? `: ${menuViolations.join(" | ")}` : ""}`);
     await page.keyboard.press("Enter");
