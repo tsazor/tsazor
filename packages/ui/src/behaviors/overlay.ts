@@ -142,8 +142,18 @@ export function overlayBehavior(options: OverlayBehaviorOptions): Attachment<HTM
   };
 }
 
+/** Shown in the top layer (`showInTopLayer`). */
+function inTopLayer(element: Element): boolean {
+  if (!element.hasAttribute("data-top-layer")) return false;
+  try {
+    return element.matches(":popover-open");
+  } catch {
+    return false; // an engine without the Popover API: nothing is in the top layer
+  }
+}
+
 /**
- * Makes everything inside `scope` inert except `element` and its ancestors — on each level from the element up to
+ * Makes everything inside `scope` inert except `element` and its ancestors, and what is shown in the top layer — on each level from the element up to
  * the scope, the siblings — and children added to those levels meanwhile. Returns the function that undoes what it
  * did (and only that: what was inert before stays inert).
  */
@@ -153,6 +163,8 @@ function inertOutside(element: HTMLElement, scope: HTMLElement): () => void {
   const inertSiblings = (parent: Element, keep: Element): void => {
     for (const child of parent.children) {
       if (child === keep || child.hasAttribute("inert") || child instanceof HTMLScriptElement || child instanceof HTMLStyleElement) continue;
+      // In the top layer it lies above the overlay, not under it: a ToastRegion's toasts stay announced and pressable.
+      if (inTopLayer(child)) continue;
       child.setAttribute("inert", "");
       made.add(child);
     }

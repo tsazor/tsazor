@@ -123,6 +123,25 @@ describe("overlayBehavior", () => {
     expect(presses).toEqual(["outside"]);
   });
 
+  it("over the page: what is shown in the top layer lies above it and isn't made inert (a ToastRegion), what was is", () => {
+    const { header, overlay } = page();
+    const inTopLayer = (element: HTMLElement): HTMLElement => {
+      // happy-dom has no Popover API: the element answers :popover-open as a browser's would after showInTopLayer.
+      element.setAttribute("data-top-layer", "");
+      element.matches = (selector: string) => selector === ":popover-open" || Element.prototype.matches.call(element, selector);
+      return element;
+    };
+    const toasts = inTopLayer(document.createElement("div"));
+    document.body.append(toasts);
+    const closed = document.createElement("div");
+    closed.setAttribute("data-top-layer", ""); // shown once, hidden since
+    document.body.append(closed);
+    attach(overlay, "page");
+    expect(header.hasAttribute("inert")).toBe(true);
+    expect(closed.hasAttribute("inert")).toBe(true);
+    expect(toasts.hasAttribute("inert")).toBe(false);
+  });
+
   it("over the page: Escape reaches it before the dialog under it", () => {
     const { overlay } = page();
     let dialogDismissed = 0;
