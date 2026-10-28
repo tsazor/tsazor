@@ -1,8 +1,8 @@
 /**
  * The showcase's smoke: the built app in a real browser (the gates' browser,
  * see scripts/browsers.mjs). The home shows the component index, the DataGrid
- * page renders its grids and one code panel per example (the copy button, once
- * clicked, says "Copied").
+ * page renders its grids, a resize handle reads its column's width, and one
+ * code panel per example (the copy button, once clicked, says "Copied").
  *
  *   node scripts/smoke.mjs      (after `npm run build`)
  */
@@ -62,6 +62,15 @@ try {
   const firstCode = await page.textContent(".sz-code pre code");
   if (!firstCode.includes("DataGrid Items=")) throw new Error("the code panel does not show the example's source");
 
+  // A resize handle reads its column's laid-out width once focused (the column has no set width), and its keys
+  // start from that width, not from a default.
+  const handle = page.locator(".tz-grid-resize").first();
+  await handle.focus();
+  const laidOut = await handle.evaluate((element) => Math.round(element.closest("th").getBoundingClientRect().width));
+  await page.waitForFunction((width) => document.querySelector(".tz-grid-resize")?.getAttribute("aria-valuenow") === String(width), laidOut, { timeout: 5000 });
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction((width) => document.querySelector(".tz-grid-resize")?.getAttribute("aria-valuenow") === String(width + 5), laidOut, { timeout: 5000 });
+
   await page.locator(".sz-code__bar button").first().click();
   await page.waitForFunction(() => [...document.querySelectorAll(".sz-code__bar button")].some((button) => button.textContent === "Copied"), { timeout: 5000 });
 
@@ -73,7 +82,7 @@ try {
   }
 
   if (errors.length > 0) throw new Error(`page errors: ${errors.join("; ")}`);
-  console.log("showcase smoke: home, DataGrid, RichText, Scheduler, a code panel per example, copy — ok");
+  console.log("showcase smoke: home, DataGrid (a resize handle's width), RichText, Scheduler, a code panel per example, copy — ok");
   await browser.close();
 } catch (error) {
   console.error(String(error));

@@ -381,14 +381,42 @@ describe("DataGrid", () => {
     const handle = container.querySelectorAll<HTMLDivElement>(".fui-datagrid__resize")[0]!;
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     await settle(renderer);
-    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 85px;");
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 125px;"); // from 120: jsdom lays nothing out
     expect(container.querySelector("table")!.className).toContain("fui-datagrid--sized");
     container.querySelectorAll(".fui-datagrid__resize")[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }));
     await settle(renderer);
-    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 105px;"); // 85, then 20 with Shift
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 145px;"); // 125, then 20 with Shift
     container.querySelectorAll(".fui-datagrid__resize")[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
     await settle(renderer);
-    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 100px;");
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 140px;");
+  });
+
+  it("reads the handle's valuenow in px from the laid-out header, and keys never shrink a column below 40 px", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: orders, resizableColumns: true }, (b) => {
+        component(b, 0, PropertyColumn, { property: customer });
+        component(b, 10, PropertyColumn, { property: total, title: "Total" });
+      }),
+    );
+    await settle(renderer);
+    const heads = container.querySelectorAll<HTMLElement>("thead th");
+    heads[0]!.getBoundingClientRect = () => ({ width: 212 }) as DOMRect;
+    heads[1]!.getBoundingClientRect = () => ({ width: 52 }) as DOMRect;
+    const handles = (): HTMLElement[] => [...container.querySelectorAll<HTMLElement>(".fui-datagrid__resize")];
+    expect(handles()[0]!.getAttribute("aria-valuenow")).toBe("120"); // not measured yet
+    handles()[0]!.dispatchEvent(new FocusEvent("focus"));
+    await settle(renderer);
+    expect(handles()[0]!.getAttribute("aria-valuenow")).toBe("212");
+    expect(container.querySelector("table")!.className).not.toContain("fui-datagrid--sized"); // focus alone sets no width
+    handles()[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 217px;");
+    expect(handles()[0]!.getAttribute("aria-valuenow")).toBe("217");
+    handles()[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", shiftKey: true, bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector("col:nth-child(2)")!.getAttribute("style")).toBe("width: 40px;"); // 52 - 20, held at 40
+    expect(handles()[1]!.getAttribute("aria-valuenow")).toBe("40");
+    expect(handles()[1]!.getAttribute("aria-valuemax")).toBe("1920");
   });
 
   it("reorders a column by the grip's keys and renders headers, cells and foot in the new order", async () => {

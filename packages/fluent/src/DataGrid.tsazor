@@ -85,7 +85,7 @@ type IconValue,
                                     </div>
                                 }
                                 @if (this.resizableColumns) {
-                                    <div class="fui-datagrid__resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" aria-valuenow="@this.widthNow(column)" aria-valuemin="40" aria-valuemax="1920" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
+                                    <div class="fui-datagrid__resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" aria-valuenow="@this.widthNow(column)" aria-valuemin="40" aria-valuemax="@Math.max(1920, this.widthNow(column))" @onfocus="(event: FocusEvent) => this.measureWidth(column, event)" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
                                 }
                             </th>
                         }
@@ -437,10 +437,27 @@ type IconValue,
         return width === undefined ? null : `width: ${width};`;
     }
 
-    /** The handle's valuenow: the column's set width in px (its default when unset). */
-    private widthNow(column: GridColumn<TGridItem>): number {
+    /** Header widths measured when a handle takes focus, by the column's owner (a render makes new column objects): the valuenow of a column without a px width (unset, percent). */
+    private readonly measuredWidths = new Map<object, number>();
+
+    /** A column's width in px: its px width when set, else its header cell's (measured now, or at the handle's focus), else 120. */
+    private pxWidth(column: GridColumn<TGridItem>, head?: Element | null): number {
         const set = this.model.widthOf(column);
-        return set === undefined ? 120 : Math.round(parseFloat(set.replace(/px$/, "")));
+        if (set !== undefined && set.endsWith("px")) return parseFloat(set);
+        const measured = head?.getBoundingClientRect().width;
+        if (measured !== undefined && measured > 0) return measured;
+        return this.measuredWidths.get(column.owner) ?? 120;
+    }
+
+    /** The handle's valuenow: the column's width in px, at least the 40 a resize keeps. */
+    private widthNow(column: GridColumn<TGridItem>): number {
+        return Math.max(40, Math.round(this.pxWidth(column)));
+    }
+
+    /** A focused handle measures its column, so a width the table laid out (or a percent) reads in px. */
+    private measureWidth(column: GridColumn<TGridItem>, event: FocusEvent): void {
+        const width = (event.currentTarget as HTMLElement).closest("th")?.getBoundingClientRect().width;
+        if (width !== undefined && width > 0) this.measuredWidths.set(column.owner, width);
     }
 
     /* Column resize and order ------------------------------------------------- */
@@ -451,10 +468,7 @@ type IconValue,
     /** Starts resizing from the handle at the header's end (the drag follows the pointer over the document). */
     private startResize(column: GridColumn<TGridItem>, pointer: PointerEvent): void {
         pointer.preventDefault();
-        const head = (pointer.currentTarget as HTMLElement).closest("th") as HTMLElement | null;
-        const set = this.model.widthOf(column);
-        const measured = head?.getBoundingClientRect().width;
-        const initial = set !== undefined ? parseFloat(set.replace(/px$/, "")) : measured !== undefined && measured > 0 ? measured : 120;
+        const initial = this.pxWidth(column, (pointer.currentTarget as HTMLElement).closest("th"));
         this.columnCleanup?.();
         this.columnCleanup = startColumnResize({
             pointer,
@@ -463,16 +477,14 @@ type IconValue,
         });
     }
 
-    /** The handle's arrow keys resize too: 5 px at a time, 20 with Shift. Percent widths don't move by keys. */
+    /** The handle's arrow keys resize too: 5 px at a time, 20 with Shift, never below 40 px (a percent width turns px). */
     private async resizeKey(column: GridColumn<TGridItem>, event: KeyboardEvent): Promise<void> {
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
-        const set = this.model.widthOf(column);
-        if (set !== undefined && !set.endsWith("px")) return;
         // Right to left: the handle is at the column's left edge, so ArrowLeft widens it.
         const step = (event.shiftKey ? 20 : 5) * (logicalArrowKey(event.key, isRightToLeft(event.target as Element)) === "ArrowRight" ? 1 : -1);
-        const current = set !== undefined ? parseFloat(set.replace(/px$/, "")) : 80;
-        await this.model.setColumnWidthAsync(column, `${Math.round(current + step)}px`);
+        const current = this.pxWidth(column, (event.currentTarget as HTMLElement).closest("th"));
+        await this.model.setColumnWidthAsync(column, `${Math.max(40, Math.round(current + step))}px`);
     }
 
     /** Starts a reorder drag from the grip (the head's th cells are the columns in display order). */
