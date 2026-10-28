@@ -785,6 +785,37 @@ describe("ListGroup + ListGroupItem", () => {
     await settle(renderer);
     expect(clicked).toBe(1);
   });
+
+  it("says its states: active is aria-current on the link, the button or the item; a disabled link goes nowhere", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, ListGroup);
+      b.addAttribute(1, "childContent", (inner: typeof b) => {
+        inner.openComponent(0, ListGroupItem);
+        inner.addAttribute(1, "disabled", true);
+        inner.addAttribute(2, "href", "/archive");
+        inner.addAttribute(3, "childContent", text("Archive"));
+        inner.closeComponent();
+        inner.openComponent(4, ListGroupItem);
+        inner.addAttribute(5, "active", true);
+        inner.addAttribute(6, "onClick", EventCallback.unbound(() => {}));
+        inner.addAttribute(7, "childContent", text("Inbox"));
+        inner.closeComponent();
+        inner.openComponent(8, ListGroupItem);
+        inner.addAttribute(9, "active", true);
+        inner.addAttribute(10, "disabled", true);
+        inner.addAttribute(11, "childContent", text("Drafts"));
+        inner.closeComponent();
+      });
+      b.closeComponent();
+    });
+    const [archive, inbox, drafts] = [...container.querySelectorAll("li")];
+    const link = archive!.querySelector("a")!;
+    expect(link.hasAttribute("href")).toBe(false);
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(inbox!.querySelector("button")!.getAttribute("aria-current")).toBe("true");
+    expect(drafts!.getAttribute("aria-current")).toBe("true");
+    expect(drafts!.getAttribute("aria-disabled")).toBe("true");
+  });
 });
 
 describe("Table", () => {

@@ -6,20 +6,23 @@
    item's color (an active item's text stays white). *@
 @if (href) {
     <li class="@itemClass list-group-item-action">
-        <a class="stretched-link text-reset text-decoration-none" href="@href" aria-current="@ariaCurrent">@childContent</a>
+        <a class="stretched-link text-reset text-decoration-none" href="@(disabled ? null : href)" aria-current="@ariaCurrent" aria-disabled="@ariaDisabled">@childContent</a>
     </li>
 } else if (onClick) {
     <li class="@itemClass list-group-item-action">
-        <button type="button" class="stretched-link bg-transparent border-0 p-0 text-reset text-start" disabled="@disabled" @onclick="handleClick">@childContent</button>
+        <button type="button" class="stretched-link bg-transparent border-0 p-0 text-reset text-start" disabled="@disabled" aria-current="@ariaCurrent" @onclick="handleClick">@childContent</button>
     </li>
 } else {
-    <li class="@itemClass">@childContent</li>
+    <li class="@itemClass" aria-current="@ariaCurrent" aria-disabled="@ariaDisabled">@childContent</li>
 }
 
 @code {
-    /** Marks the item active. */
+    /** Marks the item active, the current one (aria-current, on the item's link, button or itself). */
     @Parameter() active: boolean = false;
-    /** Renders the disabled look; on a button item it also disables the button and suppresses onClick. */
+    /**
+     * Renders the disabled look and says so (aria-disabled); a button item's button is disabled and onClick suppressed,
+     * a link item's link goes nowhere (no href).
+     */
     @Parameter() disabled: boolean = false;
     /** Makes the item a link (an anchor inside the list item). */
     @Parameter() href?: string;
@@ -33,6 +36,10 @@
         if (this.active) parts.push("active");
         if (this.disabled) parts.push("disabled");
         return parts.join(" ");
+    }
+
+    private get ariaDisabled(): string | null {
+        return this.disabled ? "true" : null;
     }
 
     private get ariaCurrent(): string | null {

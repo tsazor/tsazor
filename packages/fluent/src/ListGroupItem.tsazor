@@ -3,20 +3,23 @@
     reachable. *@
 @if (href) {
     <li class="@itemClass">
-        <a class="fui-list__action" href="@href" aria-current="@ariaCurrent">@childContent</a>
+        <a class="fui-list__action" href="@(disabled ? null : href)" aria-current="@ariaCurrent" aria-disabled="@ariaDisabled">@childContent</a>
     </li>
 } else if (onClick) {
     <li class="@itemClass">
-        <button type="button" class="fui-list__action" disabled="@disabled" @onclick="handleClick">@childContent</button>
+        <button type="button" class="fui-list__action" disabled="@disabled" aria-current="@ariaCurrent" @onclick="handleClick">@childContent</button>
     </li>
 } else {
-    <li class="@itemClass" aria-disabled="@ariaDisabled">@childContent</li>
+    <li class="@itemClass" aria-current="@ariaCurrent" aria-disabled="@ariaDisabled">@childContent</li>
 }
 
 @code {
-    /** Marks the item active (the current one). */
+    /** Marks the item active, the current one (aria-current, on the item's link, button or itself). */
     @Parameter() active: boolean = false;
-    /** Renders the disabled look; on a button item it also disables the button and suppresses onClick. */
+    /**
+     * Renders the disabled look and says so (aria-disabled); a button item's button is disabled and onClick suppressed,
+     * a link item's link goes nowhere (no href).
+     */
     @Parameter() disabled: boolean = false;
     /** Makes the item a link. */
     @Parameter() href?: string;
