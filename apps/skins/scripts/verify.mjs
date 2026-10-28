@@ -671,15 +671,15 @@ try {
       return [headers[index], table.querySelector(`tbody tr td:nth-child(${index + 1})`)].map((cell) => getComputedStyle(cell).textAlign);
     });
     say(totalAlignment.every((align) => align === "end" || align === "right"), `grid: an end-aligned column's header and cells align to the end (${totalAlignment.join(", ")})`);
-    // A row's details: its toggle opens a detail row below it (expanded, controlling it, across every column); two stay
-    // open side by side, and a second click closes one.
+    // A row's details: its toggle opens a detail row below it (expanded, controlling it, across every column; its label
+    // stays); two stay open side by side, and a second click closes one.
     const toggles = grid.getByRole("button", { name: /^Show details of order / });
     const [firstName, secondName] = await Promise.all([toggles.nth(0).getAttribute("aria-label"), toggles.nth(1).getAttribute("aria-label")]);
-    const hideName = (name) => name.replace("Show", "Hide");
-    await toggles.nth(0).click();
-    await grid.getByRole("button", { name: hideName(firstName) }).waitFor();
-    await toggles.nth(0).click();
-    await grid.getByRole("button", { name: hideName(secondName) }).waitFor();
+    const expanded = (name) => grid.locator(`button[aria-label="${name}"][aria-expanded=true]`).waitFor();
+    await grid.getByRole("button", { name: firstName, exact: true }).click();
+    await expanded(firstName);
+    await grid.getByRole("button", { name: secondName, exact: true }).click();
+    await expanded(secondName);
     const details = await grid.evaluate((table, name) => {
       const toggle = table.querySelector(`button[aria-label="${name}"]`);
       const row = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
@@ -691,14 +691,14 @@ try {
         text: row?.textContent ?? "",
         open: table.querySelectorAll("tbody button[aria-expanded=true]").length,
       };
-    }, hideName(firstName));
+    }, firstName);
     say(details.expanded === "true" && details.below && details.span === details.columns && details.text.includes("boxes of pastries"), `grid details: the toggle opens the row's details below it, aria-controls on them (span ${details.span} of ${details.columns})`);
     say(details.open === 2, `grid details: two rows' details open side by side (${details.open})`);
     const detailsViolations = await axe(page);
     say(detailsViolations.length === 0, `axe /data with details open${detailsViolations.length ? `: ${detailsViolations.join(" | ")}` : ""}`);
-    await grid.getByRole("button", { name: hideName(firstName) }).click();
-    await grid.getByRole("button", { name: firstName }).waitFor();
-    say((await grid.getByRole("button", { name: firstName }).getAttribute("aria-controls")) === null && (await grid.locator("tbody button[aria-expanded=true]").count()) === 1, "grid details: a second click closes them, the other row's stay open");
+    await grid.getByRole("button", { name: firstName, exact: true }).click();
+    await grid.locator(`button[aria-label="${firstName}"][aria-expanded=false]`).waitFor();
+    say((await grid.getByRole("button", { name: firstName, exact: true }).getAttribute("aria-controls")) === null && (await grid.locator("tbody button[aria-expanded=true]").count()) === 1, "grid details: a second click closes them, the other row's stay open");
     await grid.getByRole("button", { name: /Total/ }).click();
     await page.waitForFunction(() => document.querySelector("table[aria-label=Orders] th[aria-sort]")?.textContent?.includes("Total"));
     await page.getByRole("button", { name: "Next page" }).click();
