@@ -19,11 +19,11 @@
                     <li class="@this.stepClass(step)" aria-current="@(step.current ? "step" : null)">
                         @if (this.clickable(step)) {
                             <button type="button" class="fui-wizard__step-button" @onclick="() => this.goToStepAsync(step.index, step.index > this.value)">
-                                <WizardStepHeader icon="@this.iconOf(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
+                                <WizardStepHeader icon="@this.iconOf(step)" completed="@this.completed(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
                             </button>
                         } else {
                             <span class="fui-wizard__step-button" aria-disabled="@(step.disabled ? "true" : null)">
-                                <WizardStepHeader icon="@this.iconOf(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
+                                <WizardStepHeader icon="@this.iconOf(step)" completed="@this.completed(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
                             </span>
                         }
                     </li>
@@ -140,6 +140,11 @@
         if (status === "previous") return step.iconPrevious ?? CheckmarkCircle20Filled;
         if (status === "current") return step.iconCurrent ?? Circle20Filled;
         return step.iconNext ?? Circle20Regular;
+    }
+
+    /** A step before the current one that wasn't skipped (a disabled step is): its header says "completed". */
+    private completed(step: WizardStep): boolean {
+        return wizardStepStatus(step.index, this.value) === "previous" && !step.disabled;
     }
 
     /** The bullet's number, or null when it shows none. */

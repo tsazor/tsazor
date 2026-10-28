@@ -117,6 +117,8 @@ describe("Wizard", () => {
     expect(Page.last!.step).toBe(3);
     expect(current(container)).toBe("Done");
     expect(visiblePanel(container)).toBe("Done step.");
+    // The done steps say so (their check mark is aria-hidden); the skipped, disabled one doesn't.
+    expect([...container.querySelectorAll(".fui-wizard__labels")].map((labels) => labels.textContent!.replace(labels.querySelector(".fui-wizard__summary")?.textContent ?? "", "").trim())).toEqual(["Bread, completed", "Day, completed", "Payment", "Done"]);
     expect(buttonNamed(container, "Next")).toBeUndefined();
     buttonNamed(container, "Previous")!.click();
     await settle(result);

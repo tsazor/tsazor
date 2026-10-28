@@ -12,6 +12,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **A ColorPicker's hsv square says the color it makes** (`@tsazor/ui`, both skins): "Saturation 80%, brightness
   60%: dark blue, #1f3c99" — the hsv view shows no hex of its own. `ColorPickerLabels.squareValue` takes the color as
   an optional third argument; the new library text `colorPicker.squareColorValue` says it.
+- **A Wizard's done steps say so** (both skins): "Bread, completed" in the step list — the check mark is a picture a
+  screen reader doesn't get. A skipped (disabled) step doesn't. The new library text `wizard.completed`.
 
 ## 1.0.0-next.10 (2026-10-22)
 

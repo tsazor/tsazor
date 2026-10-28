@@ -685,6 +685,7 @@ export declare const libraryTextDefaults: {
     readonly "wizard.previous": string;
     readonly "wizard.next": string;
     readonly "wizard.done": string;
+    readonly "wizard.completed": string;
     readonly "carousel.label": string;
     readonly "carousel.roleDescription": string;
     readonly "carousel.slideRoleDescription": string;

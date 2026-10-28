@@ -107,6 +107,8 @@ export const libraryTextDefaults = catalog({
   "wizard.previous": "Previous",
   "wizard.next": "Next",
   "wizard.done": "Done",
+  // After a done step's label in the step list (its check mark is a picture a screen reader doesn't get).
+  "wizard.completed": "completed",
 
   "carousel.label": "Slides",
   // aria-roledescription: what a screen reader calls the carousel and each slide.
