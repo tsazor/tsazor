@@ -58,6 +58,13 @@ Also:
   TypeScript program timed out at vitest's 5 s with every package testing at once — lsp and cli have 30 s per test in
   their vitest configs, dotnet 30 s, the declaration tests and two others 60 s (`df5536e`, `18183e0`, `5594fee`).
 
+- **Final run after wave 2, 2026-10-29 on `ceab0de`:** `node scripts/public-tree.mjs --verify` **GREEN** (3107
+  files; install, build, every package's and app's tests). `pnpm gates`: 34 of 35 green; red only the skins gate in
+  WebKit — a real bug its new reduced-motion check found: a click on the carousel's stop/start button replaces the
+  icon under the pointer, WebKit then misses the carousel's `pointerleave`, and the slides never turned again. Fixed
+  (`0e10f43`, a pointerover outside ends the hover; a unit test per skin); the skins gate then green in WebKit,
+  Firefox and Edge.
+
 ## Owner, open
 
 1. `git push origin roadmap/phase-0`, then CI → Run workflow (ci:local needs WSL, not on this laptop).
