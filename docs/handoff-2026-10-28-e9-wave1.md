@@ -42,6 +42,12 @@ Also:
   - edge only: Blazor parity (a leftover process on :5360), the migration sample and FluentCMS (stale `obj/`, see
     "This laptop"). Re-run green.
 
+- Release dry run, 2026-10-28 on `7e676a3`: `pnpm release:pack` (19 tarballs, all checked: version, no
+  `workspace:` ranges, README and LICENSE, every `exports`/`types`/`bin` target present, nothing forbidden),
+  `pnpm smoke` (the starter from the tarballs: build, test, `tsazor check`, every bin) and `pnpm rehearsal`
+  (Verdaccio: publish as `next`, SBOM, `npm create tsazor` with @tsazor/fluent and --dotnet, install, check, build,
+  test) — **all green**. Every JS export has its `types` condition, first.
+
 ## Owner, open
 
 1. `git push origin roadmap/phase-0`, then CI → Run workflow (ci:local needs WSL, not on this laptop).
