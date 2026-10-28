@@ -221,7 +221,7 @@
                     <input id="crust" type="range" class="form-range" min="1" max="5" aria-describedby="crust-help" />
                 </FormField>
             </Grid>
-            <p class="delivery-echo">Delivery: @(deliveryDate || "not set")</p>
+            <p class="delivery-echo" role="status">Delivery: @(deliveryDate || "not set")</p>
             <div class="d-flex gap-3 align-items-start" role="region" aria-busy="true" aria-label="Loading the customer">
                 <Skeleton Shape="circular" Width="48px" />
                 <div class="flex-grow-1"><Skeleton Lines="3" /></div>

@@ -38,7 +38,7 @@
     </EditForm>
 </div>
 
-<p class="log">@status</p>
+<p class="log" role="status">@status</p>
 
 @code {
     private model = new Profile();

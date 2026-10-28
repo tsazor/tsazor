@@ -18,7 +18,7 @@
         <Chart ChartType="stacked-bar" ChartSeries="@sold" ChartLabels="@days" AriaLabel="All loaves by day" class="chart-stacked" />
         <Chart ChartType="donut" ChartSeries="@share" ChartLabels="@groups" AriaLabel="Sales by group" LegendPosition="end" @bind-SelectedIndex="pickedGroup" class="chart-share" />
     </div>
-    <Typography Variant="caption">Picked bread <span class="chart-picked">@pickedBread</span>, group <span class="chart-group">@pickedGroup</span>.</Typography>
+    <Typography Variant="caption">Picked bread <span class="chart-picked" role="status">@pickedBread</span>, group <span class="chart-group">@pickedGroup</span>.</Typography>
     <table class="spark-table">
         <caption>Loaves over the last two weeks</caption>
         <thead><tr><th scope="col">Bread</th><th scope="col">Trend</th><th scope="col">Today</th></tr></thead>

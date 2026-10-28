@@ -42,7 +42,7 @@
 <section class="demo">
     <Typography Variant="h2">Pagination and collapse</Typography>
     <Pagination Page="@currentPage" PageCount="7" OnPageChanged="@((p: number) => this.currentPage = p)" />
-    <Typography Variant="caption"><span class="page-echo">Page @currentPage of 7</span></Typography>
+    <Typography Variant="caption"><span class="page-echo" role="status">Page @currentPage of 7</span></Typography>
     <Divider />
     <Button Appearance="outline" OnClick="@(() => this.detailsOpen = !this.detailsOpen)" aria-expanded="@(detailsOpen ? "true" : "false")">Details</Button>
     <Collapse IsOpen="@detailsOpen">
@@ -96,7 +96,7 @@
     </div>
     <div class="demo-row">
         <Button OnClick="@(() => this.overflowWidth = this.overflowWidth === "18rem" ? "48rem" : "18rem")">Toggle the width</Button>
-        <Typography Variant="caption">Last step: <span class="overflow-echo">@stepped</span>.</Typography>
+        <Typography Variant="caption">Last step: <span class="overflow-echo" role="status">@stepped</span>.</Typography>
     </div>
 </section>
 
@@ -107,7 +107,7 @@
         <SidebarNav AriaLabel="Sections, compact" Links="@sections" Compact="@true" />
         <TreeView AriaLabel="Menu" Items="@menu" @bind-SelectedItem="picked" />
     </div>
-    <Typography Variant="caption">Picked: <span class="tree-picked">@(picked?.text ?? "nothing")</span>.</Typography>
+    <Typography Variant="caption">Picked: <span class="tree-picked" role="status">@(picked?.text ?? "nothing")</span>.</Typography>
 </section>
 
 @code {

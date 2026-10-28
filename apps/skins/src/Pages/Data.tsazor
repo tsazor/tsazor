@@ -24,7 +24,7 @@
         </DetailContent>
     </DataGrid>
     <Paginator State="@pagination" />
-    <Typography Variant="caption"><span class="grid-selection">@selected.length selected</span></Typography>
+    <Typography Variant="caption"><span class="grid-selection" role="status">@selected.length selected</span></Typography>
 </section>
 
 <section class="demo">

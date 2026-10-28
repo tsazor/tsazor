@@ -1,5 +1,5 @@
 @using @tsazor/bootstrap
 @* The fluent build points @tsazor/bootstrap at @tsazor/fluent (vite.config.ts): the same pages, the other skin. *@
 @import { ComponentBase, LayoutComponentBase, Parameter, EventCallback, inject } from "@tsazor/runtime"
-@import { NavigationManager, Router, RouteView, NavLink, NavLinkMatch, EditContext } from "@tsazor/runtime"
+@import { NavigationManager, Router, RouteView, NavLink, NavLinkMatch, EditContext, FocusOnNavigate } from "@tsazor/runtime"
 @import type { RenderFragment, RouteData } from "@tsazor/runtime"

@@ -9,7 +9,7 @@
     <div class="demo-row">
         <Button Intent="danger" OnClick="@(() => this.dialogOpen = true)">Delete order</Button>
         <Button OnClick="@(() => this.drawerOpen = true)">Filters</Button>
-        <span class="overlay-result">@result</span>
+        <span class="overlay-result" role="status">@result</span>
     </div>
     <Dialog IsOpen="@dialogOpen" Title="Delete order 101?" OnClosed="@(() => this.dialogOpen = false)">
         <ChildContent>The order and its lines are removed. This cannot be undone.</ChildContent>
@@ -51,7 +51,7 @@
             <TextInput Label="Note on order 101" @bind-Value="note" />
             <div class="demo-row">
                 <Button Intent="primary" OnClick="@save">Save note</Button>
-                <span class="busy-result">@saved</span>
+                <span class="busy-result" role="status">@saved</span>
             </div>
         </CardBody>
         <Overlay Visible="@saving" CloseMode="manual">
@@ -60,7 +60,7 @@
     </Card>
     <div class="demo-row">
         <Button OnClick="@publish">Publish the menu</Button>
-        <span class="publish-result">@published</span>
+        <span class="publish-result" role="status">@published</span>
     </div>
     <Overlay Visible="@publishing" FullScreen="true" CloseMode="manual" AriaLabel="Publishing the menu">
         <Card>

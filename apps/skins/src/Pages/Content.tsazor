@@ -15,7 +15,7 @@
         <Avatar Size="48" />
         <Avatar Name="Marta Bauer" Size="48" Shape="square" Color="teal" OnClick="@(() => this.picked = "Marta Bauer")" />
     </div>
-    <Typography Variant="caption"><span class="picked">@(picked === "" ? "Nobody picked." : `Picked ${picked}.`)</span></Typography>
+    <Typography Variant="caption"><span class="picked" role="status">@(picked === "" ? "Nobody picked." : `Picked ${picked}.`)</span></Typography>
 </section>
 
 <section class="demo">
@@ -96,7 +96,7 @@
         <Link Href="https://example.org/bakery" Target="_blank" IconEnd="@openIcon">Our bakery</Link>
         <Link OnClick="@(() => this.linkResult = "Undone.")">Undo</Link>
         <Link Href="/forms" Disabled="@true">Archive</Link>
-        <span class="link-result">@linkResult</span>
+        <span class="link-result" role="status">@linkResult</span>
     </div>
     <p>Fresh bread every morning: see the <Link Href="/data" Inline="@true">order list</Link> for today.</p>
     <div class="demo-row">

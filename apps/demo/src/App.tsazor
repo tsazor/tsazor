@@ -2,6 +2,8 @@
 <Router>
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@MainLayout" />
+        @* After a navigation the focus goes to the page's heading, so a screen reader starts on the new page. *@
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
         <p class="not-found">Page not found.</p>

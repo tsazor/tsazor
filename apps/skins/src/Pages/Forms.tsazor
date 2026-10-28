@@ -29,7 +29,7 @@
     <FileInput Label="Delivery list (optional)" Accept=".csv" OnChange="@fileChosen" />
     <Button Type="submit" Intent="primary">Reserve</Button>
 </Form>
-<p class="order-status">@status</p>
+<p class="order-status" role="status">@status</p>
 
 <section class="demo">
     <Typography Variant="h2">Choices</Typography>
@@ -58,7 +58,7 @@
             </WizardStep>
         </Steps>
     </Wizard>
-    <Typography Variant="caption"><span class="wizard-status">@wizardStatus</span></Typography>
+    <Typography Variant="caption"><span class="wizard-status" role="status">@wizardStatus</span></Typography>
 </section>
 
 <section class="demo">
