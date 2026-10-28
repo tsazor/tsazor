@@ -607,6 +607,7 @@ export declare const libraryTextDefaults: {
     readonly close: string;
     readonly remove: string;
     readonly loading: string;
+    readonly progress: string;
     readonly noEntries: string;
     readonly "pagination.label": string;
     readonly "pagination.first": string;

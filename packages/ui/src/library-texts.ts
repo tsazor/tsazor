@@ -14,6 +14,7 @@ export const libraryTextDefaults = catalog({
   "close": "Close",
   "remove": "Remove {name}",
   "loading": "Loading…",
+  "progress": "Progress",
   "noEntries": "No entries",
 
   "pagination.label": "Pagination",

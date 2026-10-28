@@ -139,6 +139,15 @@ describe("Collapse, Progress", () => {
     expect(fill.className).toBe("fui-progress__bar fui-progress__bar--success");
     expect(fill.getAttribute("style")!.replace(";", "")).toBe("width: 100%");
   });
+
+  it("names the progressbar without a label too", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Progress);
+      b.addAttribute(1, "value", 40);
+      b.closeComponent();
+    });
+    expect(container.querySelector("[role=progressbar]")!.getAttribute("aria-label")).toBe("Progress");
+  });
 });
 
 describe("ListGroup + ListGroupItem", () => {

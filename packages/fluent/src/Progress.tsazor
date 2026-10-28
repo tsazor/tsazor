@@ -1,6 +1,6 @@
 @** A Fluent UI 2 progress bar (`role="progressbar"` with `aria-valuenow`) for a value in percent,
     clamped to 0–100; `intent` colors the bar (brand by default), `label` shows below it. *@
-@import type { Intent } from "@tsazor/ui"
+@import { libraryTexts, type Intent } from "@tsazor/ui"
 @import { fluentColor } from "./vocabulary"
 
 <div class="fui-progress-field">
@@ -22,8 +22,11 @@
     /** The progress bar's accessible name, e.g. "Upload" — a screen reader needs one (WCAG 4.1.2). */
     @Parameter() ariaLabel?: string;
 
-    private get accessibleName(): string | undefined {
-        return this.ariaLabel ?? this.label;
+    private readonly t = libraryTexts();
+
+    /** A progressbar needs a name: the label, else a generic one ('Progress, 40%'). */
+    private get accessibleName(): string {
+        return this.ariaLabel ?? (this.label || this.t("progress"));
     }
 
     private get clamped(): number {

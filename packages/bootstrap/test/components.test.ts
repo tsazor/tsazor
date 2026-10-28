@@ -665,6 +665,8 @@ describe("Progress", () => {
     expect(bar.getAttribute("style")!.replace(";", "")).toBe("width: 100%");
     expect(bar.className).toContain("progress-bar-striped");
     expect(bar.className).toContain("bg-success");
+    // A progressbar needs a name: without a label, the generic one.
+    expect(container.querySelector("[role=progressbar]")!.getAttribute("aria-label")).toBe("Progress");
   });
 });
 
