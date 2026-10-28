@@ -573,6 +573,12 @@ describe("Accordion + AccordionItem", () => {
     expect(buttons[0]!.className).not.toContain("collapsed");
     expect(container.querySelectorAll(".accordion-body")).toHaveLength(1);
     expect(container.querySelector(".accordion-body")!.textContent).toBe("Body 0");
+    // The Fluent skin's structure: an h3 header whose button controls the open panel, a region labelled by it.
+    expect(buttons[0]!.parentElement!.tagName).toBe("H3");
+    const panel = document.getElementById(buttons[0]!.getAttribute("aria-controls")!)!;
+    expect(panel.getAttribute("role")).toBe("region");
+    expect(panel.getAttribute("aria-labelledby")).toBe(buttons[0]!.id);
+    expect(buttons[1]!.hasAttribute("aria-controls")).toBe(false);
 
     buttons[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await settle(renderer);

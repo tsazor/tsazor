@@ -1,13 +1,14 @@
-@** One section of an Accordion (Bootstrap's `.accordion-item`): a header button with the title
-    and `aria-expanded`, and a body that is rendered only while the item is open. Place it inside
+@** One section of an Accordion (Bootstrap's `.accordion-item`): a header (an h3) button with the title,
+    `aria-expanded` and `aria-controls`, and a body (`role="region"`, labelled by the header) that is rendered only
+    while the item is open — the Fluent skin's AccordionItem's structure. Place it inside
     an Accordion; clicking the header toggles it through the parent. *@
 @import type Accordion from "./Accordion.tsazor"
 <div class="accordion-item">
-    <h2 class="accordion-header">
-        <button class="@buttonClass" type="button" aria-expanded="@expandedText" @onclick="toggle">@title</button>
-    </h2>
+    <h3 class="accordion-header">
+        <button class="@buttonClass" type="button" id="@headerId" aria-expanded="@expandedText" aria-controls="@panelId" @onclick="toggle">@title</button>
+    </h3>
     @if (isOpen) {
-        <div class="accordion-collapse collapse show">
+        <div class="accordion-collapse collapse show" role="region" id="@panelId" aria-labelledby="@headerId">
             <div class="accordion-body">@childContent</div>
         </div>
     }
@@ -33,6 +34,15 @@
     /** aria-expanded is a token ("true"/"false"), not a boolean attribute. */
     private get expandedText(): string {
         return this.isOpen ? "true" : "false";
+    }
+
+    private get headerId(): string | null {
+        return this.accordion?.headerId(this.index) ?? null;
+    }
+
+    /** The open panel's id: a closed item's panel isn't in the page, so it controls nothing then. */
+    private get panelId(): string | null {
+        return this.isOpen ? (this.accordion?.panelId(this.index) ?? null) : null;
     }
 
     private get isOpen(): boolean {

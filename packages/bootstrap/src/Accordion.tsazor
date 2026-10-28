@@ -2,6 +2,7 @@
     that shows or hides its body. It cascades itself to the items; at most one item is open at a
     time (the first one initially), and opening an item closes the others. *@
 @import type AccordionItem from "./AccordionItem.tsazor"
+@import { uniqueId } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 <div @attributes="@withClass("accordion", additionalAttributes)">@childContent</div>
 
@@ -19,6 +20,17 @@
     }
 
     private items: AccordionItem[] = [];
+    private readonly idBase = uniqueId("tz-accordion");
+
+    /** @internal The header button's id of the item at `index` (its panel is labelled by it). */
+    headerId(index: number): string {
+        return `${this.idBase}-header-${index}`;
+    }
+
+    /** @internal The panel's id of the item at `index` (the header controls it). */
+    panelId(index: number): string {
+        return `${this.idBase}-panel-${index}`;
+    }
 
     get openIndex(): number {
         return this.openIndexInternal;
