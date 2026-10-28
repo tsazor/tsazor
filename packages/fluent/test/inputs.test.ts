@@ -287,6 +287,11 @@ describe("TextArea inside FluentForm", () => {
 });
 
 describe("FluentForm submit flow", () => {
+  it("is novalidate: the browser's own check doesn't block EditForm's validation", async () => {
+    const { container } = await renderForm(emptyModel(), () => {});
+    expect(container.querySelector("form")!.hasAttribute("novalidate")).toBe(true);
+  });
+
   it("blocks an invalid submit and fires onValidSubmit once valid", async () => {
     const model = emptyModel();
     let submitted = 0;
