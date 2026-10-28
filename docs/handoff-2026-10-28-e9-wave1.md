@@ -47,7 +47,11 @@ Also:
 1. `git push origin roadmap/phase-0`, then CI → Run workflow (ci:local needs WSL, not on this laptop).
    The owner is back home around 2026-11-04: no CI before then, so CI and its fixes have ~6 days before rc.1
    (2026-11-10). Until then the laptop's substitutes (`pnpm test`, `pnpm gates`, `public-tree.mjs --verify`) carry it.
-2. The five behavior decisions from the pre-audit (handoff-2026-10-27-rc1.md, "Decisions") — still open.
+2. ~~The five behavior decisions~~ — **decided 2026-10-28: yes to all five**, as recommended
+   (handoff-2026-10-27-rc1.md, "Decisions"): toasts with an action stay until closed; `aria-invalid` as soon as the
+   field shows invalid, the message still deferred; runtime inputs tie their ValidationMessage with
+   `aria-describedby`; disabled menu items stay focusable (`aria-disabled`); single-character hotkeys documented with
+   `enabled` as the way to turn them off. To be done this week, on the laptop.
 3. **The VS Code extension** (`packages/vscode`, grammar + our LSP — the Svelte-style extension exists already):
    publish it with rc.1 on the Marketplace and Open VSX, or attach the `.vsix` to the GitHub release? The roadmap
    has the Marketplace after 1.0; with the repository public at rc.1, people will look for it.
