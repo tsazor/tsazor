@@ -122,7 +122,7 @@ Started:
 - The skin differences, closed toward the more accessible side: Bootstrap's Dialog and Drawer titles are h2 (in the
   h5 look, `3fc7d84`); Bootstrap's AccordionItem has Fluent's h3, `aria-controls` and labelled region (`a7f2308`); a
   Fluent tab panel is a Tab stop (`c320cad`); a Fluent Switch shows its field's message (`b68452b`); Bootstrap's
-  field messages are `role="alert"` as Fluent's (they show only after a submit).
+  field messages are `role="alert"` as Fluent's (they show only after a submit; `e4efbd3`).
 - Library texts added: `colorPicker.squareColorValue`, `wizard.completed`, `fileUpload.fileError`,
   `datePicker.format` (CHANGELOG, Unreleased).
 
