@@ -13,10 +13,12 @@ export function carouselStep(index: number, step: number, count: number): number
 
 /**
  * Whether the slides turn by themselves now: only with `autoCycle`, more than one slide, and while nobody has paused
- * them, holds the pointer over them or has the focus in them (WCAG 2.2.2), and the page doesn't ask for reduced motion.
+ * them, holds the pointer over them or has the focus in them (WCAG 2.2.2), and — when `reducedMotion` is given — the
+ * page doesn't ask for reduced motion. The skins start paused under reduced motion instead, so their start button
+ * turns the slides all the same.
  */
-export function carouselRotates(state: { autoCycle: boolean; count: number; paused: boolean; hovered: boolean; focused: boolean; reducedMotion: boolean }): boolean {
-  return state.autoCycle && state.count > 1 && !state.paused && !state.hovered && !state.focused && !state.reducedMotion;
+export function carouselRotates(state: { autoCycle: boolean; count: number; paused: boolean; hovered: boolean; focused: boolean; reducedMotion?: boolean }): boolean {
+  return state.autoCycle && state.count > 1 && !state.paused && !state.hovered && !state.focused && state.reducedMotion !== true;
 }
 
 /** Which way a swipe went: "next" for right to left (left to right in a right-to-left page), "previous" the other way, undefined for a short or a mostly vertical one. */

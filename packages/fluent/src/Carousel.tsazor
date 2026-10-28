@@ -2,7 +2,7 @@
     CarouselItem children, or `itemsSource` through `itemTemplate` — with previous and next buttons (`showArrows`), a
     button per slide (`showBullets`) and a swipe (`enableSwipeGesture`). `@bind-selectedIndex` says which. With
     `autoCycle` the slides turn every `autoCycleTime` ms, but not while the pointer is over the carousel or the focus is
-    in it, nor with reduced motion asked for; a button stops and starts them (WCAG 2.2.2). Each slide is a group named
+    in it; a button stops and starts them (WCAG 2.2.2), and with reduced motion asked for they start stopped. Each slide is a group named
     "2 of 5"; a slide a person turns to is announced, one that turns by itself isn't. *@
 @typeparam TData
 @import { type CarouselLabels } from "@tsazor/ui"
@@ -102,8 +102,13 @@
 
     /** Whether the slides turn by themselves now. */
     private get rotating(): boolean {
-        const reducedMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-        return carouselRotates({ autoCycle: this.autoCycle, count: this.count, paused: this.paused, hovered: this.hovered, focused: this.focused, reducedMotion });
+        return carouselRotates({ autoCycle: this.autoCycle, count: this.count, paused: this.paused, hovered: this.hovered, focused: this.focused });
+    }
+
+    protected override onInitialized(): void {
+        // Reduced motion starts the slides stopped: the button then says start, and a press turns them (the person
+        // asked) — stopping them for good left a stop button that did nothing.
+        this.paused = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
 
     private get rootAttributes(): Record<string, unknown> {

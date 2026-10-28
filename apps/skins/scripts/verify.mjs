@@ -883,6 +883,21 @@ try {
     say((await shownSlide()) === "1 of 3" && (await bakery.getByRole("button", { name: "Slide 1" }).getAttribute("aria-current")) === "true", "carousel: next and a bullet turn it, the bullet marked current");
     const carouselViolations = await axe(page);
     say(carouselViolations.length === 0, `axe /content with the carousel stopped${carouselViolations.length ? `: ${carouselViolations.join(" | ")}` : ""}`);
+    // Reduced motion: the slides start stopped, the button says start, and a press turns them.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await open(page, base, "/content");
+    await page.mouse.move(0, 0);
+    const still = page.locator("section[aria-roledescription=carousel]");
+    say((await still.getByRole("button", { name: "Start the slides" }).count()) === 1 && (await still.locator("[aria-live]").getAttribute("aria-live")) === "polite", "carousel: with reduced motion it starts stopped, the button says start");
+    const stillAt = await page.locator(".carousel-index").textContent();
+    await still.getByRole("button", { name: "Start the slides" }).click();
+    // The pointer and the focus off it: either holds the slides.
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    await page.waitForFunction((start) => document.querySelector(".carousel-index")?.textContent !== start, stillAt, { timeout: 15_000 });
+    say(true, "carousel: with reduced motion, the start button turns the slides");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await open(page, base, "/content");
 
     /* Links and images. */
     const links = page.locator("section", { has: page.getByRole("heading", { name: "Links and images", exact: true }) });

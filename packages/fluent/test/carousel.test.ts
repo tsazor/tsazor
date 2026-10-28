@@ -117,6 +117,25 @@ describe("Carousel", () => {
     expect(shown()).toEqual(["Sourdough"]);
   });
 
+  it("with reduced motion asked for it starts stopped, and the start button turns the slides", async () => {
+    vi.useFakeTimers();
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: query.includes("reduce"), media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    try {
+      const { idle, shown, button } = await carousel({ autoCycleTime: 1000 });
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(shown()).toEqual(["Rye"]);
+      expect(button("Start the slides")).toBeDefined();
+      button("Start the slides").click();
+      await idle();
+      await vi.advanceTimersByTimeAsync(1000);
+      await idle();
+      expect(shown()).toEqual(["Spelt"]);
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
   it("a swipe from right to left shows the next slide", async () => {
     const { idle, root, shown } = await carousel({ autoCycle: false });
     root().dispatchEvent(new PointerEvent("pointerdown", { clientX: 200, clientY: 50 }));
