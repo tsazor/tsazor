@@ -301,5 +301,6 @@ describe("globals", () => {
   it("src/globals.generated.ts matches the installed TypeScript libs", () => {
     const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../scripts/gen-globals.mjs");
     expect(() => execFileSync(process.execPath, [script, "--check"], { stdio: "pipe" })).not.toThrow();
-  });
+    // A child process reading TypeScript's libs: half a second alone, over vitest's 5 s with every package testing at once.
+  }, 60_000);
 });

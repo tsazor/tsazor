@@ -178,7 +178,8 @@ describe("runtime manifest", () => {
   it("the generator's --check agrees", () => {
     const script = path.resolve(here, "../scripts/gen-runtime-manifest.mjs");
     expect(() => execFileSync(process.execPath, [script, "--check"], { stdio: "pipe" })).not.toThrow();
-  });
+    // A child process: well under a second alone, over vitest's 5 s with every package testing at once.
+  }, 60_000);
 
   it("RUNTIME_COMPONENTS are the manifest's concrete components", () => {
     expect([...RUNTIME_COMPONENTS].sort()).toEqual(

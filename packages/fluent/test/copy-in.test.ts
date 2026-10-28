@@ -34,7 +34,8 @@ function unresolved(files: { file: string; source: string }[]): string[] {
   return missing;
 }
 
-describe("npx @tsazor/fluent add", () => {
+// Child processes: well under a second alone, over vitest's 5 s with every package testing at once.
+describe("npx @tsazor/fluent add", { timeout: 60_000 }, () => {
   it("lists the components", () => {
     expect(execFileSync(process.execPath, [cli, "list"], { encoding: "utf8" })).toContain("  Alert");
     expect(components).toContain("Alert");
@@ -56,7 +57,7 @@ describe("npx @tsazor/fluent add", () => {
   });
 });
 
-describe("npx @tsazor/fluent add <Template>", () => {
+describe("npx @tsazor/fluent add <Template>", { timeout: 60_000 }, () => {
   /** The templates' dir: a template's closure over there (its own modules, not the components']). */
   const templates = path.resolve(import.meta.dirname, "..", "templates");
   const templateNames = readdirSync(templates).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").map((name) => name.replace(/.tsazor$/, ""));

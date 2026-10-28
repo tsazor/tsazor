@@ -75,5 +75,6 @@ console.log(JSON.stringify({ seen, variant: new Badge().variant, metadata: { ...
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
-  });
+    // A child process: well under a second alone, over vitest's 5 s with every package testing at once.
+  }, 60_000);
 });
