@@ -68,6 +68,26 @@ describe("ToastRegion", () => {
     expect(container.querySelectorAll(".fui-toast")).toHaveLength(1);
   });
 
+  it("closing the toast that holds the focus moves it to the next toast, then back where it came from", async () => {
+    const opener = document.createElement("button");
+    document.body.append(opener);
+    const toaster = new Toaster();
+    const { container, ...renderer } = await renderRegion(toaster);
+    toaster.show({ message: "One", timeout: 0 });
+    toaster.show({ message: "Two", timeout: 0 });
+    await settle(renderer);
+    opener.focus();
+    const closes = () => [...container.querySelectorAll<HTMLButtonElement>(".fui-toast__close")];
+    closes()[0]!.focus();
+    closes()[0]!.click();
+    await settle(renderer);
+    expect(document.activeElement).toBe(closes()[0]);
+    closes()[0]!.click();
+    await settle(renderer);
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+
   it("shows a toast's action as a button: a click runs it and closes the toast", async () => {
     const toaster = new Toaster();
     const { container, ...renderer } = await renderRegion(toaster);

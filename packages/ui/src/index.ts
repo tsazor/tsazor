@@ -64,7 +64,7 @@ export {
 } from "./schedule.js";
 export { WizardStepChangeEventArgs, type WizardLabels, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
-export { focusableElements, focusElement } from "./focus.js";
+export { focusableElements, focusElement, moveFocusBeforeRemoval } from "./focus.js";
 export { createLayer, type Layer } from "./layers.js";
 export { OptionsSearchEventArgs } from "./combobox.js";
 export { hideFromTopLayer, raiseInTopLayer, showInTopLayer, topLayer } from "./behaviors/top-layer.js";

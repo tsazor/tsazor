@@ -792,6 +792,9 @@ export interface LibraryTexts {
 // monthNames
 export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
 
+// moveFocusBeforeRemoval
+export declare function moveFocusBeforeRemoval(leaving: Element, container: ParentNode, fallback?: HTMLElement | null): void;
+
 // OptionsSearchEventArgs
 export declare class OptionsSearchEventArgs<TOption> {
     readonly text: string;

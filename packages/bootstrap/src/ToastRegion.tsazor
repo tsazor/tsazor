@@ -3,13 +3,13 @@
     `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them, and can be closed with their button. The region is a
     polite live region; `danger` toasts are announced as alerts. *@
-@import { Toaster, hideFromTopLayer, raiseInTopLayer, type ToastEntry } from "@tsazor/ui"
+@import { Toaster, hideFromTopLayer, moveFocusBeforeRemoval, raiseInTopLayer, type ToastEntry } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
 @inject Toaster toaster
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
 
-<div aria-live="polite" @attributes="@withClass(regionClass, additionalAttributes)" @attach="this.topLayer">
+<div aria-live="polite" @attributes="@withClass(regionClass, additionalAttributes)" @attach="this.topLayer" @onfocusin="this.entered">
     @foreach (const toast of toaster.toasts) {
         <div @key="toast.id" class="@toastClass(toast)" role="@roleOf(toast)" aria-atomic="true" data-bs-theme="@themeOf(toast)"
              @onmouseenter="() => toaster.pause(toast.id)" @onmouseleave="() => toaster.resume(toast.id)"
@@ -23,9 +23,9 @@
                 </div>
                 @if (toast.action) {
                     @* In the toast's own text color, so it keeps its contrast on every background. *@
-                    <button type="button" class="btn btn-sm btn-link text-reset fw-semibold m-auto" @onclick="() => toaster.actAsync(toast.id)">@toast.action.label</button>
+                    <button type="button" class="btn btn-sm btn-link text-reset fw-semibold m-auto" @onclick="(e: MouseEvent) => this.act(e, toast.id)">@toast.action.label</button>
                 }
-                <button type="button" class="btn-close me-2 m-auto" aria-label="@t("close")" @onclick="() => toaster.dismiss(toast.id)"></button>
+                <button type="button" class="btn-close me-2 m-auto" aria-label="@t("close")" @onclick="(e: MouseEvent) => this.close(e, toast.id)"></button>
             </div>
         </div>
     }
@@ -45,6 +45,30 @@
 
     private region?: HTMLElement;
     private newestToast?: number;
+
+    /** Where the focus came from into the region: it goes back there when the last toast holding it closes. */
+    private returnFocus?: HTMLElement;
+
+    private entered(e: FocusEvent): void {
+        const from = e.relatedTarget;
+        if (from instanceof HTMLElement && !this.region?.contains(from)) this.returnFocus = from;
+    }
+
+    private close(e: MouseEvent, id: number): void {
+        this.leave(e);
+        this.toaster.dismiss(id);
+    }
+
+    private act(e: MouseEvent, id: number): Promise<void> {
+        this.leave(e);
+        return this.toaster.actAsync(id);
+    }
+
+    /** A toast that holds the focus is about to close: the focus moves on first, not to the body (WCAG 2.4.3). */
+    private leave(e: MouseEvent): void {
+        const toast = (e.target as Element | null)?.closest(".toast");
+        if (toast && this.region) moveFocusBeforeRemoval(toast, this.region, this.returnFocus);
+    }
 
     /** The container lies in the browser's top layer, so a toast shows above an open modal, as Bootstrap's z-index does. */
     private readonly topLayer = (element: HTMLElement): (() => void) => {

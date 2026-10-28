@@ -76,10 +76,13 @@ export declare class AuthorizeRouteView extends RouteView {
     private authenticationState?;
     private resolved;
     private unsubscribe?;
+    private unsubscribeLocalizer?;
+    private localizer?;
     protected onInitialized(): void;
     dispose(): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     private renderInDefaultLayout;
+    private text;
     private authorizationService;
 }
 

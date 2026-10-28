@@ -2,7 +2,45 @@
 import { describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
-import { Toast } from "../dist/index.js";
+import { Toast, ToastRegion, Toaster } from "../dist/index.js";
+
+async function settle(renderer: { settle(): Promise<void> }): Promise<void> {
+  await renderer.settle();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await renderer.settle();
+}
+
+async function renderRegion(toaster: Toaster) {
+  return renderTree(
+    (b) => {
+      b.openComponent(0, ToastRegion);
+      b.closeComponent();
+    },
+    { services: (services) => services.registerValue(Toaster, toaster) },
+  );
+}
+
+describe("ToastRegion", () => {
+  it("closing the toast that holds the focus moves it to the next toast, then back where it came from", async () => {
+    const opener = document.createElement("button");
+    document.body.append(opener);
+    const toaster = new Toaster();
+    const { container, ...renderer } = await renderRegion(toaster);
+    toaster.show({ message: "One", timeout: 0 });
+    toaster.show({ message: "Two", timeout: 0 });
+    await settle(renderer);
+    opener.focus();
+    const closes = () => [...container.querySelectorAll<HTMLButtonElement>(".btn-close")];
+    closes()[0]!.focus();
+    closes()[0]!.click();
+    await settle(renderer);
+    expect(document.activeElement).toBe(closes()[0]);
+    closes()[0]!.click();
+    await settle(renderer);
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+});
 
 describe("Toast", () => {
   it("renders one toast with its intent and role, title and message", async () => {

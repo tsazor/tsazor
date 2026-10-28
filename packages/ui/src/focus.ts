@@ -30,3 +30,17 @@ export function focusElement(element: HTMLElement | null | undefined): boolean {
   element.focus({ preventScroll: true });
   return element.ownerDocument.activeElement === element;
 }
+
+/**
+ * Keeps the focus off the body when the part of `container` that holds it is about to go (a toast closed, a row
+ * removed): before `leaving` is removed, the focus moves to the next focusable element of `container` outside it, else
+ * the previous one, else `fallback` (where it came from). Does nothing when the focus isn't in `leaving`.
+ */
+export function moveFocusBeforeRemoval(leaving: Element, container: ParentNode, fallback?: HTMLElement | null): void {
+  const active = leaving.ownerDocument.activeElement;
+  if (!active || !leaving.contains(active)) return;
+  const others = focusableElements(container).filter((element) => !leaving.contains(element));
+  const after = others.find((element) => leaving.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING);
+  if (focusElement(after ?? others.at(-1))) return;
+  focusElement(fallback);
+}
