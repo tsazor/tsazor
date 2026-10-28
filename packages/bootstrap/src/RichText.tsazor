@@ -9,22 +9,53 @@
 @inherits InputBase<string>
 @import { type RichTextEditorContract, type RichTextFactory } from "@tsazor/ui"
 
-<div class="@this.areaClass" aria-label="@ariaLabel" @ref="element" @attributes="@this.otherAttributes"></div>
+<div class="@this.areaClass" role="@this.areaRole" aria-multiline="@(this.areaIsSurface ? "true" : null)" aria-label="@ariaLabel" @ref="element" @attributes="@this.otherAttributes"></div>
 
 @code {
     /** The engine's factory: makes the editor on an element, with the engine's own config. */
     @Parameter() create!: RichTextFactory;
     /** Shapes the engine's HTML on its way into the value (none by default). */
     @Parameter() sanitize?: (html: string) => string;
-    /** The area's accessible name, when it has no visible label. */
+    /**
+     * The editor's accessible name, when it has no visible label: on the engine's editing surface (its contenteditable
+     * or textbox, unless the engine named it), and on the area — a group of the toolbar and the surface, or the
+     * surface itself when the engine edits on the area (a textbox then).
+     */
     @Parameter() ariaLabel?: string;
 
     private editor?: RichTextEditorContract;
     /** The last HTML the engine reported: the outside value that is only the engine's echo writes nothing back. */
     private lastEmitted: string | undefined;
+    /** The name this wrapper put on the editing surface: a new ariaLabel replaces it, the engine's own stays. */
+    private surfaceName: string | undefined;
+    /** The engine edits on the area itself (made it contenteditable) rather than on an element it built inside. */
+    private areaIsSurface = false;
+
+    private get areaRole(): string | null {
+        return this.areaIsSurface ? "textbox" : this.ariaLabel ? "group" : null;
+    }
 
     protected override onAfterRender(firstRender: boolean): void {
-        if (!firstRender) return;
+        if (firstRender) {
+            this.createEditor();
+            this.areaIsSurface = this.element?.getAttribute("contenteditable") === "true" || this.element?.getAttribute("contenteditable") === "";
+            if (this.areaIsSurface) this.stateHasChanged();
+        }
+        this.nameSurface();
+    }
+
+    /** A name on the area alone names the group, not the field a screen reader lands in: the surface gets it too. */
+    private nameSurface(): void {
+        const surface = this.element?.querySelector<HTMLElement>("[contenteditable=true], [contenteditable=''], [role=textbox]");
+        if (surface === null || surface === undefined || surface.hasAttribute("aria-labelledby")) return;
+        const own = surface.getAttribute("aria-label");
+        if (own !== null && own !== this.surfaceName) return;
+        if (this.ariaLabel) surface.setAttribute("aria-label", this.ariaLabel);
+        else surface.removeAttribute("aria-label");
+        this.surfaceName = this.ariaLabel || undefined;
+    }
+
+    private createEditor(): void {
         const initial = this.value;
         this.editor = this.create(this.element!);
         this.editor.on("change", (data: { html: string }) => {

@@ -79,10 +79,12 @@ try {
     await page.waitForSelector(".sz-code pre code");
     const panels = await page.locator(".sz-code pre code").count();
     if (panels < (route === "/schedule" ? 2 : route === "/templates" ? 3 : 1)) throw new Error(`the ${route} page shows ${panels} code panels`);
+    // The stub engine edits on the RichText's area: a textbox, named by its ariaLabel.
+    if (route === "/richtext") await page.getByRole("textbox", { name: "A text to edit" }).waitFor({ timeout: 5000 });
   }
 
   if (errors.length > 0) throw new Error(`page errors: ${errors.join("; ")}`);
-  console.log("showcase smoke: home, DataGrid (a resize handle's width), RichText, Scheduler, a code panel per example, copy — ok");
+  console.log("showcase smoke: home, DataGrid (a resize handle's width), RichText (a named textbox), Scheduler, a code panel per example, copy — ok");
   await browser.close();
 } catch (error) {
   console.error(String(error));

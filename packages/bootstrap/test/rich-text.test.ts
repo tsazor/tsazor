@@ -164,4 +164,45 @@ describe("the bound host", () => {
     lastEngine().change("<p>edited</p>");
     expect((instance as unknown as { value: string | null }).value).toBe("<p>edited</p>");
   });
+
+  it("ariaLabel names the engine's editing surface, and the area as a group; an engine's own name stays", async () => {
+    const surfaceOf = (named?: string) => (element: HTMLElement): RichTextEditorContract => {
+      const surface = document.createElement("div");
+      surface.setAttribute("contenteditable", "true");
+      if (named !== undefined) surface.setAttribute("aria-label", named);
+      element.append(surface);
+      return { getHTML: () => "", setHTML: () => {}, on: () => {}, destroy: () => surface.remove() };
+    };
+    mounted.push(await render(RichText, { parameters: { create: surfaceOf(), ariaLabel: "Notes" } }));
+    await mounted.at(-1)!.settle();
+    const area = document.querySelector<HTMLElement>(".tz-rich-text")!;
+    expect(area.getAttribute("role")).toBe("group");
+    expect(area.getAttribute("aria-label")).toBe("Notes");
+    expect(area.querySelector("[contenteditable]")!.getAttribute("aria-label")).toBe("Notes");
+    mounted.splice(0).forEach((result) => result.dispose());
+    document.body.innerHTML = "";
+    mounted.push(await render(RichText, { parameters: { create: surfaceOf("Engine's name"), ariaLabel: "Notes" } }));
+    await mounted.at(-1)!.settle();
+    expect(document.querySelector("[contenteditable]")!.getAttribute("aria-label")).toBe("Engine's name");
+    // Without ariaLabel the area is no group (a visible label names the field by its own means).
+    mounted.splice(0).forEach((result) => result.dispose());
+    document.body.innerHTML = "";
+    mounted.push(await render(RichText, { parameters: { create: surfaceOf() } }));
+    await mounted.at(-1)!.settle();
+    expect(document.querySelector(".tz-rich-text")!.hasAttribute("role")).toBe(false);
+    expect(document.querySelector("[contenteditable]")!.hasAttribute("aria-label")).toBe(false);
+  });
+  it("an engine that edits on the area itself makes it a named, multi-line textbox", async () => {
+    const onArea = (element: HTMLElement): RichTextEditorContract => {
+      element.contentEditable = "true";
+      return { getHTML: () => "", setHTML: () => {}, on: () => {}, destroy: () => {} };
+    };
+    mounted.push(await render(RichText, { parameters: { create: onArea, ariaLabel: "Notes" } }));
+    await mounted.at(-1)!.settle();
+    await mounted.at(-1)!.settle();
+    const area = document.querySelector<HTMLElement>(".tz-rich-text")!;
+    expect(area.getAttribute("role")).toBe("textbox");
+    expect(area.getAttribute("aria-multiline")).toBe("true");
+    expect(area.getAttribute("aria-label")).toBe("Notes");
+  });
 });
