@@ -1,12 +1,16 @@
 @** Renders Bootstrap's `.spinner-border` or `.spinner-grow` loading indicator in a `role="status"`
-    region named by `ariaLabel` ("Loading…" by default), with optional visible `label` text next to it —
+    live region, with optional visible `label` text next to it; it announces its text, the label or else
+    `ariaLabel` as hidden text ("Loading…" by default; null for none) —
     the same parameters as the Fluent skin's Spinner; `intent` and `kind` are Bootstrap extras. *@
 @import type { Intent } from "@tsazor/ui"
 @import { textColor } from "./vocabulary"
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
-<span role="status" aria-label="@(ariaLabel === undefined ? t("loading") : ariaLabel)" @attributes="@withClass("d-inline-flex align-items-center gap-2", additionalAttributes)">
+<span role="status" @attributes="@withClass("d-inline-flex align-items-center gap-2", additionalAttributes)">
     <span class="@spinnerClass" style="@spinnerStyle" aria-hidden="true"></span>
+    @if (hiddenText) {
+        <span class="visually-hidden">@hiddenText</span>
+    }
     @if (label) {
         <span>@label</span>
     }
@@ -26,7 +30,8 @@
     @Parameter() label?: string;
     /** Content of its own after the label (a cancel link). */
     @Parameter() childContent?: RenderFragment;
-    /** The status region's accessible name. */
+    /** The busy state for screen readers, as hidden text in the status region ("Loading…" by default,
+        unless a visible label says it; null for none). */
     @Parameter() ariaLabel?: string | null;
     /** `@attributes` pass-through (class appends). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
@@ -35,6 +40,12 @@
         const base = this.kind === "grow" ? "spinner-grow" : "spinner-border";
         const size = this.size === "small" ? ` ${base}-sm` : "";
         return `${base} text-${textColor(this.intent)}${size}`;
+    }
+
+    /** A live region announces its text, not an aria-label: the default goes when a visible label speaks. */
+    private get hiddenText(): string | null {
+        if (this.ariaLabel === undefined) return this.label ? null : this.t("loading");
+        return this.ariaLabel;
     }
 
     /** Bootstrap has no large spinner: 3rem across. */

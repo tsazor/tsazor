@@ -193,3 +193,16 @@
   padding: var(--fui-spacing-xs);
   cursor: pointer;
 }
+
+/* Text for screen readers only: a live region's announcement, a column's name without chrome. */
+.fui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

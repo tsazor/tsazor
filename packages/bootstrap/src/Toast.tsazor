@@ -42,9 +42,9 @@
 
     private get toastAttributes(): Record<string, unknown> {
         return {
-            // role=alert for danger (assertive), otherwise status.
+            // role=alert for danger (assertive), otherwise status (polite); no aria-live of its own,
+            // which would make a danger toast polite too.
             role: this.intent === "danger" ? "alert" : "status",
-            "aria-live": "polite",
             "aria-atomic": "true",
             // Light text and a white close button on the strong colors.
             "data-bs-theme": this.intent === "primary" || this.intent === "secondary" || this.intent === "success" || this.intent === "danger" ? "dark" : null,

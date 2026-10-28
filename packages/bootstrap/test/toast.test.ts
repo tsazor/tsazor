@@ -16,6 +16,8 @@ describe("Toast", () => {
     const toast = container.querySelector(".toast")!;
     expect(toast.className).toBe("toast show align-items-center border-0 text-bg-danger");
     expect(toast.getAttribute("role")).toBe("alert");
+    // An aria-live of its own would override the alert's assertive politeness.
+    expect(toast.hasAttribute("aria-live")).toBe(false);
     expect(toast.getAttribute("data-bs-theme")).toBe("dark");
     expect(toast.querySelector("strong")!.textContent).toBe("Payment failed");
     expect(toast.querySelector(".toast-body")!.textContent).toContain("Try another card.");

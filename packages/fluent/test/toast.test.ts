@@ -126,5 +126,7 @@ describe("Toast", () => {
     const toast = container.querySelector(".fui-toast")!;
     expect(toast.className).toBe("fui-toast fui-toast--danger");
     expect(toast.getAttribute("role")).toBe("alert");
+    // An aria-live of its own would override the alert's assertive politeness.
+    expect(toast.hasAttribute("aria-live")).toBe(false);
   });
 });

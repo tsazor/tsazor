@@ -122,17 +122,24 @@ describe("Spinner", () => {
     });
     const spinner = container.querySelector(".fui-spinner")!;
     expect(spinner.getAttribute("role")).toBe("status");
-    expect(spinner.getAttribute("aria-label")).toBe("Loading…");
     expect(spinner.className).toBe("fui-spinner fui-spinner--large");
   });
 
-  it("keeps an accessible name on the status node (default label)", async () => {
-    const { container } = await renderTree((b) => {
+  it("announces text, not a name: hidden \"Loading…\" by default, the visible label instead", async () => {
+    // A live region speaks its content; an aria-label on role=status goes unannounced.
+    let label: string | undefined;
+    const { container, rerender } = await renderTree((b) => {
       b.openComponent(0, Spinner);
+      if (label) b.addAttribute(1, "label", label);
       b.closeComponent();
     });
     const spinner = container.querySelector(".fui-spinner")!;
-    expect(spinner.getAttribute("aria-label")).toBe("Loading…");
+    expect(spinner.hasAttribute("aria-label")).toBe(false);
+    expect(spinner.querySelector(".fui-visually-hidden")!.textContent).toBe("Loading…");
+    label = "Loading orders…";
+    await rerender();
+    expect(spinner.querySelector(".fui-visually-hidden")).toBeNull();
+    expect(spinner.textContent).toBe("Loading orders…");
   });
 });
 

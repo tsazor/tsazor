@@ -37,7 +37,8 @@
     /** Fired when the user closes the toast. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
 
-    /** role=alert for danger (assertive), otherwise status. */
+    /** role=alert for danger (assertive), otherwise status (polite); no aria-live of its own, which would
+        make a danger toast polite too. */
     private get liveRole(): string {
         return this.intent === "danger" ? "alert" : "status";
     }
@@ -50,7 +51,6 @@
         return withAttributes({
             class: this.toastClass,
             role: this.liveRole,
-            "aria-live": "polite",
             "aria-atomic": "true",
         }, this.additionalAttributes);
     }

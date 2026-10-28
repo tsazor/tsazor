@@ -1,9 +1,10 @@
-@** A Fluent UI 2 loading spinner (role="status" with an aria-label, "Loading…" by default);
-    size small | medium | large. Optional child content renders next to it. *@
+@** A Fluent UI 2 loading spinner in a role="status" live region; size small | medium | large.
+    The region announces its text: the visible label, otherwise ariaLabel as hidden text
+    ("Loading…" by default; null for none). Optional child content renders next to it. *@
 @import { withAttributes } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
 
-<span role="status" @attributes="@this.spinnerAttributes">@if (label) {<span class="fui-spinner__label">@label</span>}@childContent</span>
+<span role="status" @attributes="@this.spinnerAttributes">@if (this.hiddenText) {<span class="fui-visually-hidden">@this.hiddenText</span>}@if (label) {<span class="fui-spinner__label">@label</span>}@childContent</span>
 
 @code {
     private readonly t = libraryTexts();
@@ -12,7 +13,8 @@
     @Parameter() size: "small" | "medium" | "large" = "medium";
     /** Visible text next to the spinner ("Loading orders…"). */
     @Parameter() label?: string;
-    /** Accessible label announcing the busy state (defaults to "Loading…"). */
+    /** The busy state for screen readers, as hidden text in the status region ("Loading…" by default,
+        unless a visible label says it; null for none). */
     @Parameter() ariaLabel?: string | null;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
@@ -27,9 +29,12 @@
     }
 
     private get spinnerAttributes(): Record<string, unknown> {
-        return withAttributes({
-            class: this.spinnerClass,
-            "aria-label": this.ariaLabel === undefined ? this.t("loading") : this.ariaLabel ?? undefined,
-        }, this.additionalAttributes);
+        return withAttributes({ class: this.spinnerClass }, this.additionalAttributes);
+    }
+
+    /** A live region announces its text, not an aria-label: the default goes when a visible label speaks. */
+    private get hiddenText(): string | null {
+        if (this.ariaLabel === undefined) return this.label ? null : this.t("loading");
+        return this.ariaLabel;
     }
 }
