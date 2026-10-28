@@ -72,5 +72,15 @@ Started:
   blocking load were inert — neither announced nor pressable. A ToastRegion nested inside a covered container stays
   inert; it belongs at the layout's top level.
 - A Splitter bar that collapses a pane takes Tab without `resizable` (`901c48f`).
+- A Progress without a label is named "Progress" (`ec98239`, library text `progress`).
+- A virtualized DataGrid's `aria-rowcount` counts the rows a filter leaves, not all items (`8bd2b6f`).
+
+Looked at, left open:
+
+- DecimalInput ↑/↓: a feature (step, min/max, decimal arithmetic on a text field), not a fix — after rc.1.
+- Rating at 0: clearing works (a click or Space on the value's star); the audit note says no more — what was meant?
+- A virtualized DataGrid's detail rows have no `aria-rowindex` (the data and placeholder rows do), and
+  `aria-rowcount` doesn't count them. Options: `role="presentation"` on the detail row (its content stays, the cell
+  semantics go) or a row index scheme that counts open details. A semantics choice — not made.
 
 The rest of the wave-2 list in handoff-2026-10-27-rc1.md stands; it is after rc.1, so no rush.
