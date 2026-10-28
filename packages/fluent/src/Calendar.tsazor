@@ -4,7 +4,7 @@
     range picks days into `selectedDates` (a range: its start, then its end; `selectDatesHover` picks a set at once,
     a week). The title zooms out to the months and the years. The keys follow the WAI-ARIA date grid: the arrows by a
     day or a week, Home and End to the week's ends, Page Up and Page Down by a month (with Shift a year), Enter or
-    Space picks. The names and the week's first day come from `locale`. *@
+    Space picks. The title is a polite live region: a month turned is announced. The names and the week's first day come from `locale`. *@
 @import {
     isoDate, parseIsoDate, today, uniqueId, type CalendarDay, type CalendarLabels, type CalendarSelectMode,
     type CalendarView, type IsoDate,
@@ -24,9 +24,9 @@
 <div @attributes="@this.calendarAttributes" @ref="root">
     <div class="fui-calendar__header">
         @if (this.canZoomOut) {
-            <button type="button" class="fui-calendar__title" id="@this.titleId" @onclick="this.zoomOut">@this.title</button>
+            <button type="button" class="fui-calendar__title" id="@this.titleId" aria-live="polite" @onclick="this.zoomOut">@this.title</button>
         } else {
-            <span class="fui-calendar__title" id="@this.titleId">@this.title</span>
+            <span class="fui-calendar__title" id="@this.titleId" aria-live="polite">@this.title</span>
         }
         <button type="button" class="fui-calendar__step" aria-label="@this.stepLabels[0]" title="@this.stepLabels[0]" disabled="@(this.inert || this.stepDisabled(-1))" @onclick="() => this.step(-1)"><Icon value="@ArrowUp20Regular" /></button>
         <button type="button" class="fui-calendar__step" aria-label="@this.stepLabels[1]" title="@this.stepLabels[1]" disabled="@(this.inert || this.stepDisabled(1))" @onclick="() => this.step(1)"><Icon value="@ArrowDown20Regular" /></button>

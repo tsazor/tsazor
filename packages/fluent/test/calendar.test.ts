@@ -60,6 +60,8 @@ describe("Calendar", () => {
     const { root, cell, title } = await mount();
     expect(title()).toBe("October 2026");
     expect(root.querySelector("[role=grid]")!.getAttribute("aria-labelledby")).toBe(root.querySelector(`.${PREFIX}-calendar__title`)!.id);
+    // A month or a year turned by the step buttons or Page Up/Down is announced (the WAI-ARIA date picker's title).
+    expect(root.querySelector(`.${PREFIX}-calendar__title`)!.getAttribute("aria-live")).toBe("polite");
     expect([...root.querySelectorAll("th")].map((th) => th.textContent!.trim())).toEqual(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
     expect(root.querySelectorAll("tbody tr")).toHaveLength(6);
     expect(cell("2026-10-10").getAttribute("aria-selected")).toBe("true");
