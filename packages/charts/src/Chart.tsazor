@@ -5,7 +5,7 @@
     table (`showTable`). With `@bind-selectedIndex` a series or a slice is chosen by a click or by the keyboard (each
     is a button then); `canHideSeries` turns the legend into checkboxes that hide a series. A point's value shows on
     hover. It doesn't animate. *@
-@import { areaPath, arcPath, chartSummary, linearScale, linePath, pieSlices, stackSeries, valueAxis } from "./chart-math"
+@import { areaPath, arcPath, chartSummary, linearScale, linePath, pieSlices, seriesInWords, sliceInWords, stackSeries, valueAxis } from "./chart-math"
 @import type { ChartOptions, ChartSeries, ChartType } from "./chart-types"
 @import type { ValueAxis } from "./chart-math"
 @import { libraryTexts } from "@tsazor/ui"
@@ -278,9 +278,7 @@
     }
 
     private seriesLabel(series: number): string {
-        const data = this.chartSeries[series]!.data;
-        if (data.length === 0) return this.chartSeries[series]!.name;
-        return `${this.chartSeries[series]!.name}: ${this.format(Math.min(...data))} to ${this.format(Math.max(...data))}`;
+        return seriesInWords(this.chartSeries[series]!, this.format, this.t);
     }
 
     // The radial charts.
@@ -293,7 +291,7 @@
         const inner = this.chartType === "donut" ? radius * (this.options.donutHole ?? 0.6) : 0;
         return pieSlices(values).map((slice, i) => ({
             path: arcPath(cx, cy, radius, inner, slice.start, slice.end),
-            label: `${this.chartLabels[i] ?? i + 1}: ${this.format(values[i] ?? 0)} (${Math.round(slice.share * 100)}%)`,
+            label: sliceInWords(`${this.chartLabels[i] ?? i + 1}`, this.format(values[i] ?? 0), slice.share, this.t),
         }));
     }
 

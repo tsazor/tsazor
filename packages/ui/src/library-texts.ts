@@ -64,7 +64,16 @@ export const libraryTextDefaults = catalog({
   "schedule.more": "{count} more",
 
   "chat.label": "Chat messages",
+  // A message's speaker: the mark on its bubble, and the name a screen reader hears before its text.
+  "chat.userMark": "Y",
+  "chat.assistantMark": "A",
+  "chat.user": "You",
+  "chat.assistant": "Assistant",
+  "prompt.label": "Message",
   "prompt.send": "Send",
+  // A PivotDataGrid's own columns.
+  "pivot.rows": "Rows",
+  "pivot.total": "Total",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",
   "dataGrid.filterValue": "Filter value",

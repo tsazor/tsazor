@@ -978,11 +978,11 @@ export default class Paginator extends ComponentBase {
 export default class PivotDataGrid<TRow> extends ComponentBase {
     data?: readonly TRow[];
     rowField: (row: TRow) => unknown;
-    rowTitle: string;
+    rowTitle?: string;
     columnField?: (row: TRow) => unknown;
     columnName?: (value: unknown) => string;
     measure: PivotMeasure<TRow>;
-    totalTitle: string;
+    totalTitle?: string;
     ariaLabel?: string;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -1017,6 +1017,7 @@ export default class Progress extends ComponentBase {
 // PromptInput
 export default class PromptInput extends InputBase<string> {
     onSend?: EventCallback<string>;
+    ariaLabel?: string;
     placeholder?: string;
     disabled: boolean;
     send(): Promise<void>;

@@ -54,6 +54,9 @@ describe("Chat", () => {
     expect(messages[1]!.className).toContain("fui-chat-message--assistant");
     expect(messages[1]!.querySelector("code")!.textContent).toBe("@bind-Items"); // Markdown rendered
     expect(messages[1]!.querySelector("strong")!.textContent).toBe("Enter");
+    // The mark is a picture to a screen reader, which hears who speaks instead.
+    expect(messages[0]!.querySelector(".fui-chat-role")!.getAttribute("aria-hidden")).toBe("true");
+    expect([...messages].map((message) => message.querySelector(".fui-visually-hidden")!.textContent)).toEqual(["You: ", "Assistant: "]);
   });
 
   it("streams an answer: the draft grows in the log, the typing indicator until the first delta", async () => {
@@ -100,6 +103,11 @@ describe("PromptInput", () => {
     const { container, settle } = result;
     const area = container.querySelector<HTMLTextAreaElement>(".fui-prompt-text")!;
     expect(area.placeholder).toBe("Ask…");
+    // A placeholder is no name; the send button's is its visible (library) text.
+    expect(area.getAttribute("aria-label")).toBe("Message");
+    const button = container.querySelector<HTMLButtonElement>(".fui-prompt button")!;
+    expect(button.hasAttribute("aria-label")).toBe(false);
+    expect(button.textContent!.trim()).toBe("Send");
     area.value = "Bind the grid";
     area.dispatchEvent(new Event("input", { bubbles: true }));
     await settle();

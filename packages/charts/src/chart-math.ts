@@ -132,6 +132,25 @@ export function arcPath(cx: number, cy: number, radius: number, inner: number, s
   return `M${at(radius, start)} A${r(radius)},${r(radius)} 0 ${large} 1 ${at(radius, end)} L${at(inner, end)} A${r(inner)},${r(inner)} 0 ${large} 0 ${at(inner, start)} Z`;
 }
 
+/** A series in words: where it goes, "Rye from 98 to 182" (a summary's part, a series' name when it is a button). */
+export function seriesInWords(
+  series: { name: string; data: readonly number[] },
+  format: (value: number) => string,
+  t: LibraryTexts = englishLibraryTexts,
+): string {
+  if (series.data.length === 0) return t("chart.noValues", { series: series.name });
+  const low = Math.min(...series.data);
+  const high = Math.max(...series.data);
+  return low === high
+    ? t("chart.at", { series: series.name, value: format(low) })
+    : t("chart.range", { series: series.name, low: format(low), high: format(high) });
+}
+
+/** A pie's or a donut's slice in words: "Bread 30 (75%)". */
+export function sliceInWords(label: string, value: string, share: number, t: LibraryTexts = englishLibraryTexts): string {
+  return t("chart.slice", { label, value, share: Math.round(share * 100) });
+}
+
 /** The chart in words for its text alternative: per series, where it goes (axis charts) or each share (a pie). */
 export function chartSummary(
   type: "line" | "area" | "bar" | "stacked-bar" | "donut" | "pie",
@@ -145,16 +164,11 @@ export function chartSummary(
   if (type === "donut" || type === "pie") {
     const values = series[0]?.data ?? [];
     const slices = pieSlices(values);
-    const parts = values.map((value, i) => t("chart.slice", { label: labels[i] ?? `${i + 1}`, value: format(value), share: Math.round(slices[i]!.share * 100) }));
+    const parts = values.map((value, i) => sliceInWords(labels[i] ?? `${i + 1}`, format(value), slices[i]!.share, t));
     const chart = series[0]?.name ? t("chart.of", { chart: kind, series: series[0].name }) : kind;
     return t("chart.summary", { chart, parts: parts.join(", ") });
   }
-  const parts = series.map((s) => {
-    if (s.data.length === 0) return t("chart.noValues", { series: s.name });
-    const low = Math.min(...s.data);
-    const high = Math.max(...s.data);
-    return low === high ? t("chart.at", { series: s.name, value: format(low) }) : t("chart.range", { series: s.name, low: format(low), high: format(high) });
-  });
+  const parts = series.map((s) => seriesInWords(s, format, t));
   return labels.length > 1
     ? t("chart.summaryOver", { chart: kind, parts: parts.join("; "), first: labels[0], last: labels[labels.length - 1] })
     : t("chart.summary", { chart: kind, parts: parts.join("; ") });

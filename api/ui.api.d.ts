@@ -647,7 +647,14 @@ export declare const libraryTextDefaults: {
     readonly "schedule.resize": string;
     readonly "schedule.more": string;
     readonly "chat.label": string;
+    readonly "chat.userMark": string;
+    readonly "chat.assistantMark": string;
+    readonly "chat.user": string;
+    readonly "chat.assistant": string;
+    readonly "prompt.label": string;
     readonly "prompt.send": string;
+    readonly "pivot.rows": string;
+    readonly "pivot.total": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
     readonly "dataGrid.filterApply": string;

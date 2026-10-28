@@ -103,6 +103,15 @@ describe("FileUpload", () => {
     expect(Host.last!.uploaded).toEqual([]);
   });
 
+  it("words the count error as the library text, or as the labels say", async () => {
+    const english = await mount({ multiple: true, maximumFileCount: 1 });
+    await drop(english.zone, [file("a", 1), file("b", 1)], english.result);
+    expect(english.Host.last!.errors[0]!.errorMessage).toBe("The maximum number of files has been exceeded.");
+    const own = await mount({ multiple: true, maximumFileCount: 1, labels: { fileCountExceeded: "Höchstens eine Datei." } });
+    await drop(own.zone, [file("a", 1), file("b", 1)], own.result);
+    expect(own.Host.last!.errors[0]!.errorMessage).toBe("Höchstens eine Datei.");
+  });
+
   it("a single-file zone takes the first file dropped", async () => {
     const { Host, zone, result } = await mount();
     await drop(zone, [file("a", 1), file("b", 1)], result);

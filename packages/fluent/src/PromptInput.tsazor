@@ -7,8 +7,8 @@
 @import { libraryTexts } from "@tsazor/ui"
 
 <div class="fui-prompt" @attributes="otherAttributes">
-    <textarea class="form-control fui-prompt-text" rows="1" placeholder="@placeholder" value="@displayValue" @oninput="(event: Event) => this.typed(event)" @onkeydown="@((event: KeyboardEvent) => this.keydown(event))" @ref="element"></textarea>
-    <Button Intent="primary" OnClick="@(() => this.send())" Disabled="@this.canSend === false" AriaLabel="Send the prompt">@t("prompt.send")</Button>
+    <textarea class="form-control fui-prompt-text" rows="1" aria-label="@(ariaLabel ?? t("prompt.label"))" placeholder="@placeholder" value="@displayValue" @oninput="(event: Event) => this.typed(event)" @onkeydown="@((event: KeyboardEvent) => this.keydown(event))" @ref="element"></textarea>
+    <Button Intent="primary" OnClick="@(() => this.send())" Disabled="@this.canSend === false">@t("prompt.send")</Button>
 </div>
 
 @code {
@@ -16,6 +16,8 @@
 
     /** The send handler: append to your state and stream from your source; the input clears when it fires. */
     @Parameter() onSend?: EventCallback<string>;
+    /** The text field's name for screen readers ("Message" by default; a placeholder is no name). */
+    @Parameter() ariaLabel?: string;
     /** The input's placeholder. */
     @Parameter() placeholder?: string;
     /** Disables the input and the send. */

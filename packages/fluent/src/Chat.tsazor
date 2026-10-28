@@ -16,7 +16,7 @@
         <Virtualize Items="@this.lines" AnchorMode="@VirtualizeAnchorMode.End" ItemSize="72" OverscanCount="4" SpacerElement="div">
             <ItemContent Context="message">
                 <div class="@this.messageClass(message)">
-                    <span class="fui-chat-role" aria-hidden="true">@this.roleMark(message)</span>
+                    <span class="fui-chat-role" aria-hidden="true">@this.roleMark(message)</span><span class="fui-visually-hidden">@this.speaker(message): </span>
                     @if (message.text === "" && this.busy()) {
                         <div class="fui-chat-typing" aria-hidden="true"><span></span><span></span><span></span></div>
                     } else if (message.role === "assistant" && markdown) {
@@ -68,7 +68,12 @@
 
     /** The role's mark (a monogram for now: A or Y). */
     private roleMark(message: TMessage): string {
-        return message.role === "user" ? "Y" : "A";
+        return message.role === "user" ? this.t("chat.userMark") : this.t("chat.assistantMark");
+    }
+
+    /** Who says it, for a screen reader: the mark is a picture to it. */
+    private speaker(message: TMessage): string {
+        return message.role === "user" ? this.t("chat.user") : this.t("chat.assistant");
     }
 
     /** Whether an answer is streaming now (the state's flag or yours). */

@@ -66,7 +66,7 @@ describe("Chart", () => {
   it("donut: a slice per label with its share; the legend names them", async () => {
     const figure = await chart({ chartType: "donut", chartSeries: [{ name: "Sales", data: [30, 10] }], chartLabels: ["Bread", "Rolls"], ariaLabel: "Sales" });
     expect(figure.querySelector("desc")!.textContent).toBe("Donut chart of Sales: Bread 30 (75%), Rolls 10 (25%).");
-    expect([...figure.querySelectorAll(".tz-chart__slice title")].map((title) => title.textContent)).toEqual(["Bread: 30 (75%)", "Rolls: 10 (25%)"]);
+    expect([...figure.querySelectorAll(".tz-chart__slice title")].map((title) => title.textContent)).toEqual(["Bread 30 (75%)", "Rolls 10 (25%)"]);
     expect([...figure.querySelectorAll(".tz-chart__legend-item")].map((item) => item.textContent?.trim())).toEqual(["Bread", "Rolls"]);
   });
 
@@ -92,7 +92,7 @@ describe("Chart", () => {
     const svg = result.container.querySelector("svg")!;
     expect(svg.getAttribute("role")).toBe("group");
     const series = () => [...svg.querySelectorAll<HTMLElement>(".tz-chart__series")];
-    expect(series().map((s) => s.getAttribute("aria-label"))).toEqual(["Rye: 98 to 182", "Spelt: 38 to 75"]);
+    expect(series().map((s) => s.getAttribute("aria-label"))).toEqual(["Rye from 98 to 182", "Spelt from 38 to 75"]);
     series()[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
     await result.settle();
     expect(Host.last!.selected).toBe(1);

@@ -176,7 +176,7 @@
         if (input) input.value = "";
         if (files.length === 0) return;
         if (files.length > this.maximumFileCount) {
-            await this.onFileError?.invokeAsync({ errorCode: "file-count-exceeded", errorMessage: "The maximum number of files has been exceeded.", fileCount: files.length });
+            await this.onFileError?.invokeAsync({ errorCode: "file-count-exceeded", errorMessage: this.labels?.fileCountExceeded ?? this.t("fileUpload.fileCountExceeded"), fileCount: files.length });
             return;
         }
         if (this.onInputFileChange) {

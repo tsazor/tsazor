@@ -3,10 +3,10 @@
     become the grid's columns, each sortable; the row totals are a column, the column totals are
     the footer, and the grand total closes the corner. The measure's format shapes the cells. *@
 @typeparam TRow
-@import { PivotModel, GridSort, type PivotMatrix, type PivotMeasure, type PivotRow } from "@tsazor/ui"
+@import { PivotModel, GridSort, libraryTexts, type PivotMatrix, type PivotMeasure, type PivotRow } from "@tsazor/ui"
 
 <DataGrid Items="@lineItems" AriaLabel="@ariaLabel">
-    <TemplateColumn Title="@rowTitle" Context="line" Sortable="@true" SortBy="@byRowValue">
+    <TemplateColumn Title="@(rowTitle ?? t("pivot.rows"))" Context="line" Sortable="@true" SortBy="@byRowValue">
         @this.rowText(line)
     </TemplateColumn>
     @foreach (const column of this.matrix.columns) {
@@ -15,26 +15,28 @@
             @this.cellText(line, index)
         </TemplateColumn>
     }
-    <TemplateColumn Title="@totalTitle" Context="line" Sortable="@true" SortBy="@byTotal" Aggregate="@(() => this.matrix.totals.grand)" AggregateFormat="@(value => this.formatAggregate(value))">
+    <TemplateColumn Title="@(totalTitle ?? t("pivot.total"))" Context="line" Sortable="@true" SortBy="@byTotal" Aggregate="@(() => this.matrix.totals.grand)" AggregateFormat="@(value => this.formatAggregate(value))">
         @this.cellText(line.line.total === undefined ? undefined : line, -1)
     </TemplateColumn>
 </DataGrid>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The app's data. */
     @Parameter() data?: readonly TRow[];
     /** The row field's values (a dimension); the rows order by them. */
     @Parameter() rowField!: (row: TRow) => unknown;
-    /** The row dimension's column's title. */
-    @Parameter() rowTitle: string = "Rows";
+    /** The row dimension's column's title ("Rows" by default). */
+    @Parameter() rowTitle?: string;
     /** The column field's values (a dimension); without one, the pivot is one column wide. */
     @Parameter() columnField?: (row: TRow) => unknown;
     /** Names a column by its value (default: the value as text). */
     @Parameter() columnName?: (value: unknown) => string;
     /** The measure: the values, their aggregate, the format. */
     @Parameter() measure!: PivotMeasure<TRow>;
-    /** The totals' column's title. */
-    @Parameter() totalTitle: string = "Total";
+    /** The totals' column's title ("Total" by default). */
+    @Parameter() totalTitle?: string;
     /** Names the grid for screen readers. */
     @Parameter() ariaLabel?: string;
     /** Further attributes for the grid (class adds to its classes). */
