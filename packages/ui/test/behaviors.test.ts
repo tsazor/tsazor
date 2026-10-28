@@ -227,6 +227,8 @@ describe("FieldState", () => {
     expect(field.id("explicit")).toBe("explicit");
     expect(field.aria("", true)).toEqual({ "aria-invalid": undefined, "aria-describedby": `${id}-help` });
     expect(field.aria("Required", true)).toEqual({ "aria-invalid": "true", "aria-describedby": `${id}-help ${id}-message` });
+    // Invalid before a submit: marked, the message (and its describedby) still deferred.
+    expect(field.aria("", true, undefined, true)).toEqual({ "aria-invalid": "true", "aria-describedby": `${id}-help` });
   });
 
   it("reads Blazor's field classes: only a modified valid field is valid", () => {

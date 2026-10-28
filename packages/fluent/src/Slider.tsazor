@@ -138,7 +138,7 @@
             "aria-orientation": this.orientation === "vertical" ? "vertical" : undefined,
             "aria-valuetext": this.valueFormat ? this.valueText : undefined,
             "aria-label": this.ariaLabel,
-            "aria-invalid": this.message ? "true" : undefined,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
             "aria-describedby": this.describedBy,
         }, this.additionalAttributes);
     }

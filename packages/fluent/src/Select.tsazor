@@ -3,7 +3,7 @@
     FluentSelect<TOption>, MudSelect<T>), give `items` and `optionText` and bind @bind-selectedOption: the choice is
     the option itself — an enum member, a number, an object — with nothing parsed; `placeholder` adds an empty choice,
     null (bind a `T | null` then). Inside a FluentForm it shows the field's first validation message (role="alert",
-    aria-invalid, aria-describedby) once a submit was attempted. *@
+    aria-describedby) once a submit was attempted; aria-invalid as soon as it shows invalid. *@
 @typeparam TOption = string
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
@@ -116,7 +116,7 @@
             "aria-readonly": this.readOnly ? "true" : undefined,
             required: this.required ? true : undefined,
             "aria-label": this.ariaLabel,
-            "aria-invalid": this.message ? "true" : undefined,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
             "aria-describedby": this.describedBy,
         }, this.additionalAttributes);
     }

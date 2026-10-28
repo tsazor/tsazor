@@ -57,7 +57,7 @@
     }
 
     private get groupAttributes(): Record<string, unknown> {
-        return { id: this.field.id(this.id), ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+        return { id: this.field.id(this.id), ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
     }
 
     private optionId(index: number): string {

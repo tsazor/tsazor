@@ -6,7 +6,8 @@
  *
  * Messages appear only once the form was submitted: live validation while
  * the user is still typing gets in the way. The field's validity classes
- * stay live (a corrected field turns valid at once).
+ * stay live (a corrected field turns valid at once), and so does
+ * `aria-invalid`: a screen reader hears what the eye sees.
  */
 import type { EditContext } from "@tsazor/runtime";
 import { uniqueId } from "./ids.js";
@@ -76,12 +77,14 @@ export class FieldState {
 
   /**
    * `aria-invalid` and `aria-describedby` for the input: the message (when
-   * shown) and the help text (when there is one) describe it.
+   * shown) and the help text (when there is one) describe it. `invalid` is
+   * whether the field shows invalid — `validity(fieldClass) === "invalid"`,
+   * live before a submit; without it, while a message shows.
    */
-  aria(message: string, hasHelp = false, explicitId?: string | null): Record<string, string | undefined> {
+  aria(message: string, hasHelp = false, explicitId?: string | null, invalid = message !== ""): Record<string, string | undefined> {
     const describedBy = [hasHelp ? this.helpId(explicitId) : "", message ? this.messageId(explicitId) : ""].filter(Boolean).join(" ");
     return {
-      "aria-invalid": message ? "true" : undefined,
+      "aria-invalid": invalid || message ? "true" : undefined,
       "aria-describedby": describedBy || undefined,
     };
   }

@@ -133,7 +133,7 @@
     }
 
     private get inputAttributes(): Record<string, unknown> {
-        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
     }
 
     private handleChange(e: Event): void {

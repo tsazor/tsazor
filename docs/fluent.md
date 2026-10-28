@@ -126,11 +126,11 @@ Notes on the important ones:
   EditContext validation messages come from core; only the Fluent chrome is
   here. Every input generates a unique `id` when the app gives none
   (`fui-input-3` …), so `label[for]` and `aria-describedby` always connect
-  without the author wiring `id` strings. `aria-invalid` and
-  `aria-describedby` render as soon as there is a message; the
-  `role="alert"` message row appears with the first submit attempt only
-  (documented deviation from Blazor, whose field classes go live immediately —
-  the fluent `--invalid` classes still track every edit live).
+  without the author wiring `id` strings. `aria-invalid` tracks every edit
+  live, as the fluent `--invalid` classes do (Blazor's rule); the
+  `role="alert"` message row, and the `aria-describedby` to it, appear with
+  the first submit attempt only (a documented deviation from Blazor, whose
+  messages go live immediately).
 - **FluentForm** wraps the runtime `EditForm` (`Model`, `Validators`,
   `onValidSubmit` + `onInvalidSubmit` — fluent marks the submit attempt so the
   field rows know) and renders `class="fui-form"`; put a

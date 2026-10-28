@@ -113,7 +113,7 @@ describe("TextInput inside FluentForm", () => {
     const input = wrapper.querySelector("input")! as HTMLInputElement;
     const form = container.querySelector("form")!;
 
-    // Invalid edit: the field marks itself, but the message row waits for a submit.
+    // Invalid edit: the field marks itself — for a screen reader too — but the message row waits for a submit.
     input.value = "  ";
     input.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
@@ -121,7 +121,7 @@ describe("TextInput inside FluentForm", () => {
     expect(wrapper.querySelector(".fui-input__message")).toBeNull();
     expect(wrapper.className).toContain("fui-input-wrapper--invalid");
     expect(input.className).toContain("fui-input--invalid");
-    expect(input.getAttribute("aria-invalid")).toBeNull();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.getAttribute("aria-describedby")).toBeNull();
 
     // Submit: now the alert row appears (aria-describedby points at it, role="alert").

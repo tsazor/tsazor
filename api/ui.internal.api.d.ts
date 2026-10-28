@@ -146,7 +146,7 @@ export declare class FieldState {
     messageId(explicit?: string | null): string;
     message(context: EditContext | null | undefined, expression: string | null | undefined): string;
     validity(fieldClass: string | null | undefined): FieldValidity;
-    aria(message: string, hasHelp?: boolean, explicitId?: string | null): Record<string, string | undefined>;
+    aria(message: string, hasHelp?: boolean, explicitId?: string | null, invalid?: boolean): Record<string, string | undefined>;
 }
 
 // FieldValidity

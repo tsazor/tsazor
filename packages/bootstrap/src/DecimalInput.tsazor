@@ -90,7 +90,7 @@
     }
 
     private get inputAttributes(): Record<string, unknown> {
-        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
     }
 
     /** Blazor's CurrentValueAsString setter: empty is null, a number in the locale's grammar the value, else the parsing message. */

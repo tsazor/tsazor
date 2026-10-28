@@ -1,7 +1,7 @@
 @** A Fluent UI 2 number field (input type="number", InputBase; bind it with @bind) with an
     optional label. The value updates on change; an empty field yields "". Inside a FluentForm it
-    shows the field's first validation message (role="alert", aria-invalid, aria-describedby) once a
-    submit was attempted. *@
+    shows the field's first validation message (role="alert", aria-describedby) once a
+    submit was attempted; aria-invalid as soon as it shows invalid. *@
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
 @import { hasSubmitAttempt } from "@tsazor/ui/kit"
@@ -78,7 +78,7 @@
             max: this.max ?? undefined,
             step: this.step ?? undefined,
             "aria-label": this.ariaLabel,
-            "aria-invalid": this.message ? "true" : undefined,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
             "aria-describedby": this.describedBy,
         }, this.additionalAttributes);
     }

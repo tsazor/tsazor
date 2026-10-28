@@ -344,6 +344,17 @@ describe("Form + inputs (FieldState from @tsazor/ui)", () => {
     expect(container.querySelector("label")!.getAttribute("for")).toBe(input.id);
     expect(input.getAttribute("aria-describedby")).toBe(`${input.id}-help`);
     expect(container.querySelector(".invalid-feedback")).toBeNull();
+    expect(input.getAttribute("aria-invalid")).toBeNull();
+
+    // An invalid edit marks the field — for a screen reader too — before a submit; the message waits for one.
+    for (const text of ["M", ""]) {
+      input.value = text;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await settle(renderer);
+    }
+    expect(input.className).toContain("is-invalid");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(container.querySelector(".invalid-feedback")).toBeNull();
 
     container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await settle(renderer);

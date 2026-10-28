@@ -57,7 +57,7 @@
 
     private get groupAttributes(): Record<string, unknown> {
         const readOnly = this.readOnly ? { role: "radiogroup", "aria-readonly": "true" } : {};
-        return { id: this.field.id(this.id), ...readOnly, ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+        return { id: this.field.id(this.id), ...readOnly, ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
     }
 
     private optionId(index: number): string {

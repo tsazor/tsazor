@@ -1,6 +1,6 @@
 @** A Fluent UI 2 checkbox for a boolean value (InputBase; bind it with @bind). Inside a
-    FluentForm it shows the field's first validation message (role="alert", aria-invalid,
-    aria-describedby) once a submit was attempted. *@
+    FluentForm it shows the field's first validation message (role="alert",
+    aria-describedby) once a submit was attempted; aria-invalid as soon as it shows invalid. *@
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
 @import { hasSubmitAttempt } from "@tsazor/ui/kit"
@@ -60,7 +60,7 @@
             "aria-readonly": this.readOnly ? "true" : undefined,
             required: this.required ? true : undefined,
             "aria-label": this.ariaLabel,
-            "aria-invalid": this.message ? "true" : undefined,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
             "aria-describedby": this.describedBy,
         }, this.additionalAttributes);
     }
