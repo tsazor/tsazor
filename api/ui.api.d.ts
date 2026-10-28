@@ -631,7 +631,6 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.reorder": string;
     readonly "dataGrid.editCommit": string;
     readonly "dataGrid.editCancel": string;
-    readonly "dataGrid.groupToggle": string;
     readonly "dataGrid.groupCount.one": string;
     readonly "dataGrid.groupCount.other": string;
     readonly "schedule.label": string;

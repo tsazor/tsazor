@@ -41,7 +41,7 @@ type IconValue,
                             <th scope="col" class="tz-grid-select"><span class="visually-hidden">@t("dataGrid.selected")</span></th>
                         }
                         @foreach (const column of this.model.orderedColumns) {
-                            <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
+                            <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)" aria-label="@this.headerName(column)">
                                 <div class="d-flex align-items-center tz-grid-header">
                                     @if (this.reorderableColumns) {
                                         <div class="tz-grid-grip" role="button" tabindex="0" aria-label="@t("dataGrid.reorder")" @onpointerdown="(event: PointerEvent) => this.startReorder(column, event)" @onkeydown="(event: KeyboardEvent) => this.reorderKey(column, event)"><Icon value="@GripVertical" size="12" /></div>
@@ -137,7 +137,7 @@ type IconValue,
                         @if (line.kind === "group") {
                             <tr class="tz-grid-group">
                                 <td colspan="@this.columnCount" class="tz-grid-group-cell">
-                                    <button type="button" class="p-0 border-0 bg-transparent tz-grid-group-toggle" aria-label="@t("dataGrid.groupToggle", { count: line.count })" aria-expanded="@this.groupExpanded(line.open)" @onclick="() => this.model.toggleGroup(line.value)">
+                                    <button type="button" class="p-0 border-0 bg-transparent tz-grid-group-toggle" aria-expanded="@this.groupExpanded(line.open)" @onclick="() => this.model.toggleGroup(line.value)">
                                         <span class="tz-grid-group-chevron" aria-hidden="true"><Icon value="@CaretDownFill" size="12" /></span>
                                         <span class="fw-semibold">@this.groupText(line.value)</span>
                                         <span class="text-body-secondary ms-1">(@line.count)</span>
@@ -499,6 +499,16 @@ type IconValue,
     private cellClass(column: GridColumn<TGridItem>): string | null {
         const parts = [this.alignClass(column), column.className].filter((part): part is string => !!part);
         return parts.length > 0 ? parts.join(" ") : null;
+    }
+
+    /**
+     * The column's name for its cells: its title alone, when the header holds controls besides it — the grip, the
+     * options button, the resize separator, an open filter — whose names would join it on every cell. A header of
+     * its own (headerContent) keeps its content's name.
+     */
+    private headerName(column: GridColumn<TGridItem>): string | null {
+        const controls = this.reorderableColumns || this.resizableColumns || column.filterable === true || column.columnOptions !== undefined;
+        return controls && !column.headerContent && column.title ? column.title : null;
     }
 
     private ariaSort(column: GridColumn<TGridItem>): string | null {

@@ -370,6 +370,8 @@ describe("DataGrid", () => {
       }),
     );
     await settle(renderer);
+    // The header's name is its title alone: the resize separator's label would join it on every cell.
+    expect(container.querySelectorAll("thead th")[1]!.getAttribute("aria-label")).toBe("Total");
     expect(container.querySelector("table")!.className).not.toContain("fui-datagrid--sized");
     const handle = container.querySelectorAll<HTMLDivElement>(".fui-datagrid__resize")[0]!;
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
@@ -474,6 +476,9 @@ describe("DataGrid", () => {
     const dataRows = () => texts(container, "tbody tr:not(.fui-datagrid__group) td:first-child");
     expect(dataRows()).toEqual(["Ali", "Lena", "Marta", "Jonas"]);
     expect(groups()[0]!.getAttribute("aria-expanded")).toBe("true");
+    // Named by what it shows, the group's value and count (WCAG 2.5.3); aria-expanded says it toggles.
+    expect(groups()[0]!.hasAttribute("aria-label")).toBe(false);
+    expect(groups()[0]!.textContent!.replace(/s+/g, "")).toBe("3(1)");
 
     groups()[0]!.click();
     await settle(renderer);
