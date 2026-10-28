@@ -3,7 +3,9 @@
     while someone types into a field (`inTextFields` lets it). The content shows after the first press; with
     `hideChildContentOnRepress` the next press hides it again. The key's default action and propagation stop
     (`preventEventPropagation`). Tell screen-reader users where the shortcut leads: `aria-keyshortcuts` on that control
-    (`ariaKeyShortcuts(parseHotkey(keys))` in @tsazor/ui writes it). *@
+    (`ariaKeyShortcuts(parseHotkey(keys))` in @tsazor/ui writes it). A shortcut of one plain character ("?", "g") must
+    be possible to turn off (WCAG 2.1.4: speech input types letters that fire it): bind `disabled` to a setting the user
+    can change — or use a modifier ("Ctrl+K"), which needs no setting. *@
 @import { hotkeyApplies, matchesHotkey, parseHotkey } from "@tsazor/ui/kit"
 
 @if (this.contentShown) {
@@ -23,7 +25,7 @@
     @Parameter() preventEventPropagation: boolean = true;
     /** A plain key acts while someone types into a field too. */
     @Parameter() inTextFields: boolean = false;
-    /** Ignores the combination. */
+    /** Ignores the combination — bind it to the user's setting for a single-character shortcut (WCAG 2.1.4). */
     @Parameter() disabled: boolean = false;
 
     private contentShown = false;

@@ -290,7 +290,8 @@ render in the browser.
   Blazor's `FluentKeyCode` keeps its parameters as `<KeyCode>` with key names as the browser writes them
   (`KeyCode.Enter` is `"Enter"`, `KeyCode.Down` is `"ArrowDown"`); its handlers get the KeyboardEvent. On one element
   of your own, `@onkeydown` with `@onkeydown:preventDefault` needs neither. Put `aria-keyshortcuts` on the control a
-  shortcut triggers (`ariaKeyShortcuts` writes it).
+  shortcut triggers (`ariaKeyShortcuts` writes it). A single-character shortcut needs a way off (WCAG 2.1.4): bind
+  `Disabled` to a user setting, or give it a modifier.
 - **Color pickers.** `FluentColorPicker` keeps `SelectedColor`, `Palette`, `FindClosestColor`, `Width` and `Height`;
   `View="ColorPickerView.SwatchPalette"` is `View="swatch"`, `ColorWheel` `"wheel"`, `HsvSquare` `"hsv"`.
   `FluentColorPickerInput` becomes `<ColorPickerInput @bind-Value="…">` (`HideTextInput`, `IconPalette`). MudBlazor's
