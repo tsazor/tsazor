@@ -953,8 +953,8 @@ try {
     /* Sortable lists: the keyboard way (pick up, move, put down, put back, across), a fixed item, a pointer drag. */
     const sortables = page.locator("section", { has: page.getByRole("heading", { name: "Sortable lists", exact: true }) });
     await sortables.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
-    const bakes = sortables.getByRole("list", { name: "Today's bakes" });
-    const soldOut = sortables.getByRole("list", { name: "Sold out" });
+    const bakes = sortables.getByRole("listbox", { name: "Today's bakes" });
+    const soldOut = sortables.getByRole("listbox", { name: "Sold out" });
     const bakeItem = (text) => bakes.locator("li", { hasText: text });
     const sortOrder = (name) => page.locator(`.sortable-${name}`).textContent();
     const orderIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.sortable-${n}`)?.textContent === v, [name, value]);

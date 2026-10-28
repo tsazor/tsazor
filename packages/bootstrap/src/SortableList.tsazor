@@ -2,7 +2,8 @@
     items to drag into another order with a mouse, a pen or a finger — and, between lists of the same `group`, into
     another list. The keys do the same: Space or Enter picks the focused item up, the arrow keys move it (across to the lists before
     and after it in its group with the other arrows), Space or Enter puts it down, Escape puts it back; a screen
-    reader hears each step. The list is one tab stop. `items` is two-way (@bind-items); `itemTemplate` draws an item.
+    reader hears each step. The list is one tab stop, a listbox of options: a screen reader turns to focus mode on an
+    item, so its keys reach the list (a focusable list item stays in browse mode, which takes them). `items` is two-way (@bind-items); `itemTemplate` draws an item.
     `handle` lets only an element with the class sortable-grab start a drag, `itemFilter` keeps items in place, `clone`
     leaves a copy behind, `drop` and `sort` turn taking and reordering off — the same parameters as the Fluent skin's
     SortableList. *@
@@ -13,9 +14,9 @@
 @import { libraryTexts } from "@tsazor/ui"
 @import { sortableListLabelsFrom } from "@tsazor/ui/kit"
 
-<ul id="@this.listId" role="list" aria-label="@this.ariaLabel" @attributes="@withClass(this.listClass, this.additionalAttributes)" @attach="this.behavior">
+<ul id="@this.listId" role="listbox" aria-orientation="@this.orientation" aria-label="@this.ariaLabel" @attributes="@withClass(this.listClass, this.additionalAttributes)" @attach="this.behavior">
     @for (let i = 0; i < this.items.length; i++) {
-        <li class="@this.itemClass(i)" data-sortable-index="@i" aria-describedby="@this.hintId">@this.itemTemplate?.(this.items[i]!)</li>
+        <li class="@this.itemClass(i)" role="option" data-sortable-index="@i" aria-describedby="@this.hintId">@this.itemTemplate?.(this.items[i]!)</li>
     }
 </ul>
 <span class="visually-hidden" id="@this.hintId">@this.texts.instructions</span>

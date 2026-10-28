@@ -65,10 +65,13 @@ describe("SortableList", () => {
     const { list, texts } = await mount();
     expect(texts("Shelf")).toEqual(["Rye", "Spelt", "Wheat"]);
     const shelf = list("Shelf");
-    expect(shelf.getAttribute("role")).toBe("list");
+    // A listbox of options: a screen reader's browse mode would take Space, Enter and the arrows from a list item.
+    expect(shelf.getAttribute("role")).toBe("listbox");
+    expect(shelf.getAttribute("aria-orientation")).toBe("vertical");
     expect(shelf.id).toBe("shelf");
     const items = [...shelf.querySelectorAll("li")];
     expect(items.map((li) => li.tabIndex)).toEqual([0, -1, -1]);
+    expect(items.every((li) => li.getAttribute("role") === "option")).toBe(true);
     expect(document.getElementById(items[0]!.getAttribute("aria-describedby")!)!.textContent).toContain("Press Space to pick the item up");
     expect(list("Basket").querySelector("li")!.className).toBe(`${PREFIX}-sortable-list__item ${PREFIX}-sortable-list__item--fixed`);
   });
