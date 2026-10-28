@@ -188,8 +188,8 @@ export interface ColorPickerLabels {
   swatch: (color: HexColor) => string;
   /** The saturation and brightness square's name. */
   square: string;
-  /** What the square says it is at: "Saturation 80%, brightness 60%". */
-  squareValue: (saturation: number, brightness: number) => string;
+  /** What the square says it is at, with the color it makes: "Saturation 80%, brightness 60%: dark blue, #1f3c99". */
+  squareValue: (saturation: number, brightness: number, color?: HexColor) => string;
   /** The hue bar's name. */
   hue: string;
   /** What the hue bar says it is at: "210 degrees, blue". */
@@ -201,7 +201,10 @@ export function colorPickerLabelsFrom(t: LibraryTexts): ColorPickerLabels {
   return {
     swatch: (color) => t("colorPicker.swatch", { color: describeColor(color, t), hex: color }),
     square: t("colorPicker.square"),
-    squareValue: (saturation, brightness) => t("colorPicker.squareValue", { saturation, brightness }),
+    squareValue: (saturation, brightness, color) =>
+      color === undefined
+        ? t("colorPicker.squareValue", { saturation, brightness })
+        : t("colorPicker.squareColorValue", { saturation, brightness, color: t("colorPicker.swatch", { color: describeColor(color, t), hex: color }) }),
     hue: t("colorPicker.hue"),
     hueValue: (hue, color) => t("colorPicker.hueValue", { hue, color: describeColor(color, t) }),
   };

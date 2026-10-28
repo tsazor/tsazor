@@ -588,7 +588,7 @@ try {
     const squareBox = await square.boundingBox();
     await square.click({ position: { x: squareBox.width / 2, y: squareBox.height / 2 } });
     await colorIs("accent", "#804040");
-    say((await square.getAttribute("aria-valuetext")) === "Saturation 50%, brightness 50%", "color picker: a click in the square sets saturation and brightness (#804040)");
+    say((await square.getAttribute("aria-valuetext")) === "Saturation 50%, brightness 50%: red, #804040", "color picker: a click in the square sets saturation and brightness, and says the color (#804040)");
     const hueBar = colors.getByRole("slider", { name: "Hue" });
     await hueBar.focus();
     await page.keyboard.press("Shift+ArrowDown");

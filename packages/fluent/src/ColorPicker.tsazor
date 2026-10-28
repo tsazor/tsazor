@@ -19,7 +19,7 @@
     @if (this.view === "hsv") {
         <div class="fui-color-picker__square" role="slider" tabindex="0" aria-roledescription="@t("colorPicker.squareRoleDescription")" aria-label="@this.text.square"
              aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.round(this.hsv.s * 100)"
-             aria-valuetext="@this.text.squareValue(Math.round(this.hsv.s * 100), Math.round(this.hsv.v * 100))"
+             aria-valuetext="@this.text.squareValue(Math.round(this.hsv.s * 100), Math.round(this.hsv.v * 100), this.current ?? hsvToHex(this.hsv))"
              style="@(`--fui-color-picker-hue: ${hsvToHex({ h: this.hsv.h, s: 1, v: 1 })}`)" @attach="this.squareDrag" @onkeydown="this.squareKey">
             <span class="fui-color-picker__indicator" style="@(`inset-inline-start: ${this.hsv.s * 100}%; top: ${(1 - this.hsv.v) * 100}%; background: ${this.current ?? "transparent"}`)"></span>
         </div>

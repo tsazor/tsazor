@@ -147,6 +147,8 @@ export const libraryTextDefaults = catalog({
   "colorPicker.square": "Saturation and brightness",
   "colorPicker.squareRoleDescription": "2D slider",
   "colorPicker.squareValue": "Saturation {saturation}%, brightness {brightness}%",
+  // The square with the color it makes (the hsv view shows no hex of its own): "…: dark blue, #1f3c99".
+  "colorPicker.squareColorValue": "Saturation {saturation}%, brightness {brightness}%: {color}",
   "colorPicker.hue": "Hue",
   "colorPicker.hueValue": "{hue} degrees, {color}",
   // A color's name for a screen reader (describeColor): a hue, lighter or darker.

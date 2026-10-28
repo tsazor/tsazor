@@ -9,6 +9,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   open or closed — `aria-expanded` says which (the APG's disclosure button). It had turned "Hide details of …" while
   open, so a screen reader said "Hide details, expanded". The library texts `dataGrid.hideDetails` and
   `dataGrid.hideDetailsOf` are no longer used; they stay, so an override of them still type-checks.
+- **A ColorPicker's hsv square says the color it makes** (`@tsazor/ui`, both skins): "Saturation 80%, brightness
+  60%: dark blue, #1f3c99" — the hsv view shows no hex of its own. `ColorPickerLabels.squareValue` takes the color as
+  an optional third argument; the new library text `colorPicker.squareColorValue` says it.
 
 ## 1.0.0-next.10 (2026-10-22)
 

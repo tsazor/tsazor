@@ -161,7 +161,7 @@ export declare class ChipSetModel<T> {
 export interface ColorPickerLabels {
     swatch: (color: HexColor) => string;
     square: string;
-    squareValue: (saturation: number, brightness: number) => string;
+    squareValue: (saturation: number, brightness: number, color?: HexColor) => string;
     hue: string;
     hueValue: (hue: number, color: HexColor) => string;
 }
@@ -718,6 +718,7 @@ export declare const libraryTextDefaults: {
     readonly "colorPicker.square": string;
     readonly "colorPicker.squareRoleDescription": string;
     readonly "colorPicker.squareValue": string;
+    readonly "colorPicker.squareColorValue": string;
     readonly "colorPicker.hue": string;
     readonly "colorPicker.hueValue": string;
     readonly "color.light": string;

@@ -97,7 +97,7 @@ describe("ColorPicker", () => {
     const { Host, idle, result } = await picker({ view: "hsv" }, "#ff0000");
     const [square, hue] = [...result.container.querySelectorAll<HTMLElement>("[role=slider]")];
     expect(square!.getAttribute("aria-label")).toBe("Saturation and brightness");
-    expect(square!.getAttribute("aria-valuetext")).toBe("Saturation 100%, brightness 100%");
+    expect(square!.getAttribute("aria-valuetext")).toBe("Saturation 100%, brightness 100%: red, #ff0000"); // the color it makes: the hsv view shows no hex of its own
     expect(hue!.getAttribute("aria-valuenow")).toBe("0");
     press(square!, "ArrowDown", { shiftKey: true });
     await idle();
