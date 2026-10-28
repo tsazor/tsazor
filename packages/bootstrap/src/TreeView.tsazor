@@ -4,7 +4,7 @@
     select. A click selects a node; its chevron opens and closes it. The selected node's ancestors
     start open, so the selection is in view — the same parameters as the Fluent skin's TreeView. *@
 @import { type TreeViewItem } from "@tsazor/ui"
-@import { initiallyExpanded, isRightToLeft, logicalArrowKey, treeKeyAction, treePath, visibleTreeItems } from "@tsazor/ui/kit"
+@import { initiallyExpanded, isRightToLeft, logicalArrowKey, treeKeyAction, treePath, treeTabStop, visibleTreeItems } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 <ul role="tree" aria-label="@this.ariaLabel" @attributes="@withClass("tz-tree", this.additionalAttributes)" @ref="root" @onkeydown="handleKeydown">
@@ -57,8 +57,24 @@
 
     /** @internal TreeViewNode asks whether its item is the tree's tab stop. */
     isFocusable(item: TreeViewItem): boolean {
-        const focused = this.focusedId ?? this.selectedItem?.id ?? this.items[0]?.id;
-        return focused === item.id;
+        return this.tabStop === item.id;
+    }
+
+    /** Bumped when `expanded` changes in place, so the tab stop is worked out again. */
+    private expandedVersion = 0;
+    private tabStopMemo?: { key: readonly unknown[]; id: string | undefined };
+
+    /**
+     * The node that takes Tab, once per render (every node asks): the focused node, else the selected one, else the
+     * first — or the visible ancestor of one hidden in a closed node. The tree never loses its tab stop.
+     */
+    private get tabStop(): string | undefined {
+        const key = [this.items, this.expanded, this.expandedVersion, this.focusedId, this.selectedItem?.id];
+        const memo = this.tabStopMemo;
+        if (memo && memo.key.every((part, i) => part === key[i])) return memo.id;
+        const id = treeTabStop(this.items, this.expanded ?? new Set(), [this.focusedId, this.selectedItem?.id]);
+        this.tabStopMemo = { key, id };
+        return id;
     }
 
     /** @internal TreeViewNode opens or closes its item. */
@@ -66,6 +82,7 @@
         const expanded = (this.expanded ??= new Set());
         if (expanded.has(item.id)) expanded.delete(item.id);
         else expanded.add(item.id);
+        this.expandedVersion++;
         this.focusedId = item.id;
         this.stateHasChanged();
     }
@@ -80,7 +97,7 @@
     }
 
     private handleKeydown(e: KeyboardEvent): Promise<void> | undefined {
-        const focused = this.focusedId ?? this.selectedItem?.id ?? this.items[0]?.id;
+        const focused = this.tabStop;
         if (focused === undefined) return undefined;
         // Right to left: ArrowLeft opens an item, ArrowRight closes it (WAI-ARIA APG).
         const action = treeKeyAction(this.items, this.expanded ?? new Set(), focused, logicalArrowKey(e.key, isRightToLeft(e.target as Element)));

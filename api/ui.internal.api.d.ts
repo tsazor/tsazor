@@ -553,6 +553,9 @@ export type TreeKeyAction = {
 // treePath
 export declare function treePath(items: readonly TreeViewItem[], id: string): string[] | undefined;
 
+// treeTabStop
+export declare function treeTabStop(items: readonly TreeViewItem[], expanded: ReadonlySet<string>, candidates: ReadonlyArray<string | undefined>): string | undefined;
+
 // VisibleTreeItem
 export interface VisibleTreeItem {
     readonly item: TreeViewItem;

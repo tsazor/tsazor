@@ -115,6 +115,7 @@ export {
   initiallyExpanded,
   treeKeyAction,
   treePath,
+  treeTabStop,
   visibleTreeItems,
   type TreeKeyAction,
   type VisibleTreeItem,

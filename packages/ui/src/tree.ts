@@ -74,6 +74,26 @@ export function treePath(items: readonly TreeViewItem[], id: string): string[] |
   return undefined;
 }
 
+/**
+ * The node that takes Tab: the first candidate that is visible, else that candidate's nearest visible ancestor (it
+ * sits in a closed node), else the first node. A candidate the tree no longer has is skipped — the tree always keeps
+ * one tab stop.
+ */
+export function treeTabStop(
+  items: readonly TreeViewItem[],
+  expanded: ReadonlySet<string>,
+  candidates: ReadonlyArray<string | undefined>,
+): string | undefined {
+  const visible = new Set(visibleTreeItems(items, expanded).map((node) => node.item.id));
+  for (const id of candidates) {
+    if (id === undefined) continue;
+    if (visible.has(id)) return id;
+    const ancestor = treePath(items, id)?.filter((ancestorId) => visible.has(ancestorId)).at(-1);
+    if (ancestor !== undefined) return ancestor;
+  }
+  return items[0]?.id;
+}
+
 /** What a key does in a tree: move the focus, open or close a node, or select one. */
 export type TreeKeyAction =
   | { readonly kind: "focus"; readonly id: string }

@@ -89,4 +89,34 @@ describe("TreeView", () => {
     await press("ArrowLeft");
     expect(document.activeElement).toBe(node("blogs"));
   });
+
+  it("never loses its tab stop: a selection in a closed node gives it to the open ancestor, a removed node to the first", async () => {
+    let items = pages;
+    let selected: TreeViewItem | null = null;
+    const mounted = await renderTree((b) => {
+      b.openComponent(0, TreeView);
+      b.addAttribute(1, "items", items);
+      b.addAttribute(2, "selectedItem", selected);
+      b.closeComponent();
+    });
+    await mounted.settle();
+    const tabStops = () =>
+      [...mounted.container.querySelectorAll("[role=treeitem]")].filter((item) => item.getAttribute("tabindex") === "0").map((item) => item.getAttribute("data-tree-id"));
+    const tree = mounted.container.querySelector<HTMLElement>("[role=tree]")!;
+
+    selected = pages[1]!.items![1]!;
+    await mounted.rerender();
+    await settle(mounted);
+    expect(tabStops()).toEqual(["blogs"]);
+
+    tree.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    await settle(mounted);
+    expect(tabStops()).toEqual(["admin"]);
+    items = pages.slice(0, 2);
+    selected = null;
+    await mounted.rerender();
+    await settle(mounted);
+    expect(tabStops()).toEqual(["home"]);
+    mounted.dispose();
+  });
 });

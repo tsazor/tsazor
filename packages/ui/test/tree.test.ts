@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initiallyExpanded, treeKeyAction, treePath, visibleTreeItems, type TreeViewItem } from "../src/tree";
+import { initiallyExpanded, treeKeyAction, treePath, treeTabStop, visibleTreeItems, type TreeViewItem } from "../src/tree";
 
 const tree: TreeViewItem[] = [
   { id: "home", text: "Home" },
@@ -21,6 +21,16 @@ describe("the tree model", () => {
     expect([...expanded]).toEqual(["blogs"]);
     expect(visibleTreeItems(tree, expanded).map((node) => `${node.item.id}@${node.level}`)).toEqual(["home@1", "blogs@1", "detail@2", "archive@2", "admin@1"]);
     expect(visibleTreeItems(tree, new Set(["blogs", "archive"])).map((node) => node.item.id)).toContain("2025");
+  });
+
+  it("keeps one tab stop: a hidden candidate gives it to its visible ancestor, a missing one to the next", () => {
+    const blogsOpen = new Set(["blogs"]);
+    expect(treeTabStop(tree, blogsOpen, ["detail", "home"])).toBe("detail");
+    expect(treeTabStop(tree, blogsOpen, ["2025"])).toBe("archive");
+    expect(treeTabStop(tree, new Set(), ["2025"])).toBe("blogs");
+    expect(treeTabStop(tree, blogsOpen, ["gone", "admin"])).toBe("admin");
+    expect(treeTabStop(tree, blogsOpen, [undefined, "gone"])).toBe("home");
+    expect(treeTabStop([], blogsOpen, ["home"])).toBeUndefined();
   });
 
   it("finds an item's ancestors", () => {
