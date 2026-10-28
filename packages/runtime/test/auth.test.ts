@@ -18,6 +18,7 @@ import {
   defineComponent,
   CascadingParameter,
   ServiceCollection,
+  StringLocalizer,
   type RenderFragment,
   type RenderTreeBuilder,
   createUser,
@@ -410,6 +411,31 @@ describe("AuthorizeRouteView", () => {
     await settle(renderer);
     expect(document.querySelector(".frame h1")?.textContent).toBe("Admin area");
     expect(Frame.made).toBe(1);
+  });
+
+  it("translates its default texts by the reserved tsazor.auth.* keys of a registered StringLocalizer", async () => {
+    const provider = new TestAuthProvider();
+    provider.pending = true;
+    const localizer = new StringLocalizer({
+      tables: { de: { "tsazor.auth.authorizing": "Berechtigung wird geprüft…", "tsazor.auth.notAuthorized": "Nicht berechtigt" } },
+      defaultCulture: "de",
+    });
+    const renderer = buildApp(provider, (collection) => collection.registerValue(StringLocalizer, localizer));
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.closeComponent();
+      }
+    }
+    const host = container();
+    renderer.renderInContainer(App, host);
+    await settle(renderer);
+    expect(host.textContent).toBe("Berechtigung wird geprüft…");
+
+    provider.release();
+    await settle(renderer);
+    expect(host.textContent).toBe("Nicht berechtigt");
   });
 });
 

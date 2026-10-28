@@ -217,7 +217,8 @@ render in the browser.
   {page} von {pages}"` — and every component shows them in that language; the catalog with the English texts is
   `libraryTextDefaults` in `@tsazor/ui`. A per-instance text such as MudTablePager's `RowsPerPageString` stays a
   parameter (`pageSizeLabel`). Counted texts take an entry per plural category (`….one`, `….other`, and `….few`,
-  `….many` where your language has them).
+  `….many` where your language has them). AuthorizeRouteView's defaults, Blazor's "Not authorized" and
+  "Authorizing...", take `tsazor.auth.notAuthorized` and `tsazor.auth.authorizing`.
 - **`CurrentCulture` is the `CultureService`.** Where Blazor sets `CultureInfo.CurrentCulture`, set the culture
   service (`setExplicit("de-DE")`, or the app's default culture): the texts and the dates and numbers of the components
   (Calendar, DatePicker, TimePicker, RatingDisplay) follow it together and re-render on a change. A component's

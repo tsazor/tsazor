@@ -1,11 +1,12 @@
 import { componentInternals } from "../components/component-internals.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
-import type { ServiceProvider } from "../di/service-collection.js";
+import type { ServiceProvider, Token } from "../di/service-collection.js";
 import { renderWithLayout, RouteView } from "../routing/route-view.js";
 import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
 import { watchAuthenticationState } from "./authentication-state-provider.js";
 import { AuthorizationDecision, AuthorizationService, defaultAuthorizationService } from "./authorization.js";
+import { StringLocalizer } from "../localization/string-localizer.js";
 
 /**
  * Blazor's AuthorizeRouteView: like RouteView, but the matched page only
@@ -14,7 +15,9 @@ import { AuthorizationDecision, AuthorizationService, defaultAuthorizationServic
  * found fragment to protect pages. As in Blazor it derives from RouteView,
  * which renders the granted page (layout, route and query parameters), and
  * renders NotAuthorized and Authorizing in the default layout too — "Not
- * authorized" and "Authorizing..." when the app gives none.
+ * authorized" and "Authorizing..." when the app gives none. A registered
+ * StringLocalizer translates those two by the reserved keys
+ * `tsazor.auth.notAuthorized` and `tsazor.auth.authorizing`.
  */
 export class AuthorizeRouteView extends RouteView {
   /** Renders the page when access is granted (Razor's <Authorized>). */
@@ -29,9 +32,14 @@ export class AuthorizeRouteView extends RouteView {
   private resolved = false;
   readonly #decision = new AuthorizationDecision();
   private unsubscribe?: () => void;
+  private unsubscribeLocalizer?: () => void;
+  private localizer?: StringLocalizer;
 
   protected override onInitialized(): void {
     const services = componentInternals.services(this) as ServiceProvider | undefined;
+    // The default texts in the app's language; tryGet: without a localizer they stay English.
+    this.localizer = services?.tryGet(StringLocalizer as unknown as Token<StringLocalizer>);
+    this.unsubscribeLocalizer = this.localizer?.subscribe(() => componentInternals.requestRender(this));
     this.unsubscribe = watchAuthenticationState(
       services,
       (state) => {
@@ -51,11 +59,13 @@ export class AuthorizeRouteView extends RouteView {
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
+    this.unsubscribeLocalizer?.();
+    this.unsubscribeLocalizer = undefined;
   }
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     if (!this.resolved) {
-      this.renderInDefaultLayout(b, this.authorizing ?? defaultAuthorizing);
+      this.renderInDefaultLayout(b, this.authorizing ?? this.text("authorizing", "Authorizing..."));
       return;
     }
     const state = this.authenticationState ?? ANONYMOUS;
@@ -71,11 +81,11 @@ export class AuthorizeRouteView extends RouteView {
       );
       if (authorized === undefined) {
         // An async policy is deciding: Authorizing, as Blazor awaits AuthorizeAsync.
-        this.renderInDefaultLayout(b, this.authorizing ?? defaultAuthorizing);
+        this.renderInDefaultLayout(b, this.authorizing ?? this.text("authorizing", "Authorizing..."));
         return;
       }
       if (!authorized) {
-        this.renderInDefaultLayout(b, (this.notAuthorized ?? defaultNotAuthorized)(state));
+        this.renderInDefaultLayout(b, this.notAuthorized?.(state) ?? this.text("notAuthorized", "Not authorized"));
         return;
       }
     }
@@ -96,12 +106,14 @@ export class AuthorizeRouteView extends RouteView {
     else b.addContent(0, content);
   }
 
+  /** Blazor's default text when the app gives no content, translated by `tsazor.auth.<name>` when it can be. */
+  private text(name: "notAuthorized" | "authorizing", english: string): RenderFragment {
+    const text = this.localizer?.raw(`tsazor.auth.${name}`) ?? english;
+    return (b) => b.addContent(0, text);
+  }
+
   private authorizationService(): AuthorizationService {
     const services = componentInternals.services(this) as ServiceProvider | undefined;
     return services?.tryGet(AuthorizationService) ?? defaultAuthorizationService;
   }
 }
-
-/** Blazor's defaults when the app gives no NotAuthorized or Authorizing content. */
-const defaultNotAuthorized = (): RenderFragment => (b) => b.addContent(0, "Not authorized");
-const defaultAuthorizing: RenderFragment = (b) => b.addContent(0, "Authorizing...");
