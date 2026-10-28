@@ -53,6 +53,11 @@ Also:
   the ValidationMessage ids and the workspace's generated runtime manifest behind its doc (`e6677be` and the commit
   after it). Before a release: `pnpm -r --filter "./apps/**" test` as well.
 
+- **Final state 2026-10-28: `node scripts/public-tree.mjs --verify` GREEN on `5594fee`** (3107 files; install, build
+  and every package's and app's tests in the export). On the way, besides the two real misses above: tests that build a
+  TypeScript program timed out at vitest's 5 s with every package testing at once — lsp and cli have 30 s per test in
+  their vitest configs, dotnet 30 s, the declaration tests and two others 60 s (`df5536e`, `18183e0`, `5594fee`).
+
 ## Owner, open
 
 1. `git push origin roadmap/phase-0`, then CI → Run workflow (ci:local needs WSL, not on this laptop).
