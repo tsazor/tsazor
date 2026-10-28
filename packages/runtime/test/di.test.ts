@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { ServiceCollection, ServiceProvider } from "../src/di/service-collection";
+import { registerServiceDefault } from "../src/di/service-defaults";
 
 class Clock {
   ticks = 0;
@@ -171,7 +172,6 @@ describe("the provider as a service (Blazor's IServiceProvider)", () => {
 
 describe("a service default a library registers (registerServiceDefault)", () => {
   it("creates the service without the app registering it, from its dependencies; an app's registration wins", async () => {
-    const { registerServiceDefault } = await import("../src/index");
     class Navigation {}
     class TooltipService {
       constructor(readonly navigation: Navigation) {}
