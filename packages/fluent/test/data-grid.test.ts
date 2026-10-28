@@ -95,6 +95,9 @@ describe("DataGrid", () => {
     expect(texts(container, "tbody td")).toEqual(["Marta", "Jonas", "Lena"]);
     expect(container.querySelector(".fui-paginator__count")!.textContent!.trim()).toBe("4 items");
     expect(container.querySelector(".fui-paginator__page")!.textContent).toBe("Page 1 of 2");
+    // A page turned is announced; the grid's status counts all the rows.
+    expect(container.querySelector(".fui-paginator__page")!.getAttribute("aria-live")).toBe("polite");
+    expect(container.querySelector("table + [role=status]")!.textContent).toBe("4 results");
     expect(container.querySelector<HTMLButtonElement>("[aria-label='Previous page']")!.getAttribute("aria-disabled")).toBe("true");
 
     const next = container.querySelector<HTMLButtonElement>("[aria-label='Next page']")!;
@@ -319,6 +322,8 @@ describe("DataGrid", () => {
     apply()!.click();
     await settle(renderer);
     expect(texts(container, "tbody tr td:first-child")).toEqual(["Marta"]);
+    // The grid's status says the outcome to a screen reader.
+    expect(container.querySelector("table + [role=status]")!.textContent).toBe("1 result");
     expect(options()[0]!.className).toContain("fui-datagrid__options--active");
 
     clear()!.click();

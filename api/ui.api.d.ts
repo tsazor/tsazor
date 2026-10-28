@@ -221,6 +221,7 @@ export declare class DataGridModel<T> {
     private groupVersion;
     private lined?;
     private loadingNow;
+    private total;
     private abort;
     private unsubscribe;
     private virtualRefresh;
@@ -240,6 +241,7 @@ export declare class DataGridModel<T> {
     sortByColumnAsync(column: GridColumn<T>, direction?: SortDirection): Promise<void>;
     setSource(source: GridSource<T>): boolean;
     get loading(): boolean;
+    get totalItemCount(): number | undefined;
     get rows(): readonly T[];
     refreshDataAsync(): Promise<void>;
     filterOf(column: GridColumn<T>): GridFilterRule | undefined;
@@ -631,6 +633,8 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.reorder": string;
     readonly "dataGrid.editCommit": string;
     readonly "dataGrid.editCancel": string;
+    readonly "dataGrid.results.one": string;
+    readonly "dataGrid.results.other": string;
     readonly "dataGrid.groupCount.one": string;
     readonly "dataGrid.groupCount.other": string;
     readonly "schedule.label": string;

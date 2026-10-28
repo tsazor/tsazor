@@ -435,6 +435,7 @@ export class DataGridModel<T> {
   private groupVersion = 0;
   private lined?: { key: readonly unknown[]; lines: readonly GridRow<T>[]; indexes: Map<unknown, number> };
   private loadingNow = false;
+  private total: number | undefined;
   private abort: AbortController | undefined;
   private unsubscribe: (() => void) | undefined;
   private virtualRefresh: (() => Promise<void>) | undefined;
@@ -573,6 +574,11 @@ export class DataGridModel<T> {
     return this.loadingNow;
   }
 
+  /** All rows after the filters, across the pages; undefined until the first load. */
+  get totalItemCount(): number | undefined {
+    return this.total;
+  }
+
   /** The rows of the current page, sorted. */
   get rows(): readonly T[] {
     const items = this.source.items;
@@ -583,6 +589,7 @@ export class DataGridModel<T> {
     if (this.view === undefined || key.some((part, index) => !Object.is(part, this.view!.key[index]))) {
       const filtered = this.filtered(items);
       const sorted = column?.sortBy ? column.sortBy.apply(filtered, this.ascending) : filtered;
+      this.total = filtered.length;
       pagination?.setTotalItemCount(filtered.length);
       const rows = pagination
         ? sorted.slice(pagination.currentPageIndex * pagination.itemsPerPage, (pagination.currentPageIndex + 1) * pagination.itemsPerPage)
@@ -620,6 +627,7 @@ export class DataGridModel<T> {
       const result = await provider(request);
       if (abort.signal.aborted) return;
       this.provided = result.items;
+      this.total = result.totalItemCount;
       pagination?.setTotalItemCount(result.totalItemCount);
     } catch (error) {
       if (abort.signal.aborted) return;
@@ -920,6 +928,7 @@ export class DataGridModel<T> {
     const key = [items, items.length, column?.owner, this.ascending, this.filterVersion];
     if (this.sortedView === undefined || key.some((part, index) => !Object.is(part, this.sortedView!.key[index]))) {
       const filtered = this.filtered(items);
+      this.total = filtered.length;
       this.sortedView = { key, rows: column?.sortBy ? column.sortBy.apply(filtered, this.ascending) : filtered };
     }
     return this.sortedView.rows;
@@ -938,6 +947,7 @@ export class DataGridModel<T> {
     try {
       const result = await provider(this.request(startIndex, count, abort.signal));
       abort.signal.throwIfAborted();
+      this.total = result.totalItemCount;
       return result;
     } finally {
       if (this.abort === abort) this.abort = undefined;

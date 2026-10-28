@@ -46,6 +46,9 @@ export const libraryTextDefaults = catalog({
   // The grid's inline edit: the edited row's key handling belongs to the skin.
   "dataGrid.editCommit": "Commit the edit (Enter)",
   "dataGrid.editCancel": "Cancel the edit (Escape)",
+  // The grid's status after a load or a filter, for a screen reader.
+  "dataGrid.results.one": "{count} result",
+  "dataGrid.results.other": "{count} results",
   "dataGrid.groupCount.one": "{count} row",
   "dataGrid.groupCount.other": "{count} rows",
 

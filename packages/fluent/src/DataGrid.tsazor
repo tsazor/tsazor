@@ -178,12 +178,21 @@ type IconValue,
                     </tfoot>
                 }
             </table>
+            @* A screen reader hears a load, a filter or a provider's new page as their outcome. *@
+            <span class="fui-visually-hidden" role="status">@this.statusText</span>
         </div>
     </Defer>
 </CascadingValue>
 
 @code {
     private readonly t = libraryTexts();
+
+    /** The grid's status: "Loading…" while it loads, then how many rows the filters leave. */
+    private get statusText(): string {
+        if (this.model.loading) return this.t("loading");
+        const total = this.model.totalItemCount ?? this.totalCount;
+        return total === undefined ? "" : this.t.plural("dataGrid.results", total);
+    }
 
     /** The rows, sorted and paged by the grid. Set this or itemsProvider. */
     @Parameter() items?: TGridItem[];
