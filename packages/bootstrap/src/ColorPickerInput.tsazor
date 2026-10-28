@@ -3,8 +3,9 @@
     code ("#0f6cbd"; "#fc0" works too) and a button that shows the color and opens a ColorPicker in a dialog — `view`,
     `palette` and `findClosestColor` as the picker's. A click on a swatch, Enter or Space, or the end of a drag in the
     square picks the color and closes the dialog; Escape closes it too, the focus back on the button. Alt+ArrowDown in
-    the field opens it. `hideTextInput` leaves the button alone. Text that is no color goes to validation as it was
-    typed — the same parameters as the Fluent skin's ColorPickerInput. *@
+    the field opens it. `hideTextInput` leaves the button alone (the label names it, it carries the help, message and
+    invalid state). Text that is no color goes to validation as it was typed — the same parameters as the Fluent
+    skin's ColorPickerInput. *@
 @import {
     anchoredPosition, createLayer, dismissible, focusTrap, type ColorPickerLabels, type IconValue,
 } from "@tsazor/ui"
@@ -18,14 +19,14 @@
 
 <div class="mb-3 tz-color-picker-input">
     @if (this.label) {
-        <label class="form-label" for="@this.inputId">@this.label</label>
+        <label class="form-label" id="@(`${this.buttonId}-label`)" for="@this.inputId">@this.label</label>
     }
     <div class="input-group" @ref="fieldBox">
         @if (!this.hideTextInput) {
             <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" spellcheck="false" maxlength="7" placeholder="@this.placeholder" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@(this.currentValue ?? "")" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
         }
-        <button type="button" id="@this.buttonId" class="btn btn-outline-secondary tz-color-picker-input__button" aria-label="@this.buttonText" title="@this.buttonText" aria-haspopup="dialog"
-                aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle">
+        <button type="button" id="@this.buttonId" class="btn btn-outline-secondary tz-color-picker-input__button" aria-label="@this.buttonName" title="@this.buttonText" aria-haspopup="dialog"
+                aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @attributes="@this.buttonAttributes" @ref="button" @onclick="this.toggle">
             <span class="tz-color-picker-input__swatch" style="@(`background: ${this.color ?? "transparent"}`)" aria-hidden="true"></span>
             <Icon value="@this.iconPalette" />
         </button>
@@ -105,6 +106,23 @@
     private get buttonText(): string {
         const label = this.buttonLabel ?? this.t("colorPicker.button");
         return this.color === undefined ? label : `${label} (${this.color})`;
+    }
+
+    /** The button's name: its text, after `ariaLabel` when there is no text field to carry that. */
+    private get buttonName(): string {
+        return this.hideTextInput && this.ariaLabel ? `${this.ariaLabel}, ${this.buttonText}` : this.buttonText;
+    }
+
+    /**
+     * Without the text field the button is the field: the label names it (aria-labelledby — the label, then the
+     * button's own text), and it carries the field's help, message and invalid state.
+     */
+    private get buttonAttributes(): Record<string, unknown> | undefined {
+        if (!this.hideTextInput) return undefined;
+        return {
+            "aria-labelledby": this.label ? `${this.buttonId}-label ${this.buttonId}` : undefined,
+            ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"),
+        };
     }
 
     private get message(): string {

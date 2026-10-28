@@ -195,9 +195,15 @@ describe("ColorPickerInput", () => {
     expect(dialog()).toBeNull();
   });
 
-  it("hideTextInput leaves the button, named by the label", async () => {
-    const { input, button } = await field({ hideTextInput: true });
+  it("hideTextInput leaves the button, named by the label and its color, with the field's help", async () => {
+    const { input, button } = await field({ hideTextInput: true, help: "The header's color" });
     expect(input()).toBeNull();
-    expect(document.querySelector("label")!.htmlFor).toBe(button().id);
+    const label = document.querySelector("label")!;
+    expect(label.htmlFor).toBe(button().id);
+    // Its own aria-label would hide the label: aria-labelledby names it by both ("Brand color Choose color (#0f6cbd)").
+    expect(button().getAttribute("aria-labelledby")).toBe(`${label.id} ${button().id}`);
+    expect(button().getAttribute("aria-label")).toBe("Choose color (#0f6cbd)");
+    const help = document.getElementById(button().getAttribute("aria-describedby")!);
+    expect(help?.textContent).toBe("The header's color");
   });
 });
