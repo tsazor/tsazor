@@ -77,6 +77,8 @@ describe("Tabs", () => {
     expect(panels).toHaveLength(1);
     expect(panels[0]!.textContent).toBe("Second body");
     expect(panels[0]!.id).toBe("demo-tabs-panel-1");
+    // The panel is a Tab stop after the tab list (the APG's tabs pattern).
+    expect(panels[0]!.getAttribute("tabindex")).toBe("0");
     expect(buttons[1]!.getAttribute("aria-selected")).toBe("true");
   });
 

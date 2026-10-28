@@ -39,6 +39,9 @@
             class: "fui-tab-panel",
             id: this.panelId,
             "aria-labelledby": this.labelledBy,
+            // A Tab stop of its own (the APG's tabs pattern; the Bootstrap skin's too): a panel without a focusable
+            // element in it is reached after the tab list all the same.
+            tabindex: 0,
         }, this.additionalAttributes);
     }
 
