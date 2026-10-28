@@ -205,7 +205,7 @@ try {
     await page.waitForSelector("[role=dialog]", { state: "detached" });
     say(await opener.evaluate((el) => el === document.activeElement), "popover: Escape returns focus to its button");
     await page.getByRole("button", { name: "Print", exact: true }).focus();
-    await page.waitForSelector("[role=tooltip]");
+    await page.waitForSelector("[role=tooltip]:visible");
     say((await page.getByRole("button", { name: "Print", exact: true }).getAttribute("aria-describedby")) !== null, "tooltip: describes its button");
 
     /* Toolbar: one tab stop, the arrow keys move and wrap, Home and End; a text field keeps its arrows; a menu its own. */

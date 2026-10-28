@@ -221,7 +221,7 @@ async function main() {
     check((await focusedText()) === "Filters", "drawer: Escape closes it and focus returns to the opener");
 
     await page.locator("[aria-label=Print]").focus();
-    await page.waitForSelector("[role=tooltip]");
+    await page.waitForSelector("[role=tooltip]:visible");
     const described = await page.locator("[aria-label=Print]").evaluate((el) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent);
     check(described === "Print the order list", `tooltip: describes the button (${described})`);
     const tooltipViolations = await axe(page);

@@ -135,7 +135,7 @@ try {
 
   // Tooltip: shows on focus, describes the button, Escape hides it.
   await page.locator(".print").focus();
-  await page.waitForSelector("[role=tooltip]");
+  await page.waitForSelector("[role=tooltip]:visible");
   const described = await page.locator(".print").evaluate((button) => document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent);
   check(described === "Print the order list", `tooltip: describes the button (${described})`);
   await page.keyboard.press("Escape");
