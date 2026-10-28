@@ -31,6 +31,7 @@ const sorted = (values: Iterable<string>) => [...new Set(values)].sort();
 const outside = (values: Iterable<string>, list: readonly string[]) => sorted(values).filter((value) => !list.includes(value));
 
 describe("the ABI the compiler emits (api/abi.json)", () => {
+  // It compiles the whole corpus: ~2 s alone, over vitest's 5 s while every package's tests run beside it.
   it("is what the components of the repository compile to: the skins, the libraries, the apps", () => {
     const corpus = [
       ...["bootstrap", "fluent", "charts", "markdown"].flatMap((name) => tsazorFiles(path.join(repo, "packages", name, "src"))),
@@ -55,7 +56,7 @@ describe("the ABI the compiler emits (api/abi.json)", () => {
     expect(outside(builder, abi.builder), "RenderTreeBuilder methods emitted but not in api/abi.json").toEqual([]);
     expect(outside(statics, abi.statics), "static calls emitted but not in api/abi.json").toEqual([]);
     expect(outside(imports, abi.imports), "runtime imports emitted but not in api/abi.json").toEqual([]);
-  });
+  }, 60_000);
 
   it("is everything the code generator can emit, the rare paths too (transitions, @animate, @bind formats)", () => {
     const codegen = readFileSync(path.join(import.meta.dirname, "..", "src", "codegen.ts"), "utf8");
