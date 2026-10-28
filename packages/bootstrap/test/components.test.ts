@@ -363,6 +363,8 @@ describe("Form + inputs (FieldState from @tsazor/ui)", () => {
     expect(invalidSubmits).toBe(1);
     const message = container.querySelector(".invalid-feedback")!;
     expect(message.textContent).toBe("Name is required");
+    // Announced as it appears, as the Fluent skin's message is.
+    expect(message.getAttribute("role")).toBe("alert");
     expect(input.className).toContain("is-invalid");
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.getAttribute("aria-describedby")).toBe(`${input.id}-help ${message.id}`);

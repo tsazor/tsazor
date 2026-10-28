@@ -49,7 +49,7 @@
         <div class="form-text" id="@this.field.helpId(this.id)">@this.help</div>
     }
     @if (this.message) {
-        <div class="invalid-feedback d-block" id="@this.field.messageId(this.id)">@this.message</div>
+        <div class="invalid-feedback d-block" role="alert" id="@this.field.messageId(this.id)">@this.message</div>
     }
 </div>
 

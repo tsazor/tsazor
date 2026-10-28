@@ -15,7 +15,7 @@
         <div class="form-text" id="@helpId">@help</div>
     }
     @if (message) {
-        <div class="invalid-feedback d-block" id="@messageId">@message</div>
+        <div class="invalid-feedback d-block" role="alert" id="@messageId">@message</div>
     }
 </div>
 

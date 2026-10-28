@@ -38,7 +38,7 @@
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
     @if (message) {
-        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
     }
 </div>
 

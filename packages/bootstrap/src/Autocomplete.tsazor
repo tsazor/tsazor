@@ -35,7 +35,7 @@
                value="@this.inputText" @oninput="this.input" @onkeydown="this.keydown" />
     </div>
     @if (this.message) {
-        <div class="invalid-feedback d-block" id="@this.messageId">@this.message</div>
+        <div class="invalid-feedback d-block" role="alert" id="@this.messageId">@this.message</div>
     }
     @if (this.open) {
         <ul class="dropdown-menu show tz-autocomplete__list" role="listbox" id="@this.listId" aria-label="@(label ?? ariaLabel)" aria-multiselectable="@(multiple ? "true" : null)" @attach:top="topLayer()" @attach="position" @attach:dismiss="dismiss">

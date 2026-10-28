@@ -1,6 +1,6 @@
 @** A Bootstrap text field (`.form-control`; InputBase — bind it with @bind) with an optional label
     and help text. Inside a Form it turns red or green with the field's validation state, and after
-    a submit attempt it shows the first message below (`.invalid-feedback`, linked with
+    a submit attempt it shows the first message below (`.invalid-feedback`, role="alert", linked with
     aria-describedby, aria-invalid). `mask` shapes the text as it is typed (MudBlazor's `Mask`: a PatternMask,
     "(000) 000-0000"). `contentBefore` and `contentAfter` make it an input group (MudBlazor's adornments). *@
 @import { type PatternMask } from "@tsazor/ui"
@@ -27,7 +27,7 @@
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
     @if (message) {
-        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
     }
 </div>
 
