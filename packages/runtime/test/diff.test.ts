@@ -188,7 +188,26 @@ describe("computeDiff — keys", () => {
       b.openElement(0, "p");
       b.closeElement();
     };
-    expect(show(diff(keyed, unkeyed))).toEqual(["prepend 0 #0", "remove 1"]);
+    expect(show(diff(keyed, unkeyed))).toEqual(["remove 0", "prepend 0 #0"]);
+  });
+
+  it("a keyed loop that shrinks keeps the unkeyed sibling after it (an Autocomplete's input after its chips)", () => {
+    const field = (chips: string[]): Build => (b) => {
+      b.openElement(0, "div");
+      for (const chip of chips) {
+        b.openElement(1, "span");
+        b.setKey(chip);
+        b.addContent(2, chip);
+        b.closeElement();
+      }
+      b.openElement(3, "input");
+      b.closeElement();
+      b.closeElement();
+    };
+    // The input is matched, not re-created: a re-created input drops the focus of the user typing in it.
+    expect(show(diff(field(["Red", "Blue"]), field(["Red"])))).toEqual(["in 0", "remove 1", "out"]);
+    expect(show(diff(field(["Red"]), field([])))).toEqual(["in 0", "remove 0", "out"]);
+    expect(show(diff(field(["Red"]), field(["Red", "Blue"])))).toEqual(["in 0", "prepend 1 #3", "out"]);
   });
 
   it("inserting at the front of a keyed list is one PrependFrame", () => {

@@ -110,6 +110,10 @@ const identity = (a: unknown, b: unknown): boolean => a === b;
  * sequence number (with loop-back detection for repeated sequences); a key
  * dictionary is built only when a key is present, a key miss is always
  * remove + insert (never a sequence fallback), and duplicate keys throw.
+ * One deviation: an old keyed item that is gone from the new tree is removed
+ * before an unkeyed new frame is inserted (Blazor inserts first), so the
+ * unkeyed sibling after a shrinking keyed loop — an input after its chips —
+ * still matches its old frame and keeps its element and its focus.
  * The initial render is a diff against an empty old tree.
  */
 export function computeDiff(oldTree: RenderTreeFrame[], newTree: RenderTreeFrame[], options?: DiffOptions): RenderTreeDiff {
@@ -205,8 +209,10 @@ function appendDiffEntriesForRange(ctx: DiffContext, oldStartIndex: number, oldE
           action = DiffAction.Delete;
         } else {
           // If the new key is in both trees but the old one is not, the old
-          // item was deleted; otherwise treat it as an insertion.
-          action = newKeyIsInOldTree ? DiffAction.Delete : DiffAction.Insert;
+          // item was deleted; otherwise treat it as an insertion. An old keyed
+          // item missing from the new tree goes first when the new frame is
+          // unkeyed: that frame may still match an old one after it.
+          action = newKeyIsInOldTree || (newKey === null && !oldKeyIsInNewTree) ? DiffAction.Delete : DiffAction.Insert;
         }
       }
     } else {

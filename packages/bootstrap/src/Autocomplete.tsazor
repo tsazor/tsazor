@@ -24,7 +24,7 @@
             @foreach (const option of selectedOptions) {
                 <span class="badge text-bg-light border tz-autocomplete__chip" @key="this.keyOf(option)">
                     @optionText(option)
-                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@(disabled || readOnly)" @onclick="() => this.remove(option)"></button>
+                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@(disabled || readOnly)" @onclick="() => this.removeChip(option)"></button>
                 </span>
             }
         }
@@ -249,6 +249,12 @@
             await this.selectedOptionChanged?.invokeAsync(option);
             this.notifyFieldChanged(option);
         }
+    }
+
+    /** A chip's remove button: the focus goes to the input first, as the button goes with its chip. */
+    private removeChip(option: TOption): Promise<void> {
+        this.field?.querySelector("input")?.focus();
+        return this.remove(option);
     }
 
     private async remove(option: TOption): Promise<void> {

@@ -2431,7 +2431,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "CSS selector of the invalid fields, as FocusOnNavigate's `selector`."
         }
       ],
-      "doc": "Focuses the first invalid field after a submit that found errors — react-hook-form's `shouldFocusError`, which is\non by default there; Blazor's EditForm leaves the focus on the submit button. A superset component, named after\nBlazor's FocusOnNavigate and EditForm's OnInvalidSubmit: place it inside an EditForm.\n\nWhen the form validates (a submit; an own `editContext.validate()` counts too), the first element of the form that\nmatches `selector` — by default the fields InputBase marks `aria-invalid=\"true\"`, in the form's order — takes the\nfocus once that render is on the screen. A valid form keeps the focus where it is. Renders nothing.",
+      "doc": "Focuses the first invalid field after a submit that found errors — react-hook-form's `shouldFocusError`, which is\non by default there; Blazor's EditForm leaves the focus on the submit button. A superset component, named after\nBlazor's FocusOnNavigate and EditForm's OnInvalidSubmit: place it inside an EditForm.\n\nWhen the form validates (a submit; an own `editContext.validate()` counts too), the first element of the form that\nmatches `selector` — by default the fields InputBase marks `aria-invalid=\"true\"`, in the form's order — takes the\nfocus once that render is on the screen. A match that can't take the focus itself (a fieldset, a rating's group)\npasses it to the first element inside it that can; one with none is skipped. A valid form keeps the focus where it\nis. Renders nothing.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -2825,7 +2825,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Rendered in the default layout while the state is still resolving (Razor's <Authorizing>)."
         }
       ],
-      "doc": "Blazor's AuthorizeRouteView: like RouteView, but the matched page only\nrenders when the user meets the route's `authorize` requirements\n(Blazor's [Authorize] attribute on the page). Swap it into the Router's\nfound fragment to protect pages. As in Blazor it derives from RouteView,\nwhich renders the granted page (layout, route and query parameters), and\nrenders NotAuthorized and Authorizing in the default layout too — \"Not\nauthorized\" and \"Authorizing...\" when the app gives none.",
+      "doc": "Blazor's AuthorizeRouteView: like RouteView, but the matched page only\nrenders when the user meets the route's `authorize` requirements\n(Blazor's [Authorize] attribute on the page). Swap it into the Router's\nfound fragment to protect pages. As in Blazor it derives from RouteView,\nwhich renders the granted page (layout, route and query parameters), and\nrenders NotAuthorized and Authorizing in the default layout too — \"Not\nauthorized\" and \"Authorizing...\" when the app gives none. A registered\nStringLocalizer translates those two by the reserved keys\n`tsazor.auth.notAuthorized` and `tsazor.auth.authorizing`.",
       "base": {
         "name": "RouteView",
         "resolved": true

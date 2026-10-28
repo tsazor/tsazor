@@ -70,16 +70,24 @@ describe("Autocomplete", () => {
     expect(changes).toEqual([["Green"]]);
     expect(input.getAttribute("aria-expanded")).toBe("false");
     expect(input.value).toBe("");
-    container.querySelector<HTMLButtonElement>("button[aria-label='Remove Green']")!.click();
+    const remove = container.querySelector<HTMLButtonElement>("button[aria-label='Remove Green']")!;
+    remove.focus();
+    remove.click();
     await settle(renderer);
     expect(changes).toEqual([["Green"], []]);
+    // The button went with its chip; the focus is in the input, not on the body.
+    expect(document.activeElement).toBe(input);
     expect(container.querySelector(".fui-autocomplete__chip")).toBeNull();
   });
 
   it("removes the last chip with Backspace in the empty input, and closes with Escape", async () => {
-    const { container, type, key, changes } = await mount({ items: COLORS, selectedOptions: ["Red", "Blue"] });
+    const { container, input, type, key, changes } = await mount({ items: COLORS, selectedOptions: ["Red", "Blue"] });
+    input.focus();
     await key("Backspace");
     expect(changes).toEqual([["Red"]]);
+    // The chip goes, the input stays the same element: the focus stays where the user types.
+    expect(input.isConnected).toBe(true);
+    expect(document.activeElement).toBe(input);
     expect([...container.querySelectorAll(".fui-autocomplete__chip")].map((chip) => chip.textContent?.replace("×", "").trim())).toEqual(["Red"]);
     await type("g");
     expect(container.querySelector("[role=listbox]")).not.toBeNull();
