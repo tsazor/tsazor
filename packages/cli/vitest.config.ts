@@ -5,5 +5,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // buildLibrary compiles a library per test (the compiler, TypeScript's declarations): about a second alone, over
+    // vitest's 5 s with every package testing at once (`pnpm -r test`, public-tree --verify).
+    testTimeout: 30_000,
   },
 });
