@@ -4,6 +4,14 @@ import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { EditContext, formElements } from "./edit-context.js";
 import { componentInternals } from "../components/component-internals.js";
 
+/** Elements that can take the keyboard's focus, unless disabled (isFocusable checks the rest). */
+const FOCUSABLE = "a[href], button, input:not([type=hidden]), select, textarea, [contenteditable]:not([contenteditable=false]), [tabindex]";
+
+/** In the tab order: focusable, not disabled, not tabindex -1, not inert or hidden. */
+function isFocusable(element: HTMLElement): boolean {
+  return element.matches(FOCUSABLE) && !element.matches(":disabled") && element.tabIndex >= 0 && !element.closest("[inert],[hidden]");
+}
+
 /**
  * Focuses the first invalid field after a submit that found errors — react-hook-form's `shouldFocusError`, which is
  * on by default there; Blazor's EditForm leaves the focus on the submit button. A superset component, named after
@@ -11,7 +19,9 @@ import { componentInternals } from "../components/component-internals.js";
  *
  * When the form validates (a submit; an own `editContext.validate()` counts too), the first element of the form that
  * matches `selector` — by default the fields InputBase marks `aria-invalid="true"`, in the form's order — takes the
- * focus once that render is on the screen. A valid form keeps the focus where it is. Renders nothing.
+ * focus once that render is on the screen. A match that can't take the focus itself (a fieldset, a rating's group)
+ * passes it to the first element inside it that can; one with none is skipped. A valid form keeps the focus where it
+ * is. Renders nothing.
  */
 export class FocusOnInvalidSubmit extends ComponentBase {
   /** The enclosing form's EditContext (cascaded by EditForm). */
@@ -39,7 +49,14 @@ export class FocusOnInvalidSubmit extends ComponentBase {
     if (!this.focusAfterRender) return;
     this.focusAfterRender = false;
     const form = this.editContext ? formElements.get(this.editContext) : undefined;
-    form?.querySelector<HTMLElement>(this.selector)?.focus();
+    if (!form) return;
+    for (const match of form.querySelectorAll<HTMLElement>(this.selector)) {
+      const target = isFocusable(match) ? match : [...match.querySelectorAll<HTMLElement>(FOCUSABLE)].find(isFocusable);
+      if (target) {
+        target.focus();
+        return;
+      }
+    }
   }
 
   /** Stops listening to the EditContext. */

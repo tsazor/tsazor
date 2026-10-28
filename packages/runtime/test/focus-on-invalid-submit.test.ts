@@ -82,6 +82,43 @@ describe("FocusOnInvalidSubmit (F16)", () => {
     expect(document.activeElement?.tagName).toBe("BUTTON");
   });
 
+  it("passes the focus into a match that can't take it (a fieldset, a rating's group): its tab stop", async () => {
+    class Rated extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(EditForm));
+        b.addAttribute(1, "Model", {});
+        b.addContent(2, (_context: EditContext) => (inner: RenderTreeBuilder) => {
+          // An empty marked group first: nothing to focus there, the next match gets it.
+          inner.openElement(3, "div");
+          inner.addAttribute(4, "aria-invalid", "true");
+          inner.closeElement();
+          inner.openElement(5, "div");
+          inner.addAttribute(6, "role", "radiogroup");
+          inner.addAttribute(7, "aria-invalid", "true");
+          for (const [index, tabindex] of ["-1", "0", "-1"].entries()) {
+            inner.openElement(10 + index * 3, "span");
+            inner.addAttribute(11 + index * 3, "role", "radio");
+            inner.addAttribute(12 + index * 3, "tabindex", tabindex);
+            inner.closeElement();
+          }
+          inner.closeElement();
+          inner.openComponent(30, defineComponent(FocusOnInvalidSubmit));
+          inner.closeComponent();
+        });
+        b.closeComponent();
+      }
+    }
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderer = new Renderer();
+    renderer.renderInContainer(Rated, container);
+    await renderer.waitUntilIdle();
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { cancelable: true }));
+    await renderer.waitUntilIdle();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(document.activeElement).toBe(container.querySelectorAll("[role=radio]")[1]);
+  });
+
   it("needs an EditForm", () => {
     const outside = new FocusOnInvalidSubmit() as unknown as { onInitialized(): void };
     expect(() => outside.onInitialized()).toThrow(/requires a cascading parameter of type EditContext/);
