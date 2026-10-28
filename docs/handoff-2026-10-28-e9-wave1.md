@@ -97,6 +97,14 @@ Started:
 - A Splitter bar that collapses a pane takes Tab without `resizable` (`901c48f`).
 - A Progress without a label is named "Progress" (`ec98239`, library text `progress`).
 - A virtualized DataGrid's `aria-rowcount` counts the rows a filter leaves, not all items (`8bd2b6f`).
+- A DataGrid resize handle's `aria-valuenow` is the column's laid-out width in px (measured at focus), a drag and the
+  keys start from it, the keys stop at 40 px (`d244f4a`; the showcase smoke checks it in a browser).
+- A DetailsColumn toggle keeps its label open or closed; `aria-expanded` says which (`a6a4288`, `beb7cfd`).
+- Overflow's +N button has no `aria-haspopup` — the popup is a group, not a menu (`f49f787`).
+- An Avatar's badge joins its name by `aria-labelledby` (itself and the badge); an unnamed one with a badge isn't
+  hidden (`dcdec55`).
+- A Chip whose text is its content names its close button by what it shows (`0842a6a`).
+- A Carousel under reduced motion starts stopped, and its start button turns the slides (`08587d2`, skins gate).
 
 Looked at, left open:
 
