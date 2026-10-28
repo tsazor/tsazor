@@ -18,7 +18,10 @@ Browser ──(Renderer)──►  RenderTree frames ──(diff)──►  edit
   basis of the Blazor-style diff (sequence matching, `@key` support).
 - **Diff** (`render-tree/diff.ts`): a port of Blazor's `RenderTreeDiffBuilder` — an ordered
   two-pointer walk over sequence numbers, a key dictionary only when keys occur, key miss ⇒
-  remove + insert, duplicate keys ⇒ error. Pure data without DOM access: an edit list
+  remove + insert, duplicate keys ⇒ error. One deviation (2026-10-28): an old keyed item gone
+  from the new tree is removed before an unkeyed new frame is inserted (Blazor inserts first),
+  so the unkeyed sibling after a shrinking keyed loop — an Autocomplete's input after its chips —
+  keeps its element and its focus. Pure data without DOM access: an edit list
   (`RenderTreeEditType`, Blazor's edit types with sibling indices, `StepIn`/`StepOut`,
   permutation lists) plus the child components to instantiate/retain and to dispose
   (including those nested inside removed elements). The first render is a diff against the
