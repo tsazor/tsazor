@@ -6,7 +6,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 
-describe("the published declarations", () => {
+// A TypeScript program per test: a second or two alone, over vitest's 5 s with every package testing at once.
+describe("the published declarations", { timeout: 60_000 }, () => {
   it("type-check without skipLibCheck", () => {
     const dist = path.resolve(import.meta.dirname, "..", "dist");
     const program = ts.createProgram([path.join(dist, "index.d.ts")], {

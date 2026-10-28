@@ -257,7 +257,8 @@ describe("linq-and-arrays", () => {
     // TS2550 "Do you need to change your target library?" (+ the comparer's then-untyped parameters).
     expect(withLib(["lib.es2022.d.ts"])[0]).toBe("TS2550");
     expect(withLib(["lib.es2023.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"])).toEqual([]);
-  });
+    // Two TypeScript programs: over vitest's 5 s with every package testing at once.
+  }, 60_000);
 });
 
 /* structural-typing ------------------------------------------------------------- */

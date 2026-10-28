@@ -40,7 +40,8 @@ function typeErrors(consumer: string): string[] {
 
 const importLine = `import type { RenderFragment, RenderTreeBuilder } from ${JSON.stringify(index.replace(/\.ts$/, ".js"))};`;
 
-describe("RenderFragment<T> as a generic type (P.5)", () => {
+// A TypeScript program per test: a second or two alone, over vitest's 5 s with every package testing at once.
+describe("RenderFragment<T> as a generic type (P.5)", { timeout: 60_000 }, () => {
   it("RenderFragment<number> takes the context and returns a fragment", () => {
     const errors = typeErrors(`${importLine}
 const row: RenderFragment<number> = (n: number): RenderFragment => (b: RenderTreeBuilder): void => { n; b; };
