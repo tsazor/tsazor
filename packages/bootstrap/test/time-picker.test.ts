@@ -86,6 +86,7 @@ describe("TimePicker", () => {
     input().focus();
     await key("ArrowDown");
     expect(list()).not.toBeNull();
+    expect(list()!.getAttribute("aria-label")).toBe("Pickup");
     expect(input().getAttribute("aria-expanded")).toBe("true");
     expect(options()).toHaveLength(41);
     expect(plain(options()[0]!.textContent)).toBe("8:00 AM");
@@ -119,6 +120,13 @@ describe("TimePicker", () => {
     options()[2]!.click();
     await idle();
     expect(Host.last!.value).toBe("08:30:00");
+  });
+
+  it("names the list without a label or an ariaLabel: the button's text, as the Fluent skin does", async () => {
+    const { input, list, key } = await mount({ label: undefined });
+    input().focus();
+    await key("ArrowDown");
+    expect(list()!.getAttribute("aria-label")).toBe("Choose time");
   });
 
   it("Escape closes the list; the button toggles it", async () => {

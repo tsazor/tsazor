@@ -682,6 +682,8 @@ describe("Pagination", () => {
     });
     await settle(renderer);
 
+    // A named navigation landmark without an ariaLabel too, as the Fluent skin's.
+    expect(container.querySelector("nav")!.getAttribute("aria-label")).toBe("Pagination");
     const items = container.querySelectorAll(".page-item");
     expect(items).toHaveLength(5); // prev + 1..3 + next
     expect(items[1]!.className).toContain("active");

@@ -5,7 +5,7 @@
 @import { sizeSuffix } from "./vocabulary"
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
-<nav aria-label="@ariaLabel" @attributes="@withClass(null, additionalAttributes)">
+<nav aria-label="@(ariaLabel ?? t("pagination.label"))" @attributes="@withClass(null, additionalAttributes)">
     <ul class="@this.listClass">
         <li class="@this.prevClass"><button type="button" class="page-link" aria-label="@t("pagination.previous")" disabled="@(page <= 1)" @onclick="goPrev">@t("pagination.previousText")</button></li>
         @for (let i = 1; i <= pageCount; i++) {
@@ -24,7 +24,7 @@
     @Parameter() pageCount: number = 1;
     /** small, medium (default) or large. */
     @Parameter() size: Size = "medium";
-    /** Names the navigation for screen readers. */
+    /** Names the navigation for screen readers ("Pagination" by default). */
     @Parameter() ariaLabel?: string;
     /** Fired when the user picks a different page, with the new page number (1-based). */
     @Parameter() onPageChanged?: EventCallback<number>;
