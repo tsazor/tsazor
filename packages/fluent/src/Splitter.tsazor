@@ -121,11 +121,17 @@
         for (const pane of this.panes) pane.refresh();
     }
 
+    /** @internal The collapsible pane a bar's Enter collapses: the pane before it, else the one after. */
+    collapsibleAt(pane: SplitterPane): SplitterPane | undefined {
+        const target = pane.collapsible ? pane : this.panes[pane.index + 1];
+        return target?.collapsible ? target : undefined;
+    }
+
     /** @internal A bar's keys: the arrows move it, Home and End take the pane before to its min or max, Enter collapses. */
     async keydown(pane: SplitterPane, e: KeyboardEvent): Promise<void> {
         if (e.key === "Enter") {
-            const target = pane.collapsible ? pane : this.panes[pane.index + 1];
-            if (target?.collapsible) {
+            const target = this.collapsibleAt(pane);
+            if (target !== undefined) {
                 e.preventDefault();
                 await this.toggle(target);
             }

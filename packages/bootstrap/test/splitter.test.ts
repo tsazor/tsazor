@@ -92,4 +92,35 @@ describe("Splitter", () => {
     await settle(result);
     expect(panes(root)[0]!.style.flex).toBe("0 0 25%");
   });
+
+  it("a bar that doesn't move but collapses a pane takes Tab, so Enter reaches the collapse; one that does neither doesn't", async () => {
+    const result = await renderTree((b) => {
+      b.openComponent(0, Splitter);
+      b.addAttribute(1, "childContent", (c: RenderTreeBuilder) => {
+        c.openComponent(0, SplitterPane);
+        c.addAttribute(1, "size", "25%");
+        c.addAttribute(2, "resizable", false);
+        c.addAttribute(3, "collapsible", true);
+        c.addAttribute(4, "childContent", (d: RenderTreeBuilder) => d.addContent(0, "Nav"));
+        c.closeComponent();
+        c.openComponent(5, SplitterPane);
+        c.addAttribute(6, "resizable", false);
+        c.addAttribute(7, "childContent", (d: RenderTreeBuilder) => d.addContent(0, "Main"));
+        c.closeComponent();
+        c.openComponent(8, SplitterPane);
+        c.addAttribute(9, "childContent", (d: RenderTreeBuilder) => d.addContent(0, "Chat"));
+        c.closeComponent();
+      });
+      b.closeComponent();
+    });
+    mounted.push(result);
+    await settle(result);
+    const root = result.container.querySelector<HTMLElement>(`.${PREFIX}-splitter`)!;
+    const [first, second] = bars(root);
+    expect(first!.getAttribute("tabindex")).toBe("0");
+    expect(second!.getAttribute("tabindex")).toBe("-1");
+    first!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await settle(result);
+    expect(panes(root)[0]!.className).toContain(`${PREFIX}-splitter__pane--collapsed`);
+  });
 });

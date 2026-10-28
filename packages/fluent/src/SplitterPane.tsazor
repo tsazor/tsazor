@@ -8,7 +8,7 @@
 
 <div class="@this.paneClass" id="@this.id" style="@(`flex: ${this.flex}`)" @ref="element">@childContent</div>
 @if (splitter?.hasBarAfter(this)) {
-    <div class="fui-splitter__bar" role="separator" tabindex="@(resizable ? 0 : -1)" aria-orientation="@(splitter.orientation === "horizontal" ? "vertical" : "horizontal")" aria-controls="@this.id" aria-label="@(label ?? t("splitter.resize"))" aria-valuenow="@this.values.now" aria-valuemin="@this.values.min" aria-valuemax="@this.values.max" @onkeydown="(e) => splitter!.keydown(this, e)" @onpointerdown="(e) => splitter!.pointerdown(this, e)" @onpointermove="(e) => splitter!.pointermove(e)" @onpointerup="() => splitter!.pointerup()" @onpointercancel="() => splitter!.pointerup()" @ondblclick="() => this.toggleNearest()"></div>
+    <div class="fui-splitter__bar" role="separator" tabindex="@(this.reachable ? 0 : -1)" aria-orientation="@(splitter.orientation === "horizontal" ? "vertical" : "horizontal")" aria-controls="@this.id" aria-label="@(label ?? t("splitter.resize"))" aria-valuenow="@this.values.now" aria-valuemin="@this.values.min" aria-valuemax="@this.values.max" @onkeydown="(e) => splitter!.keydown(this, e)" @onpointerdown="(e) => splitter!.pointerdown(this, e)" @onpointermove="(e) => splitter!.pointermove(e)" @onpointerup="() => splitter!.pointerup()" @onpointercancel="() => splitter!.pointerup()" @ondblclick="() => this.toggleNearest()"></div>
 }
 
 @code {
@@ -43,6 +43,11 @@
     private readonly id = uniqueId("fui-splitter-pane");
     private collapsedNow?: boolean;
     private collapsedGiven?: boolean;
+
+    /** The bar takes Tab when it moves or collapses a pane: Enter must reach a collapse a double-click can do. */
+    private get reachable(): boolean {
+        return this.resizable || this.splitter?.collapsibleAt(this) !== undefined;
+    }
 
     get isCollapsed(): boolean {
         return this.collapsedNow ?? this.collapsed;
