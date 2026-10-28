@@ -36,18 +36,15 @@
                     @childContent
                 }
             </div>
-            <div class="fui-wizard__buttons">
+            <div class="fui-wizard__buttons" @ref="buttons">
                 @if (buttonTemplate) {
                     @buttonTemplate(value)
                 } else {
                     @if (this.previousIndex >= 0) {
                         <Button onClick="@this.previous">@this.texts.previous</Button>
                     }
-                    @if (this.nextIndex >= 0) {
-                        <Button intent="primary" onClick="@this.next">@this.texts.next</Button>
-                    } else {
-                        <Button intent="primary" onClick="@this.finish">@this.texts.done</Button>
-                    }
+                    @* One button for Next and Done: at the last step it stays the same element, and keeps the focus. *@
+                    <Button intent="primary" onClick="@this.forward">@(this.nextIndex >= 0 ? this.texts.next : this.texts.done)</Button>
                 }
             </div>
         </div>
@@ -174,8 +171,26 @@
         await this.valueChanged?.invokeAsync(index);
     }
 
+    private buttons?: HTMLElement;
+    private focusForward = false;
+
     private async previous(): Promise<void> {
-        if (this.previousIndex >= 0) await this.goToStepAsync(this.previousIndex);
+        if (this.previousIndex < 0) return;
+        const hadFocus = this.buttons?.contains(document.activeElement) ?? false;
+        await this.goToStepAsync(this.previousIndex);
+        // At the first step Previous goes, and would take the focus with it: Next has it then.
+        this.focusForward = hadFocus && this.previousIndex < 0;
+        if (this.focusForward) this.stateHasChanged();
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.focusForward) return;
+        this.focusForward = false;
+        this.buttons?.querySelector<HTMLElement>("button:last-of-type")?.focus();
+    }
+
+    private forward(): Promise<void> {
+        return this.nextIndex >= 0 ? this.next() : this.finish();
     }
 
     private async next(): Promise<void> {

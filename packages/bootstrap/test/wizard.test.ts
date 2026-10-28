@@ -123,6 +123,26 @@ describe("Wizard", () => {
     expect(Page.last!.step).toBe(1);
   });
 
+  it("keeps the focus on the buttons: Next turns into Done in place, and at the first step Previous hands it to Next", async () => {
+    const { result, container } = await mount();
+    const next = buttonNamed(container, "Next")!;
+    next.focus();
+    next.click();
+    await settle(result);
+    next.click();
+    await settle(result);
+    // The same element, now Done, still has the focus.
+    expect(buttonNamed(container, "Done")).toBe(next);
+    expect(document.activeElement).toBe(next);
+    buttonNamed(container, "Previous")!.focus();
+    buttonNamed(container, "Previous")!.click();
+    await settle(result);
+    buttonNamed(container, "Previous")!.click();
+    await settle(result);
+    expect(buttonNamed(container, "Previous")).toBeUndefined();
+    expect(document.activeElement).toBe(buttonNamed(container, "Next"));
+  });
+
   it("Done raises onFinish; a step's onChange sees the target and can cancel", async () => {
     const { Page, result, container } = await mount({ cancelLeavingFirst: true });
     buttonNamed(container, "Next")!.click();
