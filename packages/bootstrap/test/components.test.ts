@@ -240,6 +240,8 @@ describe("Modal", () => {
       b.closeComponent();
     });
     expect(container.querySelector(".modal-title")!.textContent).toBe("Confirm");
+    // An h2 in the h5 look: the level under the page's h1, as the Fluent skin's dialog (the look stays Bootstrap's).
+    expect(container.querySelector(".modal-title")!.tagName).toBe("H2");
     expect(container.querySelector(".modal-body")!.textContent).toBe("Sure?");
     expect(container.querySelector(".modal-backdrop")).not.toBeNull();
     container.querySelector(".btn-close")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -399,6 +401,7 @@ describe("Drawer, ToastRegion, Tooltip", () => {
     expect(panel.className).toContain("offcanvas-end");
     expect(panel.getAttribute("aria-modal")).toBe("true");
     expect(document.getElementById(panel.getAttribute("aria-labelledby")!)!.textContent).toBe("Filters");
+    expect(document.getElementById(panel.getAttribute("aria-labelledby")!)!.tagName).toBe("H2");
     expect(panel.contains(document.activeElement)).toBe(true);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await settle(renderer);

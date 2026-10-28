@@ -13,7 +13,7 @@
     <div tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass(panelClass, additionalAttributes)" @attach:top="topLayer()" @attach="trap" @attach:lock="lock" @attach:dismiss="dismiss">
         <div class="offcanvas-header">
             @if (title) {
-                <h5 class="offcanvas-title" id="@titleId">@title</h5>
+                <h2 class="offcanvas-title h5" id="@titleId">@title</h2>
             }
             <button type="button" class="btn-close" aria-label="@t("close")" @onclick="requestClose"></button>
         </div>

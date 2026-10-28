@@ -80,8 +80,8 @@ describe("DialogService with DialogProvider and a hosted Dialog", () => {
     await settle(renderer);
 
     const dialog = document.querySelector<HTMLElement>("[role=dialog]")!;
-    expect(dialog.querySelector("h5")!.textContent).toBe("Logout");
-    expect(dialog.getAttribute("aria-labelledby")).toBe(dialog.querySelector("h5")!.id);
+    expect(dialog.querySelector("h2")!.textContent).toBe("Logout");
+    expect(dialog.getAttribute("aria-labelledby")).toBe(dialog.querySelector("h2")!.id);
     expect(dialog.querySelector(".content")!.textContent).toBe("Logout Confirmation");
 
     buttonNamed("Logout").click();
@@ -131,7 +131,7 @@ describe("DialogService with DialogProvider and a hosted Dialog", () => {
     expect(document.querySelectorAll("[role=dialog]")).toHaveLength(2);
 
     // By its own heading: the shown dialog contains the inner one, text and all.
-    const inner = [...document.querySelectorAll<HTMLElement>("[role=dialog]")].find((dialog) => dialog.querySelector("h5")?.textContent === "Inner")!;
+    const inner = [...document.querySelectorAll<HTMLElement>("[role=dialog]")].find((dialog) => dialog.querySelector("h2")?.textContent === "Inner")!;
     inner.querySelector<HTMLButtonElement>("[aria-label=Close]")!.click();
     await settle(renderer);
 
