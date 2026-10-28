@@ -2,9 +2,10 @@
     native input type="range", so the arrow keys, Page Up and Down, Home and End work as in any slider. `min`, `max`
     and `step` (0, 100, 1); `orientation` vertical stands it up, `size` small makes it thin. The value follows the
     drag once it pauses for immediateDelay ms (Fluent UI Blazor's `ImmediateDelay`), or only on release with
-    `immediate` false. `tickMarks` draws a mark per step, with `tickMarkLabels` under them; `valueLabel` shows the
-    value, through `valueFormat` ("40 %"), which screen readers read too (aria-valuetext). Inside a FluentForm it
-    shows the field's first validation message once a submit was attempted. *@
+    `immediate` false. `tickMarks` draws a mark per step, with `tickMarkLabels` under them (a screen reader hears the
+    label of the tick the value sits on); `valueLabel` shows the value, through `valueFormat` ("40 %"), which screen
+    readers read too (aria-valuetext). Inside a FluentForm it shows the field's first validation message once a submit
+    was attempted. *@
 @import { uniqueId, type Orientation } from "@tsazor/ui"
 @import { hasSubmitAttempt, ImmediateInput, sliderFraction, sliderTicks } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
@@ -105,6 +106,17 @@
         return this.valueFormat ? this.valueFormat(this.shownValue) : String(this.shownValue);
     }
 
+    /**
+     * What a screen reader says for the value (aria-valuetext): the formatted value, else the label of the tick the
+     * value sits on ("Medium", not "2" — the tick labels themselves are hidden from it), else nothing (the number).
+     */
+    private get spokenValue(): string | undefined {
+        if (this.valueFormat) return this.valueText;
+        if (!this.tickMarks || this.tickMarkLabels === undefined) return undefined;
+        const index = sliderTicks(this.min, this.max, this.step).findIndex((tick) => Math.abs(tick - this.shownValue) < 1e-9);
+        return index === -1 ? undefined : this.tickMarkLabels[index];
+    }
+
     /** The marks: where each sits on the rail, and its label. */
     private get ticks(): { at: number; label?: string }[] {
         return sliderTicks(this.min, this.max, this.step).map((tick, index) => ({
@@ -136,7 +148,7 @@
             disabled: this.disabled ? true : undefined,
             "aria-readonly": this.readOnly ? "true" : undefined,
             "aria-orientation": this.orientation === "vertical" ? "vertical" : undefined,
-            "aria-valuetext": this.valueFormat ? this.valueText : undefined,
+            "aria-valuetext": this.spokenValue,
             "aria-label": this.ariaLabel,
             "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
             "aria-describedby": this.describedBy,

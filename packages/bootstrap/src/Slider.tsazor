@@ -2,9 +2,9 @@
     InputBase<number> — bind it with @bind): the arrow keys, Page Up and Down, Home and End work as in any slider.
     `min`, `max` and `step` (0, 100, 1); `orientation` vertical stands it up, `size` small makes it thin. The value
     follows the drag once it pauses for immediateDelay ms, or only on release with `immediate` false. `tickMarks` draws
-    a mark per step, with `tickMarkLabels` under them; `valueLabel` shows the value, through `valueFormat` ("40 %"),
-    which screen readers read too (aria-valuetext). Validation state and message as with TextInput — the same
-    parameters as the Fluent skin's Slider. *@
+    a mark per step, with `tickMarkLabels` under them (a screen reader hears the label of the tick the value sits on);
+    `valueLabel` shows the value, through `valueFormat` ("40 %"), which screen readers read too (aria-valuetext).
+    Validation state and message as with TextInput — the same parameters as the Fluent skin's Slider. *@
 @import { type Orientation } from "@tsazor/ui"
 @import { FieldState, ImmediateInput, sliderFraction, sliderTicks } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
@@ -17,7 +17,7 @@
     }
     <div class="tz-slider__control">
         <div class="tz-slider__rail">
-            <input @ref="element" id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-readonly="@(readOnly ? "true" : null)" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@(valueFormat ? valueText : null)" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @onmousedown:preventDefault="@readOnly" @ontouchstart:preventDefault="@readOnly" @onkeydown="keepValue" @oninput="handleInput" @onchange="handleChange" />
+            <input @ref="element" id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-readonly="@(readOnly ? "true" : null)" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@spokenValue" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @onmousedown:preventDefault="@readOnly" @ontouchstart:preventDefault="@readOnly" @onkeydown="keepValue" @oninput="handleInput" @onchange="handleChange" />
             @if (tickMarks) {
                 <div class="tz-slider__ticks" aria-hidden="true">
                     @foreach (const tick of ticks) {
@@ -99,6 +99,17 @@
 
     private get valueText(): string {
         return this.valueFormat ? this.valueFormat(this.shownValue) : String(this.shownValue);
+    }
+
+    /**
+     * What a screen reader says for the value (aria-valuetext): the formatted value, else the label of the tick the
+     * value sits on ("Medium", not "2" — the tick labels themselves are hidden from it), else nothing (the number).
+     */
+    private get spokenValue(): string | undefined {
+        if (this.valueFormat) return this.valueText;
+        if (!this.tickMarks || this.tickMarkLabels === undefined) return undefined;
+        const index = sliderTicks(this.min, this.max, this.step).findIndex((tick) => Math.abs(tick - this.shownValue) < 1e-9);
+        return index === -1 ? undefined : this.tickMarkLabels[index];
     }
 
     /** The marks: where each sits on the track, and its label. */

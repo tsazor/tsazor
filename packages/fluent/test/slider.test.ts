@@ -95,6 +95,15 @@ describe("Slider", () => {
     expect(marks[1]!.getAttribute("style")).toContain("--fui-slider-tick: 0.25");
   });
 
+  it("a screen reader hears the label of the tick the value sits on (the tick labels are hidden from it)", async () => {
+    const { input, result } = await mount({ step: 25, tickMarks: true, tickMarkLabels: ["Off", "Low", "Mid", "High", "Max"] });
+    expect(input.hasAttribute("aria-valuetext")).toBe(false); // 40: between ticks, the number says it
+    await move(result, input, "50", "change");
+    expect(input.getAttribute("aria-valuetext")).toBe("Mid");
+    await move(result, input, "100", "change");
+    expect(input.getAttribute("aria-valuetext")).toBe("Max");
+  });
+
   it("a value label in the value's format, which screen readers read (aria-valuetext)", async () => {
     const { input, result } = await mount({ valueLabel: true, valueFormat: (value: number) => `${value} %` });
     const output = result.container.querySelector("output")!;
