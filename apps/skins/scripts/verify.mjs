@@ -1104,12 +1104,12 @@ try {
       return { first, lines };
     });
     say(chartColors.lines[0] === chartColors.first && new Set(chartColors.lines).size === 3, `charts: the series in the skin's palette (${chartColors.lines.join(", ")})`);
-    const ryeSeries = sold.getByRole("button", { name: "Rye: 98 to 182" });
+    const ryeSeries = sold.getByRole("button", { name: "Rye from 98 to 182" });
     await ryeSeries.focus();
     await page.keyboard.press("Enter");
     await page.waitForFunction(() => document.querySelector(".chart-picked")?.textContent === "0");
     say((await ryeSeries.getAttribute("aria-pressed")) === "true", "charts: Enter on a series chooses it (@bind-selectedIndex)");
-    await page.locator("figure.chart-share").getByRole("button", { name: /^Pastries: 450/ }).click();
+    await page.locator("figure.chart-share").getByRole("button", { name: /^Pastries 450/ }).click();
     await page.waitForFunction(() => document.querySelector(".chart-group")?.textContent === "1");
     say(true, "charts: a click on a donut's slice chooses it");
     const days = page.locator("figure.chart-days");
