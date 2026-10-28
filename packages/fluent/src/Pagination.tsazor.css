@@ -18,12 +18,13 @@
     font-size: var(--fui-font-size-body);
     cursor: pointer;
 }
-.fui-pagination__button:hover:not(:disabled),
-.fui-pagination__page:hover:not(:disabled) {
+.fui-pagination__button:hover:not(:disabled):not([aria-disabled="true"]),
+.fui-pagination__page:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--fui-stroke-1);
     color: var(--fui-foreground-1);
 }
-.fui-pagination__button:disabled {
+.fui-pagination__button:disabled,
+.fui-pagination__button[aria-disabled="true"] {
     color: var(--fui-foreground-disabled);
     cursor: default;
 }
@@ -32,7 +33,7 @@
     color: var(--fui-foreground-on-brand);
     font-weight: var(--fui-font-weight-semibold);
 }
-.fui-pagination__page--current:hover:not(:disabled) {
+.fui-pagination__page--current:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--fui-brand-background-hover);
     color: var(--fui-foreground-on-brand);
 }

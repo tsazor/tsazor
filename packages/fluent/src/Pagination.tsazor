@@ -8,9 +8,9 @@
 
 <nav aria-label="@(this.ariaLabel ?? t("pagination.label"))" @attributes="@this.paginationAttributes">
     <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")"
-            disabled="@this.atFirst" @onclick="() => this.go(1)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
+            aria-disabled="@(this.atFirst ? "true" : null)" @onclick="() => this.go(1)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
     <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")"
-            disabled="@this.atFirst" @onclick="() => this.go(this.page - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
+            aria-disabled="@(this.atFirst ? "true" : null)" @onclick="() => this.go(this.page - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
     @for (const item of this.windowItems) {
         @if (typeof item === "number") {
             <button type="button" class="@this.pageClass(item)" aria-label="@t("pagination.goTo", { page: item })"
@@ -22,9 +22,9 @@
         }
     }
     <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")"
-            disabled="@this.atLast" @onclick="() => this.go(this.page + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
+            aria-disabled="@(this.atLast ? "true" : null)" @onclick="() => this.go(this.page + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
     <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")"
-            disabled="@this.atLast" @onclick="() => this.go(this.pageCount)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
+            aria-disabled="@(this.atLast ? "true" : null)" @onclick="() => this.go(this.pageCount)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
 </nav>
 
 @code {

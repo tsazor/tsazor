@@ -22,13 +22,13 @@
             @if (summaryContent) { @summaryContent } else { <text>@t.plural("paginator.items", state.totalItemCount)</text> }
         </span>
         <div class="fui-pagination">
-            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")" disabled="@(!canGoBack)" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
-            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")" aria-disabled="@(canGoBack ? null : "true")" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")" aria-disabled="@(canGoBack ? null : "true")" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
             @if (this.showPageNumber) {
                 <span class="fui-paginator__page" aria-current="page">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span>
             }
-            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
-            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")" disabled="@(!canGoForward)" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")" aria-disabled="@(canGoForward ? null : "true")" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")" aria-disabled="@(canGoForward ? null : "true")" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
         </div>
     </nav>
 }

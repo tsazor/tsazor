@@ -95,13 +95,21 @@ describe("DataGrid", () => {
     expect(texts(container, "tbody td")).toEqual(["Marta", "Jonas", "Lena"]);
     expect(container.querySelector(".tz-paginator-count")!.textContent!.trim()).toBe("4 items");
     expect(container.querySelector(".tz-paginator-page")!.textContent).toBe("Page 1 of 2");
-    expect(container.querySelector<HTMLButtonElement>("[aria-label='Previous page']")!.disabled).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>("[aria-label='Previous page']")!.getAttribute("aria-disabled")).toBe("true");
 
-    container.querySelector<HTMLButtonElement>("[aria-label='Next page']")!.click();
+    const next = container.querySelector<HTMLButtonElement>("[aria-label='Next page']")!;
+    next.focus();
+    next.click();
     await settle(renderer);
     expect(texts(container, "tbody td")).toEqual(["Ali"]);
     expect(container.querySelector(".tz-paginator-page")!.textContent).toBe("Page 2 of 2");
-    expect(container.querySelector<HTMLButtonElement>("[aria-label='Last page']")!.disabled).toBe(true);
+    // At the end the button is aria-disabled, not disabled: it keeps the focus (a disabled one drops it to the body).
+    expect(next.getAttribute("aria-disabled")).toBe("true");
+    expect(next.disabled).toBe(false);
+    expect(document.activeElement).toBe(next);
+    container.querySelector<HTMLButtonElement>("[aria-label='Last page']")!.click();
+    await settle(renderer);
+    expect(texts(container, "tbody td")).toEqual(["Ali"]);
   });
 
   it("leaves the page text out with showPageNumber false (MudTablePager has none), the arrows stay", async () => {

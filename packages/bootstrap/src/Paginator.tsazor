@@ -22,13 +22,13 @@
             @if (summaryContent) { @summaryContent } else { <text>@t.plural("paginator.items", state.totalItemCount)</text> }
         </span>
         <ul class="@listClass">
-            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="@t("pagination.first")" disabled="@(!canGoBack)" @onclick="() => go(0)">«</button></li>
-            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="@t("pagination.previous")" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)">‹</button></li>
+            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="@t("pagination.first")" aria-disabled="@(canGoBack ? null : "true")" @onclick="() => go(0)">«</button></li>
+            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="@t("pagination.previous")" aria-disabled="@(canGoBack ? null : "true")" @onclick="() => go(state.currentPageIndex - 1)">‹</button></li>
             @if (this.showPageNumber) {
                 <li class="page-item active" aria-current="page"><span class="page-link tz-paginator-page">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span></li>
             }
-            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="@t("pagination.next")" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)">›</button></li>
-            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="@t("pagination.last")" disabled="@(!canGoForward)" @onclick="() => go(lastPage)">»</button></li>
+            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="@t("pagination.next")" aria-disabled="@(canGoForward ? null : "true")" @onclick="() => go(state.currentPageIndex + 1)">›</button></li>
+            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="@t("pagination.last")" aria-disabled="@(canGoForward ? null : "true")" @onclick="() => go(lastPage)">»</button></li>
         </ul>
     </nav>
 }
