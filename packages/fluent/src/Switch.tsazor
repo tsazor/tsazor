@@ -1,8 +1,10 @@
 @** A Fluent UI 2 toggle switch for a boolean value: a native checkbox with role="switch"
-    (InputBase; bind it with @bind) inside a clickable label, with an optional help text. It shows no
-    validation message. *@
+    (InputBase; bind it with @bind) inside a clickable label, with an optional help text. Inside a FluentForm it shows
+    the field's first validation message (role="alert", aria-describedby) once a submit was attempted, as a Checkbox
+    does (and the Bootstrap skin's Switch); aria-invalid as soon as it shows invalid. *@
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
 
 @inherits InputBase<boolean>
 
@@ -15,6 +17,9 @@
 </label>
 @if (this.help) {
     <span class="fui-input__help" id="@this.helpId">@this.help</span>
+}
+@if (this.message) {
+    <span class="fui-input__message fui-switch__message" role="alert" id="@this.messageId">@this.message</span>
 }
 
 @code {
@@ -51,12 +56,30 @@
             disabled: this.disabled ? true : undefined,
             "aria-readonly": this.readOnly ? "true" : undefined,
             "aria-label": this.ariaLabel,
-            "aria-describedby": this.help ? this.helpId : undefined,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
+            "aria-describedby": this.describedBy,
         }, this.additionalAttributes);
     }
 
     private get helpId(): string {
         return `${this.elementId}-help`;
+    }
+
+    /** The help text and (once shown) the message describe the switch. */
+    private get describedBy(): string | undefined {
+        const ids = [this.help ? this.helpId : null, this.message ? this.messageId : null].filter((id): id is string => id !== null);
+        return ids.length > 0 ? ids.join(" ") : undefined;
+    }
+
+    private get messageId(): string {
+        return `${this.elementId}-message`;
+    }
+
+    /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
+    private get message(): string {
+        if (!hasSubmitAttempt(this.editContext)) return "";
+        if (!this.editContext || !this.valueExpression) return "";
+        return this.editContext.getValidationMessages(this.valueExpression)[0] ?? "";
     }
 
     private handleChange(e: Event): void {

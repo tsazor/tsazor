@@ -182,6 +182,28 @@ describe("NumberInput inside FluentForm", () => {
 });
 
 describe("Switch", () => {
+  it("shows the field's message once a submit was attempted, as a Checkbox does", async () => {
+    const model = emptyModel();
+    const { container, renderer } = await renderForm(model, b => {
+      b.openComponent(0, Switch);
+      b.addAttribute(1, "value", model.agree);
+      b.addAttribute(2, "valueChanged", EventCallback.unbound((v: boolean) => { model.agree = v; }));
+      b.addAttribute(3, "valueExpression", "agree");
+      b.addAttribute(4, "label", "I agree");
+      b.addAttribute(5, "id", "agree-switch");
+      b.closeComponent();
+    });
+    const input = container.querySelector<HTMLInputElement>("input[role=switch]")!;
+    expect(container.querySelector(".fui-input__message")).toBeNull();
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    const row = container.querySelector(".fui-input__message")!;
+    expect(row.textContent).toBe("Please confirm.");
+    expect(row.getAttribute("role")).toBe("alert");
+    expect(input.getAttribute("aria-describedby")).toBe("agree-switch-message");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+  });
+
   it("toggles through the role=switch native control", async () => {
     const captured: boolean[] = [];
     const { container, ...renderer } = await renderTree(b => {

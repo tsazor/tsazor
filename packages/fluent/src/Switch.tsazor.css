@@ -80,3 +80,8 @@
     transition: none;
   }
 }
+
+/* The validation message on a line of its own under the switch. */
+.fui-switch__message {
+  display: block;
+}
