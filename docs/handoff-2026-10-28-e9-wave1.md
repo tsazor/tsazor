@@ -32,6 +32,10 @@ Also:
 ## Checked today
 
 - `pnpm test`: green (2957 tests).
+- `node scripts/public-tree.mjs --verify` on `9773703`: install, build and every test green in the export; RED only
+  for a trace ("(owner)" in design-release.md, `a15a3ce`). The export and trace checks alone on `a15a3ce`: **GREEN**.
+  The first run, on `14af24c`, also timed out in the globals check — the tests that start a Node process have 60 s
+  now (`9773703`).
 - `pnpm gates` (edge, firefox, webkit): **all 35 green**, after the re-runs below. The first full run had 9 red:
   - the a11y and skins gates in all three browsers: their tooltip checks (`80e69eb`) and the chart names in the
     skins gate (`3d6f7fe`) — gate scripts behind today's fixes, not product bugs;
@@ -63,5 +67,10 @@ Started:
 
 - The tooltip's Escape no longer closes the dialog it sits in (`b2cdd53`): its listener is on the window, capturing.
 - A focus trap skips elements CSS hides (`58e204d`): `focusableElements` asks `checkVisibility`.
+- A TreeView never loses its tab stop (`dda8fde`): a selection in a closed node gives it to the open ancestor.
+- A full-screen Overlay leaves the ToastRegion (in the top layer, above it) alone (`46840d6`): toasts during a
+  blocking load were inert — neither announced nor pressable. A ToastRegion nested inside a covered container stays
+  inert; it belongs at the layout's top level.
+- A Splitter bar that collapses a pane takes Tab without `resizable` (`901c48f`).
 
 The rest of the wave-2 list in handoff-2026-10-27-rc1.md stands; it is after rc.1, so no rush.
