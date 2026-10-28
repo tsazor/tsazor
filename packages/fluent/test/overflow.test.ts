@@ -65,6 +65,9 @@ describe("Overflow", () => {
     await idle();
     const popup = result.container.querySelector<HTMLElement>("[role=group]")!;
     expect(popup.getAttribute("aria-label")).toBe("2 more: Oat, Barley");
+    // A disclosure: aria-haspopup would promise a menu (or a listbox, a dialog), and the popup is neither.
+    expect(more().getAttribute("aria-controls")).toBe(popup.id);
+    expect(more().hasAttribute("aria-haspopup")).toBe(false);
     expect([...popup.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Oat", "Barley"]);
     expect(more().getAttribute("aria-expanded")).toBe("true");
     more().click();

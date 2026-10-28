@@ -2,7 +2,8 @@
     `itemTemplate`; the ones that don't fit move behind a "+N" button, which opens them in a popup — buttons that
     overflow stay usable there. It measures again when its size changes. `itemText` names the overflowed items for
     the button; `moreTemplate` replaces the button's "+N", `overflowTemplate` the popup's content, and `onMoreClick`
-    takes over the button. The overflowed items stay in the page, out of sight and out of the tab order — the same
+    takes over the button. The button discloses the popup (aria-expanded, aria-controls; no aria-haspopup — that
+    promises a menu, and the popup is a group of the items as they are). The overflowed items stay in the page, out of sight and out of the tab order — the same
     parameters as the Fluent skin's Overflow. *@
 @typeparam TItem
 @import type { Attachment } from "@tsazor/runtime"
@@ -22,7 +23,7 @@
             }
         </div>
     }
-    <button type="button" class="tz-overflow__more btn btn-sm btn-primary rounded-pill" hidden="@(this.overflowed.length === 0)" aria-label="@this.moreLabel" aria-haspopup="@(this.onMoreClick ? null : "true")"
+    <button type="button" class="tz-overflow__more btn btn-sm btn-primary rounded-pill" hidden="@(this.overflowed.length === 0)" aria-label="@this.moreLabel"
             aria-expanded="@(this.onMoreClick ? null : this.open ? "true" : "false")" aria-controls="@(this.open ? this.popupId : null)" @ref="button" @onclick="this.more">
         @if (this.moreTemplate !== undefined) {
             @this.moreTemplate({ overflowed: this.overflowed, count: this.overflowed.length })
