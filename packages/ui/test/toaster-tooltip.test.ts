@@ -65,21 +65,27 @@ describe("tooltip", () => {
     const id = button.getAttribute("aria-describedby")!.split(" ")[1]!;
     expect(button.getAttribute("aria-describedby")).toBe(`hint ${id}`);
 
-    button.dispatchEvent(new FocusEvent("focusin"));
+    // The description is there before any focus or hover: browse mode reads it without focusing.
     const tip = document.getElementById(id)!;
     expect(tip.getAttribute("role")).toBe("tooltip");
     expect(tip.textContent).toBe("Save the order");
+    expect(tip.hidden).toBe(true);
+
+    button.dispatchEvent(new FocusEvent("focusin"));
+    expect(tip.hidden).toBe(false);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(document.getElementById(id)).toBeNull();
+    expect(tip.hidden).toBe(true);
 
     button.dispatchEvent(new Event("pointerenter"));
     vi.advanceTimersByTime(300);
-    expect(document.getElementById(id)).not.toBeNull();
+    expect(tip.hidden).toBe(false);
     button.dispatchEvent(new Event("pointerleave"));
     vi.advanceTimersByTime(100);
-    expect(document.getElementById(id)).toBeNull();
+    expect(tip.hidden).toBe(true);
+    expect(document.getElementById(id)).toBe(tip);
 
     cleanup();
+    expect(document.getElementById(id)).toBeNull();
     expect(button.getAttribute("aria-describedby")).toBe("hint");
   });
 });

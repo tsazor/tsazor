@@ -2,7 +2,7 @@ import type { Attachment } from "@tsazor/runtime";
 import { uniqueId } from "../ids.js";
 import type { Placement } from "../vocabulary.js";
 import { anchoredPosition } from "./anchored-position.js";
-import { showInTopLayer } from "./top-layer.js";
+import { hideFromTopLayer, showInTopLayer } from "./top-layer.js";
 
 /** Options of `tooltip`. */
 export interface TooltipOptions {
@@ -23,7 +23,8 @@ const cache = new Map<string, Attachment<HTMLElement>>();
  * appears when the pointer rests on the element or the element takes focus,
  * stays while the pointer moves onto it, and goes away on Escape, blur or
  * when the pointer leaves. The element gets `aria-describedby`, so screen
- * readers read the text. The same text and options give the same attachment,
+ * readers read the text — in browse mode too: the tooltip stays in the DOM,
+ * `hidden` while it isn't shown. The same text and options give the same attachment,
  * so `@attach="tooltip('Save')"` in markup doesn't re-attach every render.
  *
  * ```razor
@@ -45,41 +46,45 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
   const previousDescribedBy = element.getAttribute("aria-describedby");
   element.setAttribute("aria-describedby", previousDescribedBy ? `${previousDescribedBy} ${id}` : id);
 
-  let tip: HTMLElement | null = null;
+  let shown = false;
   let detachPosition: (() => void) | void;
   let showTimer: ReturnType<typeof setTimeout> | undefined;
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // The description lives as long as the attachment: a screen reader in browse mode reads aria-describedby
+  // without focusing the element, so a tip created on focus would describe nothing there.
+  const tip = document.createElement("div");
+  tip.id = id;
+  tip.setAttribute("role", "tooltip");
+  tip.className = options.className ?? "tz-tooltip";
+  tip.hidden = true;
+  if (options.innerClassName) {
+    const inner = document.createElement("div");
+    inner.className = options.innerClassName;
+    inner.textContent = text;
+    tip.append(inner);
+  } else {
+    tip.textContent = text;
+  }
+  document.body.append(tip);
+
   const show = (): void => {
     clearTimeout(hideTimer);
-    if (tip) return;
-    tip = document.createElement("div");
-    tip.id = id;
-    tip.setAttribute("role", "tooltip");
-    tip.className = options.className ?? "tz-tooltip";
-    if (options.innerClassName) {
-      const inner = document.createElement("div");
-      inner.className = options.innerClassName;
-      inner.textContent = text;
-      tip.append(inner);
-    } else {
-      tip.textContent = text;
-    }
-    // Hoverable (WCAG 1.4.13): moving onto the tooltip keeps it.
-    tip.addEventListener("pointerenter", () => clearTimeout(hideTimer));
-    tip.addEventListener("pointerleave", scheduleHide);
-    document.body.append(tip);
-    // Above an open dialog or menu too: the top layer (removing the tip takes it out again).
+    if (shown) return;
+    shown = true;
+    tip.hidden = false;
+    // Above an open dialog or menu too: the top layer.
     showInTopLayer(tip);
     detachPosition = anchoredPosition({ anchor: () => element, placement: options.placement ?? "top", offset: 6 })(tip);
   };
   const hide = (): void => {
     clearTimeout(showTimer);
     clearTimeout(hideTimer);
-    if (!tip) return;
+    if (!shown) return;
+    shown = false;
     detachPosition?.();
-    tip.remove();
-    tip = null;
+    hideFromTopLayer(tip);
+    tip.hidden = true;
   };
   const scheduleHide = (): void => {
     clearTimeout(showTimer);
@@ -92,12 +97,15 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
   };
   const onKeydown = (event: KeyboardEvent): void => {
     // Dismissable (WCAG 1.4.13): Escape closes it without moving focus.
-    if (event.key === "Escape" && tip) {
+    if (event.key === "Escape" && shown) {
       event.stopPropagation();
       hide();
     }
   };
 
+  // Hoverable (WCAG 1.4.13): moving onto the tooltip keeps it.
+  tip.addEventListener("pointerenter", () => clearTimeout(hideTimer));
+  tip.addEventListener("pointerleave", scheduleHide);
   element.addEventListener("pointerenter", onPointerEnter);
   element.addEventListener("pointerleave", scheduleHide);
   element.addEventListener("focusin", show);
@@ -106,6 +114,7 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
 
   return () => {
     hide();
+    tip.remove();
     element.removeEventListener("pointerenter", onPointerEnter);
     element.removeEventListener("pointerleave", scheduleHide);
     element.removeEventListener("focusin", show);

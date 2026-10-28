@@ -462,7 +462,7 @@ describe("Drawer, ToastRegion, Tooltip", () => {
     expect(tip.className).toBe("tooltip show");
     expect(tip.querySelector(".tooltip-inner")!.textContent).toBe("Save the order");
     button.dispatchEvent(new FocusEvent("focusout"));
-    expect(document.querySelector(".tooltip")).toBeNull();
+    expect(tip.hidden).toBe(true);
   });
 });
 

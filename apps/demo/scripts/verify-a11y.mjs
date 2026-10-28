@@ -139,7 +139,7 @@ try {
   const described = await page.locator(".print").evaluate((button) => document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent);
   check(described === "Print the order list", `tooltip: describes the button (${described})`);
   await page.keyboard.press("Escape");
-  check((await page.locator("[role=tooltip]").count()) === 0, "tooltip: Escape hides it");
+  check((await page.locator("[role=tooltip]:visible").count()) === 0, "tooltip: Escape hides it (it stays in the DOM, hidden, for browse mode)");
 
   // Form: messages only after a submit, linked to their inputs; axe with the errors showing.
   await page.getByRole("button", { name: "Reserve" }).click();

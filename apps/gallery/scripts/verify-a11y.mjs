@@ -227,7 +227,7 @@ async function main() {
     const tooltipViolations = await axe(page);
     check(tooltipViolations.length === 0, `axe /overlays with a tooltip${tooltipViolations.length ? `: ${tooltipViolations.join(" | ")}` : ""}`);
     await page.keyboard.press("Escape");
-    check((await page.locator("[role=tooltip]").count()) === 0, "tooltip: Escape hides it");
+    check((await page.locator("[role=tooltip]:visible").count()) === 0, "tooltip: Escape hides it (it stays in the DOM, hidden, for browse mode)");
 
     /* 5 — accordion, radio group, collapse (the structure page) */
     await page.goto(`${APP}/structure`, { waitUntil: "networkidle" });
