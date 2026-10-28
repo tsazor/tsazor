@@ -69,6 +69,8 @@ describe("FileUpload", () => {
     expect(input.multiple).toBe(true);
     expect(zone.textContent!.trim()).toBe("Drop files here, or click to choose");
     expect(root.querySelector(`.${PREFIX}-file-upload__progress`)!.hasAttribute("hidden")).toBe(true);
+    // The status is in the page before a run, so its first text is announced.
+    expect(root.querySelector("[role=status]")!.textContent).toBe("");
   });
 
   it("dropped files are read into buffers, with the progress and its text", async () => {
@@ -80,7 +82,10 @@ describe("FileUpload", () => {
     const progress = root.querySelector(`.${PREFIX}-file-upload__progress`)!;
     expect(progress.hasAttribute("hidden")).toBe(false);
     expect(progress.querySelector("[role=progressbar]")!.getAttribute("aria-valuenow")).toBe("100");
-    expect(progress.querySelector("[role=status]")!.textContent).toBe("Completed");
+    expect(progress.textContent).toContain("Completed");
+    const status = root.querySelector("[role=status]")!;
+    expect(status.textContent).toBe("Completed");
+    expect(root.querySelector("input[type=file]")!.getAttribute("aria-describedby")).toBe(status.id);
   });
 
   it("an upload function sends the files and gives its result", async () => {
@@ -101,6 +106,19 @@ describe("FileUpload", () => {
     await drop(zone, [file("big", 500)], result);
     expect(Host.last!.errors.map((error) => [error.errorCode, error.fileName])).toEqual([["file-count-exceeded", undefined], ["maximum-size-reached", "big"]]);
     expect(Host.last!.uploaded).toEqual([]);
+  });
+
+  it("shows a run's errors under the progress, and the status says them", async () => {
+    const { root, zone, result } = await mount({ multiple: true, maximumFileCount: 1, maximumFileSize: 100 });
+    await drop(zone, [file("a", 1), file("b", 1)], result);
+    const progress = root.querySelector(`.${PREFIX}-file-upload__progress`)!;
+    expect(progress.hasAttribute("hidden")).toBe(false);
+    expect([...progress.querySelectorAll("li")].map((item) => item.textContent)).toEqual(["The maximum number of files has been exceeded."]);
+    expect(root.querySelector("[role=status]")!.textContent).toBe("The maximum number of files has been exceeded.");
+    // A new run starts without the last one's errors.
+    await drop(zone, [file("big", 500)], result);
+    expect([...progress.querySelectorAll("li")].map((item) => item.textContent)).toEqual(["big: The maximum size allowed is reached"]);
+    expect(root.querySelector("[role=status]")!.textContent).toBe("Completed. big: The maximum size allowed is reached");
   });
 
   it("words the count error as the library text, or as the labels say", async () => {

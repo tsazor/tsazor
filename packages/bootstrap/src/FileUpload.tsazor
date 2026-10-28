@@ -3,8 +3,9 @@
     @tsazor/ui posts it with its progress — or is read in chunks (mode buffer, the default: onProgressChange gets
     each `chunk`, onFileUploaded the whole `buffer`) or handed over as it is (stream). A progress bar and its text
     show the run (or a `progressTemplate`); onProgressChange can cancel it (`isCancelled`). More than
-    `maximumFileCount` files, or a file over `maximumFileSize`, raises onFileError. `anchorId` lets a button elsewhere
-    open the chooser — the same parameters as the Fluent skin's FileUpload. *@
+    `maximumFileCount` files, or a file over `maximumFileSize`, raises onFileError, and the error shows under the
+    progress. A screen reader hears the run's text and its errors from a status that is always in the page. `anchorId`
+    lets a button elsewhere open the chooser — the same parameters as the Fluent skin's FileUpload. *@
 @import { InputFile, InputFileChangeEventArgs, type Attachment } from "@tsazor/runtime"
 @import {
     uniqueId, type FileUploader, type FileUploadErrorEventArgs, type FileUploadEventArgs, type FileUploadLabels,
@@ -24,7 +25,7 @@
                 @this.prompt
             }
         </span>
-        <InputFile OnChange="@this.chosen" id="@this.inputId" class="tz-file-upload__input" accept="@this.accept" multiple="@this.multiple" disabled="@this.disabled" tabindex="@(this.dragDropZoneVisible ? null : -1)" aria-describedby="@(this.title ? this.progressId : null)" />
+        <InputFile OnChange="@this.chosen" id="@this.inputId" class="tz-file-upload__input" accept="@this.accept" multiple="@this.multiple" disabled="@this.disabled" tabindex="@(this.dragDropZoneVisible ? null : -1)" aria-describedby="@(this.announcement ? this.statusId : null)" />
     </label>
     @if (this.progressTemplate) {
         @if (this.showsProgress) {
@@ -32,10 +33,21 @@
         }
     } else {
         <div class="tz-file-upload__progress" id="@this.progressId" hidden="@(!this.showsProgress)">
-            <Progress value="@this.percent" ariaLabel="@(this.progressLabel ?? t("fileUpload.progressLabel"))" />
-            <span class="tz-file-upload__title form-text" role="status">@this.title</span>
+            @if (this.percent > 0) {
+                <Progress value="@this.percent" ariaLabel="@(this.progressLabel ?? t("fileUpload.progressLabel"))" />
+                <span class="tz-file-upload__title form-text" aria-hidden="true">@this.title</span>
+            }
+            @if (this.errors.length > 0) {
+                <ul class="tz-file-upload__errors" aria-hidden="true">
+                    @foreach (const error of this.errors) {
+                        <li>@error</li>
+                    }
+                </ul>
+            }
         </div>
     }
+    @* Always in the page, so the first text is announced (a live region that appears with its text often isn't). *@
+    <span class="visually-hidden" role="status" id="@this.statusId">@this.announcement</span>
 </div>
 
 @code {
@@ -88,6 +100,9 @@
 
     private readonly inputId = uniqueId("tz-file-upload");
     private readonly progressId = `${this.inputId}-progress`;
+    private readonly statusId = `${this.inputId}-status`;
+    /** The run's file errors (a file too large, an upload that failed, too many files), shown and announced. */
+    private errors: string[] = [];
     private percent = 0;
     private percentFor?: number;
     private title = "";
@@ -124,7 +139,19 @@
     }
 
     private get showsProgress(): boolean {
-        return this.percent > 0;
+        return this.percent > 0 || this.errors.length > 0;
+    }
+
+    /** What a screen reader hears of the run: the progress text, then the errors. */
+    private get announcement(): string {
+        return [this.title, ...this.errors].filter(Boolean).join(". ");
+    }
+
+    /** Shows and announces an error, and raises onFileError. */
+    private async fileError(error: FileUploadErrorEventArgs): Promise<void> {
+        this.errors = [...this.errors, error.fileName ? this.t("fileUpload.fileError", { name: error.fileName, message: error.errorMessage }) : error.errorMessage];
+        this.stateHasChanged();
+        await this.onFileError?.invokeAsync(error);
     }
 
     private get uploadClass(): string {
@@ -175,8 +202,10 @@
         const input = this.input;
         if (input) input.value = "";
         if (files.length === 0) return;
+        this.errors = [];
+        this.title = "";
         if (files.length > this.maximumFileCount) {
-            await this.onFileError?.invokeAsync({ errorCode: "file-count-exceeded", errorMessage: this.labels?.fileCountExceeded ?? this.t("fileUpload.fileCountExceeded"), fileCount: files.length });
+            await this.fileError({ errorCode: "file-count-exceeded", errorMessage: this.labels?.fileCountExceeded ?? this.t("fileUpload.fileCountExceeded"), fileCount: files.length });
             return;
         }
         if (this.onInputFileChange) {
@@ -203,7 +232,7 @@
             },
             progressChange: (args) => this.onProgressChange?.invokeAsync(args),
             fileUploaded: (args) => this.onFileUploaded?.invokeAsync(args),
-            fileError: (error) => this.onFileError?.invokeAsync(error),
+            fileError: (error) => this.fileError(error),
             completed: (all) => this.onCompleted?.invokeAsync(all),
         });
     }

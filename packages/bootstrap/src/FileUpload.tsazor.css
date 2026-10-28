@@ -80,3 +80,11 @@
 .tz-file-upload__title {
   margin-top: 0;
 }
+
+/* The run's file errors, under the progress. */
+.tz-file-upload__errors {
+  margin: 0;
+  padding-inline-start: 1.25em;
+  color: var(--bs-form-invalid-color);
+  font-size: 0.875em;
+}

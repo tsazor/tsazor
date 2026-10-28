@@ -183,6 +183,8 @@ export const libraryTextDefaults = catalog({
   // The errorMessage of onFileError ("file-count-exceeded", "maximum-size-reached"), Fluent UI Blazor's wording.
   "fileUpload.fileCountExceeded": "The maximum number of files has been exceeded.",
   "fileUpload.fileSizeExceeded": "The maximum size allowed is reached",
+  // A file's error under the progress, and in what a screen reader hears of the run.
+  "fileUpload.fileError": "{name}: {message}",
 
   "rating.label": "Rating",
   "rating.stars.one": "{count} star",

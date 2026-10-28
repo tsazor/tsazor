@@ -749,6 +749,7 @@ export declare const libraryTextDefaults: {
     readonly "fileUpload.canceled": string;
     readonly "fileUpload.fileCountExceeded": string;
     readonly "fileUpload.fileSizeExceeded": string;
+    readonly "fileUpload.fileError": string;
     readonly "rating.label": string;
     readonly "rating.stars.one": string;
     readonly "rating.stars.other": string;

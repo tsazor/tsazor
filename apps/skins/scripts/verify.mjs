@@ -621,8 +621,9 @@ try {
     await uploads.getByText("dropped.csv: 10 byte sent").waitFor();
     say(true, "file upload: dropped files go to the server");
     await chooser.setInputFiles({ name: "huge.csv", mimeType: "text/csv", buffer: Buffer.alloc(2 * 1024 * 1024) });
-    await uploads.getByText("huge.csv: The maximum size allowed is reached").waitFor();
-    say(true, "file upload: a file over the limit is refused");
+    // The page logs the error (onFileError); the zone shows it under its progress and its status says it.
+    await uploads.locator(".fui-file-upload__errors li, .tz-file-upload__errors li").filter({ hasText: "huge.csv: The maximum size allowed is reached" }).waitFor();
+    say((await uploads.getByRole("status").first().textContent()).endsWith("huge.csv: The maximum size allowed is reached"), "file upload: a file over the limit is refused, the error shown under the progress and in the status");
     const [listChooser] = await Promise.all([page.waitForEvent("filechooser"), uploads.getByRole("button", { name: "Read a delivery list" }).click()]);
     await listChooser.setFiles({ name: "route.csv", mimeType: "text/csv", buffer: Buffer.from("Mill Lane 4\nStation Road 12\nHigh Street 1\n") });
     await page.waitForFunction(() => document.querySelector(".delivery-list")?.textContent === "Read 3 lines from route.csv.");

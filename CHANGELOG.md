@@ -14,6 +14,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   an optional third argument; the new library text `colorPicker.squareColorValue` says it.
 - **A Wizard's done steps say so** (both skins): "Bread, completed" in the step list — the check mark is a picture a
   screen reader doesn't get. A skipped (disabled) step doesn't. The new library text `wizard.completed`.
+- **A FileUpload shows and announces its errors** (both skins): too many files, a file too large or an upload that
+  failed show under the progress ("big.csv: The maximum size allowed is reached"; library text `fileUpload.fileError`),
+  besides raising `onFileError` as before. The run's status is always in the page, so its first text is announced
+  too, and the file input's `aria-describedby` points at it.
 
 ## 1.0.0-next.10 (2026-10-22)
 

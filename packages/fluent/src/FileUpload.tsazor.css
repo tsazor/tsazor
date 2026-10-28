@@ -87,3 +87,12 @@
   line-height: var(--fui-line-height-caption);
   color: var(--fui-foreground-2);
 }
+
+/* The run's file errors, under the progress. */
+.fui-file-upload__errors {
+  margin: 0;
+  padding-inline-start: 1.25em;
+  color: var(--fui-color-red-1);
+  font-size: var(--fui-font-size-caption);
+  line-height: var(--fui-line-height-caption);
+}
