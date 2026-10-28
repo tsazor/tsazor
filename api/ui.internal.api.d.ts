@@ -45,7 +45,7 @@ export declare function carouselRotates(state: {
     paused: boolean;
     hovered: boolean;
     focused: boolean;
-    reducedMotion: boolean;
+    reducedMotion?: boolean;
 }): boolean;
 
 // carouselStep
