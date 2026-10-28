@@ -2,8 +2,9 @@
     the initials of `name` (or `initials`), else a person icon. `color` neutral (default), brand, colorful (picked by
     the name) or a named color, drawn as a tint of Bootstrap's nearest hue; `shape` circular | square; `size` in px.
     `active` rings it, `active="false"` dims it. With onClick it is a button (Enter and Space click it). `name` is its
-    accessible name and, with `tooltip`, its tooltip. A badge goes in its content. *@
-@import { type AvatarColor, type IconValue } from "@tsazor/ui"
+    accessible name and, with `tooltip`, its tooltip. A badge (presence, a count) goes in its content and joins the name ("Ada Lovelace Available": the image's
+    children are presentational, so aria-labelledby names it by itself and the badge, as Fluent UI React does). *@
+@import { type AvatarColor, type IconValue, uniqueId } from "@tsazor/ui"
 @import { avatarColorFor, avatarIconSize, avatarInitials } from "@tsazor/ui/kit"
 @import { PersonFill } from "./core-icons"
 @import { withClass } from "./attributes"
@@ -18,7 +19,9 @@
     } else {
         <Icon value="@(icon ?? PersonFill)" size="@avatarIconSize(size)" />
     }
-    @childContent
+    @if (childContent) {
+        <span id="@this.badgeId" style="display: contents">@childContent</span>
+    }
 </span>
 
 @code {
@@ -87,17 +90,34 @@
         return style.join("; ");
     }
 
-    /** A named avatar is an image (or a button) with the name; one without a name is decoration. */
+    /** The badge's wrapper id: the named avatar's aria-labelledby takes it after its own name. */
+    private readonly badgeId = uniqueId("tz-avatar-badge");
+
+    /** The root's id: its own (from the attributes) or one made for the aria-labelledby that points back at it. */
+    private readonly ownId = uniqueId("tz-avatar");
+
+    /**
+     * A named avatar is an image (or a button) with the name; one without a name is decoration — unless it has a badge,
+     * which stays readable. A badge joins a name: the image's (the button's) children are presentational, so the root
+     * names itself by aria-labelledby, itself (its aria-label) and the badge.
+     */
     private get rootAttributes(): Record<string, unknown> {
         const named = this.name !== undefined && this.name !== "";
         return withClass(this.avatarClass, {
             style: this.avatarStyle,
             role: this.clickable ? "button" : named ? "img" : null,
             "aria-label": named ? this.name : null,
-            "aria-hidden": !named && !this.clickable ? "true" : null,
+            "aria-hidden": !named && !this.clickable && this.childContent === undefined ? "true" : null,
+            "aria-labelledby": named && this.childContent !== undefined ? `${this.rootId} ${this.badgeId}` : null,
+            id: named && this.childContent !== undefined ? this.rootId : null,
             tabindex: this.clickable ? 0 : null,
             ...this.additionalAttributes,
         });
+    }
+
+    private get rootId(): string {
+        const own = this.additionalAttributes?.id;
+        return typeof own === "string" && own !== "" ? own : this.ownId;
     }
 
     private handleClick(e: MouseEvent): Promise<void> | undefined {

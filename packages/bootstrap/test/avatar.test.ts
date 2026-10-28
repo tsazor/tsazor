@@ -89,4 +89,34 @@ describe("Avatar", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(clicks).toBe(3);
   });
+  it("a badge joins the name (the image's children are presentational) and stays readable on an unnamed avatar", async () => {
+    const badge = (b: RenderTreeBuilder): void => {
+      b.openElement(0, "span");
+      b.addAttribute(1, "role", "img");
+      b.addAttribute(2, "aria-label", "Available");
+      b.closeElement();
+    };
+    const named = await avatar((b) => {
+      b.addAttribute(1, "name", "Ada Lovelace");
+      b.addAttribute(2, "childContent", badge);
+    });
+    const wrapper = named.querySelector("[role=img][aria-label=Available]")!.parentElement!;
+    expect(named.getAttribute("aria-label")).toBe("Ada Lovelace");
+    expect(named.getAttribute("aria-labelledby")).toBe(`${named.id} ${wrapper.id}`);
+    expect(named.id).not.toBe("");
+    const ownId = await avatar((b) => {
+      b.addAttribute(1, "name", "Ada Lovelace");
+      b.addAttribute(2, "id", "ada");
+      b.addAttribute(3, "childContent", badge);
+    });
+    expect(ownId.getAttribute("aria-labelledby")).toMatch(/^ada \S+$/);
+    // Without a badge the name is the aria-label alone.
+    const plain = await avatar((b) => b.addAttribute(1, "name", "Ada Lovelace"));
+    expect(plain.hasAttribute("aria-labelledby")).toBe(false);
+    expect(plain.hasAttribute("id")).toBe(false);
+    // Unnamed: no longer hidden as decoration while it holds a badge.
+    const unnamed = await avatar((b) => b.addAttribute(1, "childContent", badge));
+    expect(unnamed.hasAttribute("aria-hidden")).toBe(false);
+    expect(unnamed.hasAttribute("aria-labelledby")).toBe(false);
+  });
 });
