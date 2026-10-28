@@ -119,6 +119,10 @@ Started:
 - A ListGroupItem says active (aria-current) and disabled (aria-disabled), and a disabled link loses its href
   (`77f1bf6`).
 - The demo and skins apps have FocusOnNavigate, and their result texts are `role="status"` (`6dbc460`).
+- The skin differences, closed toward the more accessible side: Bootstrap's Dialog and Drawer titles are h2 (in the
+  h5 look, `3fc7d84`); Bootstrap's AccordionItem has Fluent's h3, `aria-controls` and labelled region (`a7f2308`); a
+  Fluent tab panel is a Tab stop (`c320cad`); a Fluent Switch shows its field's message (`b68452b`); Bootstrap's
+  field messages are `role="alert"` as Fluent's (they show only after a submit).
 - Library texts added: `colorPicker.squareColorValue`, `wizard.completed`, `fileUpload.fileError`,
   `datePicker.format` (CHANGELOG, Unreleased).
 
@@ -131,4 +135,6 @@ Looked at, left open:
   `aria-rowcount` doesn't count them. Options: `role="presentation"` on the detail row (its content stays, the cell
   semantics go) or a row index scheme that counts open details. A semantics choice — not made.
 
-The rest of the wave-2 list in handoff-2026-10-27-rc1.md stands; it is after rc.1, so no rush.
+With these, the wave-2 list in handoff-2026-10-27-rc1.md is done except the two items above (DecimalInput ↑/↓, the
+detail rows' semantics). Every fix has a test that fails without it; the ones a browser decides (names by
+`aria-labelledby`, focus, reduced motion) are checked in the skins gate or the showcase smoke as well.
