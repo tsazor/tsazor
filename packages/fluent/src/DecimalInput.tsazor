@@ -4,7 +4,8 @@
     exact: no floating point, the scale kept ("19.90" stays two places). An empty field is null. Text that is no
     number keeps the value and stays in the field, and the field gets its parsing message (Blazor's
     ParsingErrorMessage): the form doesn't submit until it is fixed. `format` writes the value as .NET formats a
-    decimal ("F2", "N2", "0.00"); `contentBefore` and `contentAfter` put a currency sign inside the field. Inside a
+    decimal ("F2", "N2", "0.00"); ↑ and ↓ step it by `step` within `min` and `max`, a spin button for
+    screen readers; `contentBefore` and `contentAfter` put a currency sign inside the field. Inside a
     FluentForm it shows the field's first validation message (role="alert", aria-describedby) once a
     submit was attempted; aria-invalid as soon as it shows invalid. *@
 @import { Decimal } from "@tsazor/primitives"
@@ -24,13 +25,13 @@
             @if (this.contentBefore) {
                 <span class="fui-input-group__before">@this.contentBefore</span>
             }
-            <input @ref="element" id="@this.elementId" type="text" inputmode="decimal" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+            <input @ref="element" id="@this.elementId" type="text" inputmode="decimal" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @onkeydown="this.stepKey" />
             @if (this.contentAfter) {
                 <span class="fui-input-group__after">@this.contentAfter</span>
             }
         </div>
     } else {
-        <input @ref="element" id="@this.elementId" type="text" inputmode="decimal" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+        <input @ref="element" id="@this.elementId" type="text" inputmode="decimal" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @onkeydown="this.stepKey" />
     }
     @if (this.help) {
         <span class="fui-input__help" id="@this.helpId">@this.help</span>
@@ -63,6 +64,12 @@
     @Parameter() format?: string;
     /** The message for text that is no number (Blazor's `ParsingErrorMessage`; `{0}` is the field's label). Default: the library text "The {field} field must be a number.". */
     @Parameter() parsingErrorMessage?: string;
+    /** The lowest value ↓ reaches (a Decimal, "0.5" or 0.5); none by default. */
+    @Parameter() min?: Decimal | string | number;
+    /** The highest value ↑ reaches; none by default. */
+    @Parameter() max?: Decimal | string | number;
+    /** What ↑ and ↓ add or take away: 1 by default, "0.01" for cents (Blazor's and MudBlazor's `Step`). */
+    @Parameter() step: Decimal | string | number = 1;
     /** Content inside the field before the number — a currency sign (MudBlazor's start adornment). */
     @Parameter() contentBefore?: RenderFragment;
     /** Content inside the field after the number — a unit (MudBlazor's end adornment). */
@@ -88,8 +95,44 @@
     /** The value's exact digits (or its format), in the locale's separators. */
     private get displayValue(): string {
         const value = this.currentValue;
-        if (value === null || value === undefined) return "";
+        return value === null || value === undefined ? "" : this.textOf(value);
+    }
+
+    private textOf(value: Decimal): string {
         return localizeNumberText(formatValue(value, this.format), this.resolvedLocale);
+    }
+
+    /** A spin button (the APG's): its number, bounds and text, for screen readers. */
+    private get spinAttributes(): Record<string, unknown> {
+        const value = this.currentValue;
+        const hasValue = value !== null && value !== undefined;
+        return {
+            role: "spinbutton",
+            "aria-valuenow": hasValue ? value.toString() : undefined,
+            "aria-valuetext": hasValue ? this.displayValue : undefined,
+            "aria-valuemin": this.min === undefined ? undefined : Decimal.zero.add(this.min).toString(),
+            "aria-valuemax": this.max === undefined ? undefined : Decimal.zero.add(this.max).toString(),
+        };
+    }
+
+    /**
+     * ↑ and ↓ add or take away `step` from the field's number — what was typed counts, as on Enter; empty is 0 — kept
+     * within min and max, exactly (Decimal arithmetic, the scale kept: "19.90" ↑ is "20.90"). Text that is no number
+     * stays as it is.
+     */
+    private stepKey(e: KeyboardEvent): void {
+        if ((e.key !== "ArrowUp" && e.key !== "ArrowDown") || e.altKey || e.ctrlKey || e.metaKey || this.disabled || this.readOnly) return;
+        const input = e.currentTarget as HTMLInputElement;
+        const text = input.value.trim();
+        const from = text === "" ? Decimal.zero : Decimal.parse(text, this.resolvedLocale);
+        if (from === null) return;
+        e.preventDefault();
+        let next = e.key === "ArrowUp" ? from.add(this.step) : from.sub(this.step);
+        if (this.max !== undefined && next.compare(this.max) > 0) next = Decimal.zero.add(this.max);
+        if (this.min !== undefined && next.compare(this.min) < 0) next = Decimal.zero.add(this.min);
+        this.clearParsingMessage();
+        this.currentValue = next;
+        input.value = this.textOf(next);
     }
 
     private get wrapperClass(): string {
@@ -109,6 +152,7 @@
             "aria-label": this.ariaLabel,
             "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
             "aria-describedby": this.describedBy,
+            ...this.spinAttributes,
         }, this.additionalAttributes);
     }
 

@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **DecimalInput steps with ↑ and ↓** (`@tsazor/fluent`, `@tsazor/bootstrap`): new parameters `step` (1 by default),
+  `min` and `max` (a `Decimal`, a string or a number), as NumberInput's. The step is exact Decimal arithmetic with the
+  scale kept ("19.90" ↑ is "20.90"), from what was typed (empty is 0), kept within `min` and `max`; read-only or
+  disabled it doesn't step. The field is a spin button (`role="spinbutton"`, `aria-valuenow`, `aria-valuetext` in the
+  locale's text, `aria-valuemin`, `aria-valuemax`).
 - **A DetailsColumn's toggle keeps its label** (`@tsazor/fluent`, `@tsazor/bootstrap`): "Show details of order 42"
   open or closed — `aria-expanded` says which (the APG's disclosure button). It had turned "Hide details of …" while
   open, so a screen reader said "Hide details, expanded". The library texts `dataGrid.hideDetails` and

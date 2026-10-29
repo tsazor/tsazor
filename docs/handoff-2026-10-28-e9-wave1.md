@@ -130,18 +130,18 @@ Started:
   h5 look, `3fc7d84`); Bootstrap's AccordionItem has Fluent's h3, `aria-controls` and labelled region (`a7f2308`); a
   Fluent tab panel is a Tab stop (`c320cad`); a Fluent Switch shows its field's message (`b68452b`); Bootstrap's
   field messages are `role="alert"` as Fluent's (they show only after a submit; `e4efbd3`).
+- DecimalInput steps with ↑ and ↓ (`step`, `min`, `max`; exact, the scale kept) and is a spin button (the commit
+  after `4b08a4f`; skins gate in edge, firefox, webkit).
 - Library texts added: `colorPicker.squareColorValue`, `wizard.completed`, `fileUpload.fileError`,
   `datePicker.format` (CHANGELOG, Unreleased).
 
 Looked at, left open:
 
-- DecimalInput ↑/↓: a feature (step, min/max, decimal arithmetic on a text field), not a fix — after rc.1.
 - Rating at 0: checked 2026-10-28, no finding — clearing (a click or Space on the value's star), the keys from 0
   (→ 1, ← stays, End 5, focus on the star), `readOnly` (a click puts the check back), RatingDisplay "Rated 0 out of 5".
 - A virtualized DataGrid's detail rows have no `aria-rowindex` (the data and placeholder rows do), and
   `aria-rowcount` doesn't count them. Options: `role="presentation"` on the detail row (its content stays, the cell
   semantics go) or a row index scheme that counts open details. A semantics choice — not made.
 
-With these, the wave-2 list in handoff-2026-10-27-rc1.md is done except the two items above (DecimalInput ↑/↓, the
-detail rows' semantics). Every fix has a test that fails without it; the ones a browser decides (names by
+With these, the wave-2 list in handoff-2026-10-27-rc1.md is done except the item above (the detail rows' semantics). Every fix has a test that fails without it; the ones a browser decides (names by
 `aria-labelledby`, focus, reduced motion) are checked in the skins gate or the showcase smoke as well.

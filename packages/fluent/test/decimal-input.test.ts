@@ -96,6 +96,41 @@ describe("DecimalInput", () => {
     expect(context.getValidationMessages("price")).toEqual([]);
   });
 
+  it("is a spin button: ↑ and ↓ step it exactly, the scale kept, within min and max", async () => {
+    const order: Order = { price: Decimal.from("19.90") };
+    const { input, changes } = await renderBound(order, { locale: "de-DE", step: "0.05", min: 0, max: "20" });
+    const key = async (name: string) => {
+      const event = new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true });
+      input.dispatchEvent(event);
+      await Promise.resolve();
+      return event.defaultPrevented;
+    };
+    expect([input.getAttribute("role"), input.getAttribute("aria-valuenow"), input.getAttribute("aria-valuetext"), input.getAttribute("aria-valuemin"), input.getAttribute("aria-valuemax")])
+      .toEqual(["spinbutton", "19.90", "19,90", "0", "20"]);
+    expect(await key("ArrowUp")).toBe(true);
+    expect([order.price?.toString(), input.value]).toEqual(["19.95", "19,95"]);
+    await key("ArrowUp");
+    await key("ArrowUp");
+    expect(order.price?.toString()).toBe("20");
+    input.value = "0,03";
+    await key("ArrowDown");
+    expect([order.price?.toString(), input.value]).toEqual(["0", "0"]);
+    input.value = "abc";
+    expect(await key("ArrowUp")).toBe(false);
+    expect(changes.at(-1)?.toString()).toBe("0");
+  });
+
+  it("steps by 1 from an empty field; read-only, it doesn't step", async () => {
+    const order: Order = { price: null };
+    const { input } = await renderBound(order, { locale: "en-US" });
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    expect(order.price?.toString()).toBe("-1");
+    const locked: Order = { price: Decimal.from("1") };
+    const second = await renderBound(locked, { readOnly: true });
+    second.input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+    expect(locked.price?.toString()).toBe("1");
+  });
+
   it("is read-only with the native readonly", async () => {
     const { input } = await renderBound({ price: Decimal.from("1") }, { readOnly: true });
     expect([input.readOnly, input.disabled]).toEqual([true, false]);

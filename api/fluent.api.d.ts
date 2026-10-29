@@ -497,6 +497,9 @@ export default class DecimalInput extends InputBase<Decimal | null> {
     locale?: string;
     format?: string;
     parsingErrorMessage?: string;
+    min?: Decimal | string | number;
+    max?: Decimal | string | number;
+    step: Decimal | string | number;
     contentBefore?: RenderFragment;
     contentAfter?: RenderFragment;
 }

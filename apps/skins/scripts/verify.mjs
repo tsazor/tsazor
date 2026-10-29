@@ -267,6 +267,11 @@ try {
     await deposit.dispatchEvent("change");
     await page.waitForFunction(() => !document.body.textContent?.includes("The Deposit field must be a number."));
     say((await deposit.inputValue()) === "2.50", `decimal: the number in its format, F2 (${await deposit.inputValue()})`);
+    await deposit.press("ArrowUp");
+    await page.waitForFunction(() => document.querySelector("[role=spinbutton]")?.getAttribute("aria-valuenow") === "3.50");
+    say((await deposit.inputValue()) === "3.50" && (await page.getByRole("spinbutton", { name: "Deposit" }).count()) === 1, `decimal: a spin button, ↑ steps it, the format kept (${await deposit.inputValue()})`);
+    await deposit.press("ArrowDown");
+    await page.waitForFunction(() => document.querySelector("[role=spinbutton]")?.getAttribute("aria-valuenow") === "2.50");
     await name.fill("Marta");
     await name.dispatchEvent("change");
     await page.getByLabel("Bread").selectOption("rye");
