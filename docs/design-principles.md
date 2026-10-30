@@ -21,6 +21,15 @@ to .NET.
 Neither audience is secondary, and neither entry point (README, docs, tutorial) leads through the
 other's.
 
+**The core stays neutral, permanently** (decided 2026-10-30). Everything that should look like
+.NET — .NET names and types, C# behavior for ported logic, the backend bridge — lives in one
+package, the .NET door (`@tsazor/dotnet`); no core package depends on it. The test: a TypeScript
+developer can build a complete Tsazor app and read their whole path through the docs without
+meeting a .NET name, and a .NET team finds everything it needs behind that one door. Audience
+packages may follow for other ecosystems; they add to the core and never bend it. (Open before
+1.0: which of `@tsazor/primitives`' types move to the .NET door — see
+[roadmap-1.0.md](roadmap-1.0.md#for-the-owner-to-decide).)
+
 **Backend options stay open.** Nothing in the frontend may depend on .NET. The bridge is built on
 OpenAPI, which is backend-agnostic, and .NET conventions (ProblemDetails, claim URIs, the
 FluentCMS envelope) are supported but never required. Optional integrations such as
