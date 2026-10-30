@@ -322,6 +322,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**DataGrid detail rows** (B44)~~ | **Decided and done 2026-10-22:** `detailContent` and a `DetailsColumn` (or `toggleDetailsAsync`), `detailsMode="single"`, with grouping and virtualization |
 | ~~**A DateRangePicker** (B45)~~ | **Decided and done 2026-10-22:** `DateRangePicker` in both skins, a `DateRange \| null` of ISO dates |
 | ~~**`@bind` by the declared type** (B46)~~ | **Decided and done 2026-10-22:** K.7/K.8's rule stays; `tsazor check` warns where it bites (TZS040, from the declared type) |
+| **.NET names in the API** (the positioning of 2026-10-29, [design-principles.md](design-principles.md#when-in-doubt-typescript)) | Checked against "natural for a TypeScript developer without a .NET background": `CultureInfo`/`NumberFormatInfo` in `@tsazor/runtime` (.NET class names over `Intl`; a TS developer expects a locale) — rename, alias or keep? `@tsazor/primitives`' `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid` (they serve `@tsazor/dotnet`'s mapping) — keep as part of the .NET bridge or move to the migration library? `LayoutComponentBase.Body` stays (markup reads `@Body`). Everything else Blazor-named stands in ported markup and stays |
 | ~~**Cleanup**~~ | **Done 2026-10-15:** `apps/fluentcms-admin` deleted (`apps/fluentcms` replaced it); the fullstackhero containers, their images and volumes removed (owner) |
 
 ### After 1.0 (additive)

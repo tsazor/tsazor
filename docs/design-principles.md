@@ -2,17 +2,24 @@
 
 ## Why Tsazor
 
-Blazor's component model — RenderTree, lifecycle, parameters, cascading values, DI, EditForm,
-routing — is a well-thought-out model, and it is not tied to .NET. Tsazor brings it to
-TypeScript: for .NET developers (low migration effort from Blazor, a bridge to the .NET backend)
-**and** for frontend developers outside the Microsoft ecosystem who want to use this model in
-idiomatic TypeScript. Both audiences are equally important.
+Tsazor is a component framework for TypeScript: a mature component model — RenderTree,
+lifecycle, parameters, cascading values, DI, forms, routing — strict typing with a stability
+promise, and a design for large public web apps. The model comes from Blazor, and it is not tied
+to .NET.
 
-**Primary audience:** professional teams that **keep their .NET backend** but are unhappy with
-Blazor as their only SPA option. Tsazor gives them a TypeScript SPA that still feels familiar:
-the same component model, the same Razor markup, the same concepts (`@inject`, `EditForm`,
-DataAnnotations-style validation), and a typed bridge to their backend (`@tsazor/dotnet`). The
-migration is gentle and incremental, route by route instead of one big bang.
+**Two audiences, two equal entry points** (decided 2026-10-29):
+
+- **TypeScript developers** who want this model in idiomatic TypeScript. For them Tsazor must
+  stand on its own: nothing in it may require a .NET background or read as a Microsoft product.
+- **Teams migrating from Blazor**, typically professional teams that **keep their .NET backend**
+  but are unhappy with Blazor as their only SPA option. Tsazor gives them a TypeScript SPA that
+  still feels familiar: the same component model, the same Razor markup, the same concepts
+  (`@inject`, `EditForm`, DataAnnotations-style validation), and a typed bridge to their backend
+  (`@tsazor/dotnet`). The migration is gentle and incremental, route by route instead of one big
+  bang.
+
+Neither audience is secondary, and neither entry point (README, docs, tutorial) leads through the
+other's.
 
 **Backend options stay open.** Nothing in the frontend may depend on .NET. The bridge is built on
 OpenAPI, which is backend-agnostic, and .NET conventions (ProblemDetails, claim URIs, the
@@ -20,13 +27,15 @@ FluentCMS envelope) are supported but never required. Optional integrations such
 `@tsazor/sleipnir` are separate packages; nothing in the core depends on them. A team that later
 wants to move its backend away from .NET can do so without touching the frontend architecture.
 
-Because the primary audience is professional teams, clean architecture, security and long-term
+Because both audiences build professional apps, clean architecture, security and long-term
 stability take priority.
 
-In short: **Blazor, with C# replaced by TypeScript.** The same development model, the same Razor
-templates, the same CSS (scoped CSS as `X.tsazor.css` with `::deep`, like `X.razor.css`) — and
-TypeScript is TypeScript. No hybrid of C# and TS: it confuses both audiences. Porting effort is
-handled elsewhere, mostly automated (codemod).
+In short: **a component framework for TypeScript, with Razor as its markup — and a low-effort
+path from Blazor.** For a Blazor team the development model, the Razor templates and the CSS
+(scoped CSS as `X.tsazor.css` with `::deep`, like `X.razor.css`) stay the same — and TypeScript
+is TypeScript. No hybrid of C# and TS: it confuses both audiences. Porting effort is handled
+elsewhere: mostly automated (codemod), and .NET naming and behavior for ported logic in a
+separate migration library.
 
 ## Markup is Razor, code is TypeScript, the bridge is tooling
 
@@ -42,6 +51,9 @@ handled elsewhere, mostly automated (codemod).
    A method keeps Blazor's name in camelCase, `Async` included (`refreshDataAsync`, `invokeAsync`,
    a Wizard's `goToStepAsync`), and a method Tsazor adds gets `Async` when it returns a Promise:
    the suffix is part of the name a Blazor developer looks for, not C# syntax (decided 2026-10-11).
+   It also stands on its own in TypeScript: it marks a method that is asynchronous, and other
+   JavaScript ecosystems name such methods the same way (e.g. Expo's `getItemAsync`; confirmed
+   2026-10-29).
    A lifecycle pair (`OnInitialized`/`OnInitializedAsync`) is one method, `onInitialized`.
 4. **Migration through tooling, not through compiler leniency.** Leftover C# in ported code is
    handled by a codemod (`.razor` → `.tsazor`) and LSP diagnostics with quick fixes. The
@@ -69,12 +81,20 @@ markup, directives and the semantics of the component model; where it collides w
 TypeScript (naming, types, syntax, language features), TypeScript wins. One decided exception: the
 `Async` suffix of method names stays (above).
 
+Not colliding is not enough. Blazor fidelity is kept only where it would also be the natural
+TypeScript choice for someone without a Blazor background. Whatever makes sense only to .NET
+developers — .NET naming, C# semantics, .NET types and format strings — does not belong in Tsazor.
+It belongs in a separate migration library for C# teams, which Tsazor neither depends on nor
+refers to in its API. Tsazor must not read as a Microsoft product to a TypeScript developer
+(decided 2026-10-29).
+
 ## Parity first, then scale
 
 Tsazor targets a different problem space than Blazor: public web apps for very large audiences,
 where bundle size, startup time and rendering cost matter — a place nobody would deploy Blazor.
-So Blazor compatibility is a **starting point, not a permanent constraint**. It is applied in
-stages and with restraint:
+So Blazor compatibility is a **starting point, not a permanent constraint**. Tsazor does not
+follow Blazor's roadmap and may develop in a different direction; nothing Blazor adds later is a
+commitment for Tsazor. Compatibility is applied in stages and with restraint:
 
 - **Version 1: Blazor parity.** Every valid `.razor` construct keeps its Blazor meaning;
   nothing is reinterpreted. Extensions are allowed only as a superset: on the TypeScript side
@@ -111,5 +131,5 @@ is what allows a promise no untyped framework can make:
 ## The test question for new features
 
 Would a TypeScript developer without a .NET background find this natural — and does a Blazor
-port still stay cheap? If only the second question gets a yes, the help belongs in the codemod
-or in a diagnostic, not in the language.
+port still stay cheap? If only the second question gets a yes, the help belongs in the codemod,
+in a diagnostic or in the separate migration library, not in Tsazor.

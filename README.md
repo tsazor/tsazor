@@ -1,11 +1,15 @@
 # Tsazor — TypeScript Razor
 
-Tsazor is an SPA framework that follows Blazor's architecture 1:1 — RenderTree, renderer,
-lifecycle, parameter system, routing, forms — but without WASM and C#: TypeScript is the primary
-language, and everything runs purely in the browser.
+Tsazor is a component framework for TypeScript SPAs: a mature component model — render tree
+with diffing, lifecycle, parameters, cascading values, dependency injection, routing with layouts,
+forms with validation — strict typing with a stability promise, and everything runs purely in the
+browser.
 
-`.tsazor` files use Razor as their markup syntax. The code in `@code` blocks is TypeScript;
-apart from that, the markup is largely interchangeable with Blazor's `.razor` files.
+`.tsazor` files use Razor as their markup syntax; the code in `@code` blocks is clean TypeScript.
+
+**Coming from Blazor?** The component model is Blazor's, and the markup is largely
+interchangeable with `.razor` files, so an app migrates route by route — see
+[Migrating from Blazor](docs/migration.md).
 
 ```razor
 @page "/counter"
@@ -30,9 +34,9 @@ apart from that, the markup is largely interchangeable with Blazor's `.razor` fi
 
 ## Feature overview
 
-- **Blazor architecture 1:1:** RenderTree, renderer/diff, component lifecycle, parameters
+- **Component model:** RenderTree, renderer/diff, component lifecycle, parameters
   (`@Parameter()`), cascading values, DI, routing with layouts, EditForm/`@bind` validation,
-  Virtualize.
+  Virtualize — Blazor's architecture, 1:1.
 - **Tsazor extensions (superset, desugar to the Blazor form):** `@Bindable() accessor value`
   (a two-way parameter in one line) and `this.observe(source)` / `this.disposeSignal` (external
   sources bound to the component lifetime) — see the
