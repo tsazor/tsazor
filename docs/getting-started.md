@@ -1,9 +1,5 @@
 # Getting Started
 
-Coming from C#? The [C# to TypeScript cheat sheet](csharp-to-typescript.md) maps the language
-and the base class library, and the interactive tutorial's Blazor track opens with a short
-chapter, "TypeScript for C# developers".
-
 ## A new app
 
 ```bash
@@ -11,7 +7,7 @@ npm create tsazor@latest my-app                          # pnpm create tsazor, y
 npm create tsazor@latest my-app -- --ui @tsazor/bootstrap  # with a component library
 ```
 
-The starter writes the app `dotnet new blazorwasm` would:
+The starter writes a small complete app (the same one `dotnet new blazorwasm` writes):
 - `Program.ts`, `App.tsazor` with the Router, and `Layout/MainLayout` and `NavMenu`;
 - the pages Home, Counter and Weather, plus a Counter test;
 - strict TypeScript, and the VS Code extension recommended.
@@ -299,3 +295,12 @@ workspace:
 
 To test locally: open the `packages/vscode` folder in VS Code → `F5`
 (Extension Development Host). Details: [language-server.md](language-server.md).
+
+## Coming from Blazor or C#
+
+- [Migrating from Blazor](migration.md): running both side by side, the codemod, page by page.
+- [The migration guide](migration-guide.md): every C# keyword, Razor directive and Blazor API
+  with its Tsazor form.
+- [The C# to TypeScript cheat sheet](csharp-to-typescript.md): the language and the base class
+  library; the interactive tutorial's Blazor track opens with a short chapter, "TypeScript for C#
+  developers".
