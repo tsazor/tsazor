@@ -20,6 +20,9 @@ for, not guaranteed service levels.
 | the previous major, for 12 months after the next major ships | maintenance | security fixes and critical regressions |
 | `1.0.0-next.N`, `1.0.0-rc.N` | prerelease | nothing: the next prerelease replaces it |
 
+From `1.0.0-rc.1` on, the public API is frozen: a later rc changes it only to fix a defect. The exception is
+`@tsazor/dotnet`, whose scope and API are settled between the release candidates and stand with 1.0.0.
+
 ## Decisions
 
 - **D-S1 — Semantic versioning, one version for every package.** A major for breaking changes, a minor for

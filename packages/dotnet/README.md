@@ -4,6 +4,10 @@ The official bridge between Tsazor frontends and .NET backends (roadmap 5.2) —
 *one way instead of three app-specific ones* (review 7.3: Sleipnir, FluentCMS and Pizza each
 ran their own HTTP helpers).
 
+> **Not final in 1.0.0-rc.1.** This package's scope and API are still being settled. It becomes the one package for
+> everything .NET-like (OpenAPI clients, auth, the type mappings), and it will be tested against real .NET behavior
+> before 1.0.0. Expect changes to it between the release candidates; the rest of Tsazor is API-frozen with rc.1.
+
 ## What's included
 
 - **OpenAPI ⇒ typed TS client.** Local generation from an ASP.NET Core OpenAPI document
