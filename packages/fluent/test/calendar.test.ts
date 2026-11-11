@@ -117,7 +117,7 @@ describe("Calendar", () => {
   });
 
   it("multiple: a click toggles a day", async () => {
-    const { Host, cell, idle } = await mount({ selectMode: "multiple" });
+    const { Host, cell, idle } = await mount({ selectMode: "multiple", pickerMonth: "2026-10-01" });
     cell("2026-10-14").click();
     await idle();
     cell("2026-10-16").click();
@@ -129,7 +129,7 @@ describe("Calendar", () => {
   });
 
   it("range: a start, a preview under the pointer, an end; a click inside clears it", async () => {
-    const { Host, root, cell, idle } = await mount({ selectMode: "range" });
+    const { Host, root, cell, idle } = await mount({ selectMode: "range", pickerMonth: "2026-10-01" });
     cell("2026-10-14").click();
     await idle();
     expect(Host.last!.dates).toEqual(["2026-10-14"]);

@@ -43,7 +43,12 @@ describe("ScheduleModel views", () => {
       "2026-09-28", "2026-09-29", "2026-09-30",
       "2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08",
     ]);
-    expect(days.find((day) => day.date === todayValue)).toEqual(expect.objectContaining({ isToday: true }));
+    expect(days.filter((day) => day.isToday).map((day) => day.date)).toEqual(
+      days.some((day) => day.date === todayValue) ? [todayValue] : [],
+    );
+    // Today, in its own month's grid (the grid above holds it only while the clock says October 2026).
+    model.setView("month", todayValue);
+    expect(model.days.find((day) => day.date === todayValue)).toEqual(expect.objectContaining({ isToday: true }));
   });
 
   it("week: seven days, Monday first; day: one day", () => {
