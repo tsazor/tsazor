@@ -26,9 +26,9 @@ other's.
 package, the .NET door (`@tsazor/dotnet`); no core package depends on it. The test: a TypeScript
 developer can build a complete Tsazor app and read their whole path through the docs without
 meeting a .NET name, and a .NET team finds everything it needs behind that one door. Audience
-packages may follow for other ecosystems; they add to the core and never bend it. (Open before
-1.0: which of `@tsazor/primitives`' types move to the .NET door — see
-[roadmap-1.0.md](roadmap-1.0.md#for-the-owner-to-decide).)
+packages may follow for other ecosystems; they add to the core and never bend it. (Settled
+between the release candidates, before 1.0.0: which of `@tsazor/primitives`' types move to the
+.NET door.)
 
 **Backend options stay open.** Nothing in the frontend may depend on .NET. The bridge is built on
 OpenAPI, which is backend-agnostic, and .NET conventions (ProblemDetails, claim URIs, the
