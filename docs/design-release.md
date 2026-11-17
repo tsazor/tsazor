@@ -102,3 +102,17 @@ old repository, a handoff, an internal roadmap, a note about the owner), every r
 the tree, and install, build and test in it. Left out: the handoffs, the September review and its roadmap, the
 roadmaps (the public one is [after-1.0.md](after-1.0.md)), the API review's working document and `spikes/`. The
 port reports stay: they show what the ports found and how each gap was fixed.
+
+## Kept public (decided 2026-11-17)
+
+After the first commit, Tsazor is developed in `tsazor/tsazor` itself; the maintainers' working notes (session
+handoffs, internal roadmaps, feedback) live in a private repository of their own, not here. What may not be public
+is written down once, in `scripts/traces.mjs`: the files that stay private, and the traces of the private work. It
+has two users:
+
+- `public-tree.mjs` checks the exported tree of the first commit with it;
+- `node scripts/traces.mjs` checks the repository in place — every tracked file — and `.github/workflows/traces.yml`
+  runs it on every push and pull request of `tsazor/tsazor`. A file that should stay private is a finding there by
+  itself, as is a trace in any other file or a relative Markdown link to a file that isn't in the tree.
+
+The check reads files, not commit messages: a commit message is public too, and nothing checks it.
