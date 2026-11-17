@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-rc.1 (2026-11-17)
+
+The first version on npm; the `1.0.0-next.N` below were prereleases that npm never saw. Blazor parity is measured
+against .NET 11.0.0. From this version on, the public API is frozen: a later rc changes it only to fix a defect. The
+exception is `@tsazor/dotnet`, whose scope and API are settled between the release candidates and stand with 1.0.0
+([support-policy.md](docs/support-policy.md)).
+
+Changes since 1.0.0-next.10:
+
 - **DecimalInput steps with ↑ and ↓** (`@tsazor/fluent`, `@tsazor/bootstrap`): new parameters `step` (1 by default),
   `min` and `max` (a `Decimal`, a string or a number), as NumberInput's. The step is exact Decimal arithmetic with the
   scale kept ("19.90" ↑ is "20.90"), from what was typed (empty is 0), kept within `min` and `max`; read-only or
