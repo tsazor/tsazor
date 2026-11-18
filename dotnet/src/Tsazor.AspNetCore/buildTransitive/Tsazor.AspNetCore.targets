@@ -19,7 +19,7 @@
       <Output TaskParameter="ExitCode" PropertyName="_TsazorNodeExitCode" />
     </Exec>
     <Error Code="TSAZOR001" Condition="'$(_TsazorNodeExitCode)' != '0'"
-           Text="Tsazor: Node.js was not found. The client ($(_TsazorClientDir)) is built with npm: install Node.js 22.12 or later (https://nodejs.org) and build again, or skip the client with -p:TsazorNpmInstall=false -p:TsazorBuildClient=false." />
+           Text="Tsazor: Node.js was not found. The client ($(_TsazorClientDir)) is built with npm: install Node.js 22.12 or later (https://nodejs.org) and build again, or skip the client with -p:TsazorNpmInstall=false -p:TsazorBuildClient=false -p:TsazorGenerateApiClient=false." />
   </Target>
 
   <!-- npm install when package.json or the lock file is newer than the last install, or node_modules is missing. -->
@@ -36,7 +36,7 @@
   <!-- Opt-in: the typed client from the OpenAPI document the build writes (Microsoft.Extensions.ApiDescription.Server). -->
   <Target Name="TsazorGenerateApiClient"
           Condition="'$(_TsazorEnabled)' == 'true' and '$(TsazorGenerateApiClient)' == 'true'"
-          DependsOnTargets="TsazorNpmInstall"
+          DependsOnTargets="TsazorCheckClient;TsazorNpmInstall"
           Inputs="$(TsazorOpenApiDocument)"
           Outputs="$(IntermediateOutputPath)tsazor-api-client.stamp">
     <Error Code="TSAZOR003" Condition="'$(TsazorOpenApiDocument)' == '' or !Exists('$(TsazorOpenApiDocument)')"
@@ -50,7 +50,7 @@
   <!-- npm run build when a file of the client is newer than dist/index.html. -->
   <Target Name="TsazorBuildClient"
           Condition="'$(_TsazorEnabled)' == 'true'"
-          DependsOnTargets="TsazorNpmInstall;TsazorGenerateApiClient;_TsazorClientInputs"
+          DependsOnTargets="TsazorCheckClient;TsazorNpmInstall;TsazorGenerateApiClient;_TsazorClientInputs"
           Inputs="@(_TsazorClientInput)"
           Outputs="$(_TsazorClientDist)index.html">
     <Message Importance="high" Text="Tsazor: $(TsazorBuildCommand) in $(_TsazorClientDir)" />
