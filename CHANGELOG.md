@@ -26,6 +26,11 @@ Changes since 1.0.0-next.10:
   skins); such rows show the pointer and a hover background. `rowClass` and `rowStyle` give a row its own class and
   style from its item (`RowClass`, `RowStyle`): a failed run's row. The row click is a pointer convenience; the same
   action belongs in a cell as a link or a button for the keyboard and screen readers.
+- **Every new app has notes for coding agents** (`create-tsazor`): `AGENTS.md` — the app's packages and setup, the
+  commands that verify a change, the core patterns as minimal snippets (a page, parameters, events, services, live
+  data, a form with server errors, a test), the component library's everyday parts, the pitfalls (no import
+  inference, the class named after its file, strict mode, `this.` in `@code`, number binds) and which sample to copy
+  for what. The docs site serves an `llms.txt` that points at it and at the references.
 - **The live connection's state** (`@tsazor/runtime`, `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`):
   `ConnectionState` — `connecting`, `open`, `reconnecting`, `closed` — is the app's without a registration; whatever
   opens the connection `report`s into it (`trackEventSource` does it for an EventSource; SignalR and Sleipnir by their

@@ -1,7 +1,7 @@
 /**
  * Writes a new app: the static files of `template/` (the shape of
  * `dotnet new blazorwasm`) and the files that depend on the options —
- * package.json, Program.ts, _Imports.tsazor, MainLayout.tsazor, README.md.
+ * package.json, Program.ts, _Imports.tsazor, MainLayout.tsazor, README.md, AGENTS.md.
  */
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -54,6 +54,7 @@ export function scaffold(options: ScaffoldOptions): string[] {
   write("src/_Imports.tsazor", importsTsazor(options.library));
   write("src/Layout/MainLayout.tsazor", mainLayout(options.library));
   write("README.md", readme(options));
+  write("AGENTS.md", agents(readFileSync(path.join(templateDir, "AGENTS.md"), "utf8"), options));
   return [...new Set(written)].sort();
 }
 
@@ -178,6 +179,33 @@ function mainLayout(library: Library | undefined): string {
     </main>
 </div>
 ${layout}`;
+}
+
+/** The template's AGENTS.md (notes for coding agents) with this app's name, packages and setup. */
+function agents(template: string, options: ScaffoldOptions): string {
+  const code = (text: string) => "`" + text + "`";
+  const versions = Object.entries(options.versions)
+    .filter(([name]) => name === "@tsazor/runtime" || name === options.library?.name || (options.dotnet && name === "@tsazor/dotnet"))
+    .map(([name, version]) => code(`${name}@${version}`));
+  const library = options.library;
+  const lines = [
+    "## This app",
+    "",
+    `- **Packages:** ${versions.join(", ")}; every ${code("@tsazor/*")} package at that one version.`,
+    library
+      ? `- **Components:** ${code(library.name)} — ${code(`@using ${library.name}`)} in ${code("src/_Imports.tsazor")}, so its tags ` +
+        `work in every ${code(".tsazor")} file` +
+        (library.setup ? `; its styles and services are set up in ${code("src/Program.ts")}, its hosts in ${code("src/Layout/MainLayout.tsazor")}` : "") +
+        "."
+      : `- **Components:** plain HTML and the runtime's (${code("NavLink")}, ${code("EditForm")}, ${code("InputText")}, …); ` +
+        `${code("@tsazor/fluent")} or ${code("@tsazor/bootstrap")} adds a component library.`,
+    options.dotnet
+      ? `- **Backend:** an ASP.NET Core API through ${code("@tsazor/dotnet")}; ${code("npm run api")} regenerates the typed client in ` +
+        `${code("src/api")} from its OpenAPI document. A call returns a result (${code("ok")}, ${code("body")}, ${code("problem")}, ` +
+        `${code("validationErrors")}); it doesn't throw for an error status.`
+      : `- **Backend:** none yet. For ASP.NET Core, ${code("@tsazor/dotnet")} generates a typed client from the OpenAPI document.`,
+  ];
+  return template.replaceAll("%APP_NAME%", options.name).replace("%APP_SETUP%", lines.join("\n"));
 }
 
 function readme(options: ScaffoldOptions): string {

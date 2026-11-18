@@ -148,6 +148,8 @@ createTsazorApp({ root: App, routes });
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
+- [Notes for coding agents](packages/create-tsazor/template/AGENTS.md) — every new app carries them as `AGENTS.md`;
+  the docs site has an `llms.txt`
 - [Migration guide: Blazor → Tsazor at a glance (C# keywords, Razor, Blazor APIs)](docs/migration-guide.md)
 - [Migrating from Blazor (side by side, the codemod, the API boundary)](docs/migration.md)
 - [C# to TypeScript (cheat sheet)](docs/csharp-to-typescript.md)

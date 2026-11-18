@@ -128,6 +128,7 @@ describe("the files", () => {
     expect(files).toEqual([
       ".gitignore",
       ".vscode/extensions.json",
+      "AGENTS.md",
       "README.md",
       "index.html",
       "package.json",
@@ -150,6 +151,12 @@ describe("the files", () => {
       "vitest.config.ts",
     ]);
     expect(read(dir, "index.html")).toContain("<title>shop</title>");
+    // Notes for coding agents: the app's name and setup, no placeholder left.
+    const agents = read(dir, "AGENTS.md");
+    expect(agents).toContain("# shop — notes for coding agents");
+    expect(agents).toContain("- **Components:** plain HTML");
+    expect(agents).toContain("- **Backend:** none yet.");
+    expect(agents).not.toMatch(/%APP_[A-Z]+%/);
     expect(read(dir, "src/Layout/NavMenu.tsazor")).toContain('<a class="brand" href="">shop</a>');
     expect(JSON.parse(read(dir, "tsconfig.json")).compilerOptions.strict).toBe(true);
     const manifest = JSON.parse(read(dir, "package.json"));
@@ -176,6 +183,7 @@ describe("the files", () => {
     expect(read(dir, "src/Layout/MainLayout.tsazor")).toContain("</div>\n<ToastHost />\n<PopoverHost />\n");
     expect(JSON.parse(read(dir, "package.json")).dependencies).toEqual({ "@acme/ui": "^2.3.4", "@tsazor/runtime": "^0.1.0", "acme-css": "^4.0.0" });
     expect(read(dir, "README.md")).toContain("`@acme/ui`");
+    expect(read(dir, "AGENTS.md")).toContain("- **Components:** `@acme/ui`");
     // The library's styles bring its typeface; the template's body font would beat it (F16). The rest stays.
     const css = read(dir, "src/app.css");
     expect(css).not.toContain("font-family");
@@ -233,7 +241,7 @@ describe("a whole run", () => {
     const run = io({ cwd });
     expect(await main(["shop", "--ui", "@acme/ui"], run)).toBe(0);
     expect(run.installs).toEqual([path.join(cwd, "shop")]);
-    expect(run.lines.join("\n")).toMatch(/Created shop .*22 files, with @acme\/ui\./);
+    expect(run.lines.join("\n")).toMatch(/Created shop .*23 files, with @acme\/ui\./);
     expect(run.lines).toContain("  cd shop");
     expect(run.lines).not.toContain("  npm install");
   });
