@@ -16,9 +16,11 @@
         <desc id="@this.descId">@this.summary</desc>
         @if (this.radial) {
             @for (let i = 0; i < this.slices.length; i++) {
-                <path class="@this.markClass(i)" d="@this.slices[i]!.path" fill="@this.colorOf(i)" role="@(this.interactive ? "button" : null)" tabindex="@(this.interactive ? 0 : null)"
-                      aria-label="@(this.interactive ? this.slices[i]!.label : null)" aria-pressed="@(this.interactive ? (i === this.selectedIndex ? "true" : "false") : null)"
-                      @onclick="() => this.select(i)" @onkeydown="(e) => this.selectKey(e, i)"><title>@this.slices[i]!.label</title></path>
+                @if (this.slices[i]!.share > 0) {
+                    <path class="@this.markClass(i)" d="@this.slices[i]!.path" fill="@this.colorOf(i)" role="@(this.interactive ? "button" : null)" tabindex="@(this.interactive ? 0 : null)"
+                          aria-label="@(this.interactive ? this.slices[i]!.label : null)" aria-pressed="@(this.interactive ? (i === this.selectedIndex ? "true" : "false") : null)"
+                          @onclick="() => this.select(i)" @onkeydown="(e) => this.selectKey(e, i)"><title>@this.slices[i]!.label</title></path>
+                }
             }
         } else {
             <g class="tz-chart__axes" aria-hidden="true">
@@ -32,7 +34,9 @@
                     @if (this.options.xAxisLines) {
                         <line class="tz-chart__grid" x1="@this.labelX(i)" x2="@this.labelX(i)" y1="@this.plot.top" y2="@this.plot.bottom" />
                     }
-                    <text class="tz-chart__tick" x="@this.labelX(i)" y="@(this.plot.bottom + 20)" text-anchor="middle">@this.chartLabels[i]</text>
+                    @if (i % this.labelStep === 0) {
+                        <text class="tz-chart__tick" x="@this.labelX(i)" y="@(this.plot.bottom + 20)" text-anchor="middle">@this.chartLabels[i]</text>
+                    }
                 }
                 <line class="tz-chart__baseline" x1="@this.plot.left" x2="@this.plot.right" y1="@this.y(0)" y2="@this.y(0)" />
                 @if (this.options.yAxisTitle) {
@@ -48,8 +52,8 @@
                        aria-label="@(this.interactive ? this.seriesLabel(s) : null)" aria-pressed="@(this.interactive ? (s === this.selectedIndex ? "true" : "false") : null)"
                        @onclick="() => this.select(s)" @onkeydown="(e) => this.selectKey(e, s)">
                         @if (this.chartType === "bar" || this.chartType === "stacked-bar") {
-                            @foreach (const bar of this.bars(s)) {
-                                <rect class="tz-chart__bar" x="@bar.x" y="@bar.y" width="@bar.width" height="@bar.height" rx="2"><title>@bar.title</title></rect>
+                            @foreach (const bar of this.bars(s).filter((bar) => bar.value !== 0)) {
+                                <rect class="tz-chart__bar" x="@bar.x" y="@bar.y" width="@bar.width" height="@bar.height" rx="2" style="@bar.style"><title>@bar.title</title></rect>
                             }
                         } else {
                             @if (this.chartType === "area") {
@@ -57,7 +61,7 @@
                             }
                             <path class="tz-chart__line" d="@this.line(s)" stroke-width="@(this.options.lineStrokeWidth ?? 3)" />
                             @foreach (const point of this.points(s)) {
-                                <circle class="tz-chart__point" cx="@point.x" cy="@point.y" r="4"><title>@point.title</title></circle>
+                                <circle class="tz-chart__point" cx="@point.x" cy="@point.y" r="4" style="@point.style"><title>@point.title</title></circle>
                             }
                         }
                     </g>
@@ -69,14 +73,14 @@
         <ul class="tz-chart__legend">
             @for (let i = 0; i < this.legend.length; i++) {
                 <li class="tz-chart__legend-item">
-                    @if (this.canHideSeries && !this.radial) {
+                    @if (this.canHideSeries && !this.radial && this.categories.length === 0) {
                         <label class="tz-chart__toggle">
                             <input type="checkbox" checked="@(!this.hidden.has(i))" @onchange="() => this.toggle(i)" />
-                            <span class="tz-chart__swatch" style="@(`background: ${this.colorOf(i)}`)"></span>
+                            <span class="tz-chart__swatch" style="@(`background: ${this.legendColor(i)}`)"></span>
                             @this.legend[i]
                         </label>
                     } else {
-                        <span class="tz-chart__swatch" style="@(`background: ${this.colorOf(i)}`)"></span>
+                        <span class="tz-chart__swatch" style="@(`background: ${this.legendColor(i)}`)"></span>
                         @this.legend[i]
                     }
                 </li>
@@ -99,7 +103,7 @@
                     <thead><tr><th scope="col"></th>@foreach (const series of this.chartSeries) {<th scope="col">@series.name</th>}</tr></thead>
                     <tbody>
                         @for (let i = 0; i < this.chartLabels.length; i++) {
-                            <tr><th scope="row">@this.chartLabels[i]</th>@foreach (const series of this.chartSeries) {<td>@this.format(series.data[i] ?? 0)</td>}</tr>
+                            <tr><th scope="row">@this.chartLabels[i]</th>@foreach (const series of this.chartSeries) {<td>@this.pointText(series, i)</td>}</tr>
                         }
                     </tbody>
                 }
@@ -193,7 +197,43 @@
     }
 
     private get legend(): string[] {
-        return this.radial ? this.chartLabels : this.chartSeries.map((series) => series.name);
+        if (this.radial) return this.chartLabels;
+        return this.categories.length > 0 ? this.categories : this.chartSeries.map((series) => series.name);
+    }
+
+    /** The categories of every series' points, in the order they first appear. */
+    private get categories(): string[] {
+        const seen = new Set<string>();
+        for (const series of this.chartSeries) for (const category of series.categories ?? []) if (category !== undefined) seen.add(category);
+        return [...seen];
+    }
+
+    /** A legend entry's color: a slice's, a series' or a category's. */
+    private legendColor(index: number): string {
+        return !this.radial && this.categories.length > 0 ? this.categoryColor(this.categories[index]!) : this.colorOf(index);
+    }
+
+    private categoryColor(category: string): string {
+        return this.options.categoryColors?.[category] ?? this.colorOf(this.categories.indexOf(category));
+    }
+
+    /** A point's own color as a style (its category's), or null for the series' color. */
+    private pointStyle(series: number, index: number): string | null {
+        const category = this.chartSeries[series]!.categories?.[index];
+        return category === undefined ? null : `color: ${this.categoryColor(category)}`;
+    }
+
+    /** A bar's or a point's hover title: "Durations, Run 12: 65, Warning". */
+    private pointTitle(series: number, index: number): string {
+        const data = this.chartSeries[series]!;
+        return `${data.name}, ${this.chartLabels[index] ?? index + 1}: ${this.pointText(data, index)}`;
+    }
+
+    /** A value as its title and the table write it: with its category, if it has one. */
+    private pointText(series: ChartSeries, index: number): string {
+        const value = this.format(series.data[index] ?? 0);
+        const category = series.categories?.[index];
+        return category === undefined ? value : `${value}, ${category}`;
     }
 
     private markClass(index: number): string {
@@ -246,9 +286,9 @@
         return count === 1 ? (left + right) / 2 : Math.round((left + (index * (right - left)) / (count - 1)) * 100) / 100;
     }
 
-    private points(series: number): { x: number; y: number; title: string }[] {
+    private points(series: number): { x: number; y: number; title: string; style: string | null }[] {
         const data = this.chartSeries[series]!.data;
-        return data.map((value, i) => ({ x: this.labelX(i), y: this.y(value), title: `${this.chartSeries[series]!.name}, ${this.chartLabels[i] ?? i + 1}: ${this.format(value)}` }));
+        return data.map((_, i) => ({ x: this.labelX(i), y: this.y(data[i]!), title: this.pointTitle(series, i), style: this.pointStyle(series, i) }));
     }
 
     private line(series: number): string {
@@ -259,7 +299,19 @@
         return areaPath(this.points(series), this.y(Math.max(this.axis.min, 0)), this.options.interpolation === "smooth");
     }
 
-    private bars(series: number): { x: number; y: number; width: number; height: number; title: string }[] {
+    /** Every how many labels one is drawn: the label axis thins its labels when they would overlap (each still names
+        its bar or point in the hover title and in the table). Estimated from the longest label at the ticks' 12px. */
+    private get labelStep(): number {
+        const count = this.chartLabels.length;
+        if (count < 2) return 1;
+        const { left, right } = this.plot;
+        const bars = this.chartType === "bar" || this.chartType === "stacked-bar";
+        const spacing = (right - left) / (bars ? count : count - 1);
+        const longest = Math.max(...this.chartLabels.map((label) => label.length));
+        return Math.max(1, Math.ceil((longest * 7 + 8) / spacing));
+    }
+
+    private bars(series: number): { x: number; y: number; width: number; height: number; title: string; value: number; style: string | null }[] {
         const { left, right } = this.plot;
         const band = (right - left) / Math.max(1, this.chartLabels.length);
         const shown = this.chartSeries.map((_, i) => i).filter((i) => !this.hidden.has(i));
@@ -273,7 +325,7 @@
             const to = stacks ? stacks[place]![i]!.to : value;
             const x = stacked ? left + band * i + band * 0.2 : left + band * i + band * 0.1 + width * place;
             const [top, bottom] = [this.y(Math.max(from, to)), this.y(Math.min(from, to))];
-            return { x: round(x), y: top, width: round(width), height: round(Math.max(0, bottom - top)), title: `${this.chartSeries[series]!.name}, ${this.chartLabels[i] ?? i + 1}: ${this.format(value)}` };
+            return { x: round(x), y: top, width: round(width), height: round(Math.max(0, bottom - top)), value, title: this.pointTitle(series, i), style: this.pointStyle(series, i) };
         });
     }
 
@@ -283,7 +335,7 @@
 
     // The radial charts.
 
-    private get slices(): { path: string; label: string }[] {
+    private get slices(): { path: string; label: string; share: number }[] {
         const values = this.chartSeries[0]?.data ?? [];
         const cx = this.width / 2;
         const cy = this.height / 2;
@@ -291,6 +343,7 @@
         const inner = this.chartType === "donut" ? radius * (this.options.donutHole ?? 0.6) : 0;
         return pieSlices(values).map((slice, i) => ({
             path: arcPath(cx, cy, radius, inner, slice.start, slice.end),
+            share: slice.share,
             label: sliceInWords(`${this.chartLabels[i] ?? i + 1}`, this.format(values[i] ?? 0), slice.share, this.t),
         }));
     }

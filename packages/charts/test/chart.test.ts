@@ -63,6 +63,46 @@ describe("Chart", () => {
     expect(area.querySelector(".tz-chart__area")!.getAttribute("d")!.endsWith("Z")).toBe(true);
   });
 
+  it("a bar or a slice of 0 draws nothing and has no hover title; the table keeps its 0", async () => {
+    const stacked = await chart({ chartType: "stacked-bar", chartSeries: [{ name: "OK", data: [5, 0] }, { name: "Failure", data: [0, 3] }], chartLabels: ["Run 1", "Run 2"] });
+    expect([...stacked.querySelectorAll(".tz-chart__bar title")].map((title) => title.textContent)).toEqual(["OK, Run 1: 5", "Failure, Run 2: 3"]);
+    expect([...stacked.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Run 150", "Run 203"]);
+    const pie = await chart({ chartType: "pie", chartSeries: [{ name: "Sales", data: [30, 0, 10] }], chartLabels: ["Bread", "Cake", "Rolls"] });
+    expect([...pie.querySelectorAll(".tz-chart__slice title")].map((title) => title.textContent)).toEqual(["Bread 30 (75%)", "Rolls 10 (25%)"]);
+    expect([...pie.querySelectorAll(".tz-chart__legend-item")].map((item) => item.textContent?.trim())).toEqual(["Bread", "Cake", "Rolls"]);
+  });
+
+  it("many labels: the axis draws every n-th, so they don't overlap; each still names its bar", async () => {
+    const labels = Array.from({ length: 30 }, (_, i) => `17.11. ${String(i).padStart(2, "0")}:00`);
+    const figure = await chart({ chartType: "bar", chartSeries: [{ name: "Duration", data: labels.map((_, i) => i + 1) }], chartLabels: labels });
+    const ticks = [...figure.querySelectorAll(".tz-chart__axes text.tz-chart__tick")].map((tick) => tick.textContent).filter((text) => labels.includes(text!));
+    expect(ticks.length).toBeGreaterThan(1);
+    expect(ticks.length).toBeLessThan(10);
+    expect(ticks[0]).toBe(labels[0]);
+    expect(figure.querySelectorAll(".tz-chart__bar")).toHaveLength(30);
+    expect(figure.querySelectorAll(".tz-chart__bar title")[29]!.textContent).toBe(`Duration, ${labels[29]}: 30`);
+    expect(figure.querySelectorAll("tbody tr")).toHaveLength(30);
+    const few = await chart({ chartType: "bar", chartSeries: loaves, chartLabels: week });
+    expect([...few.querySelectorAll(".tz-chart__axes text.tz-chart__tick")].filter((tick) => week.includes(tick.textContent!))).toHaveLength(6);
+  });
+
+  it("categories: a bar takes its category's color; the legend, the title and the table name the category", async () => {
+    const figure = await chart({
+      chartType: "bar",
+      chartSeries: [{ name: "Duration", data: [65, 70, 12], categories: ["OK", "Warning", "Failure"] }],
+      chartLabels: ["Run 1", "Run 2", "Run 3"],
+      chartOptions: { categoryColors: { Failure: "red" } },
+    });
+    const bars = [...figure.querySelectorAll<SVGRectElement>(".tz-chart__bar")];
+    expect(bars.map((bar) => bar.getAttribute("style"))).toEqual(["color: var(--tz-chart-1)", "color: var(--tz-chart-2)", "color: red"]);
+    expect(bars[1]!.querySelector("title")!.textContent).toBe("Duration, Run 2: 70, Warning");
+    expect([...figure.querySelectorAll(".tz-chart__legend-item")].map((item) => item.textContent?.trim())).toEqual(["OK", "Warning", "Failure"]);
+    expect((figure.querySelectorAll(".tz-chart__swatch")[2] as HTMLElement).getAttribute("style")).toBe("background: red");
+    expect([...figure.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Run 165, OK", "Run 270, Warning", "Run 312, Failure"]);
+    const plain = await chart({ chartType: "bar", chartSeries: loaves, chartLabels: week });
+    expect(plain.querySelector(".tz-chart__bar")!.hasAttribute("style")).toBe(false);
+  });
+
   it("donut: a slice per label with its share; the legend names them", async () => {
     const figure = await chart({ chartType: "donut", chartSeries: [{ name: "Sales", data: [30, 10] }], chartLabels: ["Bread", "Rolls"], ariaLabel: "Sales" });
     expect(figure.querySelector("desc")!.textContent).toBe("Donut chart of Sales: Bread 30 (75%), Rolls 10 (25%).");

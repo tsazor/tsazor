@@ -14,6 +14,15 @@ exception is `@tsazor/dotnet`, whose scope and API are settled between the relea
 
 Changes since 1.0.0-next.10:
 
+- **A color per point** (`@tsazor/charts`): `ChartSeries.categories` names each point's category ("OK", "Warning",
+  "Failure"); a bar or a point takes its category's color — `ChartOptions.categoryColors` by name, else the
+  palette's next — and the legend lists the categories, the hover title and the table name each point's ("Duration,
+  Run 2: 70, Warning"). One series colored by status, instead of a series per status padded with zeros.
+- **A chart's label axis thins its labels** (`@tsazor/charts`): with more labels than fit, it draws every n-th, so
+  they no longer overlap; each bar and point still names its label in its hover title and in the table.
+- **A bar or a slice of 0 draws nothing** (`@tsazor/charts`): no zero-height bar with a hover title ("Failure: 0"
+  near a stacked bar's base), no empty slice; the table keeps the 0.
+
 - **DecimalInput steps with ↑ and ↓** (`@tsazor/fluent`, `@tsazor/bootstrap`): new parameters `step` (1 by default),
   `min` and `max` (a `Decimal`, a string or a number), as NumberInput's. The step is exact Decimal arithmetic with the
   scale kept ("19.90" ↑ is "20.90"), from what was typed (empty is 0), kept within `min` and `max`; read-only or

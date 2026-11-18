@@ -35,6 +35,7 @@ export interface ChartOptions {
     readonly lineStrokeWidth?: number;
     readonly showLegend?: boolean;
     readonly chartPalette?: readonly string[];
+    readonly categoryColors?: Readonly<Record<string, string>>;
     readonly donutHole?: number;
 }
 
@@ -42,6 +43,7 @@ export interface ChartOptions {
 export interface ChartSeries {
     readonly name: string;
     readonly data: readonly number[];
+    readonly categories?: readonly (string | undefined)[];
 }
 
 // ChartType
