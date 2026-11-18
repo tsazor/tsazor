@@ -34,6 +34,8 @@ jobs:
       - run: pnpm -r test
       - name: API snapshot (S1)
         run: pnpm api:check
+      - name: The framework's texts page is current (docs/library-texts.md)
+        run: node scripts/library-texts-doc.mjs --check
       - name: Tarball smoke
         run: pnpm smoke
       - name: Release rehearsal (R2) — the tarballs checked, published to a fresh Verdaccio, npm create tsazor from it

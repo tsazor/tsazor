@@ -23,6 +23,10 @@
     "./kit": {
       "types": "./dist/kit.d.ts",
       "default": "./dist/kit.js"
+    },
+    "./texts/de": {
+      "types": "./dist/texts/de.d.ts",
+      "default": "./dist/texts/de.js"
     }
   },
   "sideEffects": false,

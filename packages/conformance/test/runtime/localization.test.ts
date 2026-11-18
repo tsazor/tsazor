@@ -19,6 +19,7 @@ import {
   MinLength,
   parseValue,
   Range,
+  StringLength,
   Required,
   type ComponentBase,
   ServiceCollection,
@@ -343,6 +344,28 @@ describe("localized validation messages (E8 §4, D-L7)", () => {
       "Quantity is mandatory.", // a fixed message override ignores the culture
     ]);
     warn.mockRestore();
+    subscription();
+    localizer.dispose();
+  });
+
+  it("StringLength with a minimum takes tsazor.validation.stringLengthIncludingMinimum, else its one text", () => {
+    class Name {
+      @StringLength(10, { minimumLength: 3 })
+      first = "a";
+      @StringLength(2)
+      last = "abc";
+    }
+    const tables = {
+      "de-DE": {
+        "tsazor.validation.stringLength": "{displayName}: höchstens {max} Zeichen.",
+        "tsazor.validation.stringLengthIncludingMinimum": "{displayName}: {min} bis {max} Zeichen.",
+      },
+    };
+    const localizer = new StringLocalizer({ culture: new CultureService("de-DE"), tables, defaultCulture: "de-DE" });
+    const context = new EditContext(new Name());
+    const subscription = enableDataAnnotationsValidation(context, { localizer });
+    context.validate();
+    expect(context.getValidationMessages()).toEqual(["first: 3 bis 10 Zeichen.", "last: höchstens 2 Zeichen."]);
     subscription();
     localizer.dispose();
   });

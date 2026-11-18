@@ -1239,3 +1239,15 @@ export type WizardStepSequence = "linear" | "any" | "visited";
 
 // WizardStepStatus
 export type WizardStepStatus = "previous" | "current" | "next";
+
+/* @tsazor/ui/texts/de */
+
+// FrameworkTexts
+export type FrameworkTexts = {
+    readonly [Name in `tsazor.ui.${LibraryText}`]: string;
+} & {
+    readonly [Name in `tsazor.validation.${ValidationText}`]: string;
+};
+
+// germanFrameworkTexts
+export declare const germanFrameworkTexts: FrameworkTexts;

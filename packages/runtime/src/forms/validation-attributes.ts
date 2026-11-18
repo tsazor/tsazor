@@ -317,7 +317,10 @@ export function resolveValidationMessage(
   if (override?.messageFactory !== undefined) return override.messageFactory({ displayName, ...rule.params });
   if (override?.message !== undefined) return override.message;
   const key = override?.messageKey ?? `tsazor.validation.${rule.kind}`;
-  const localized = localizer?.raw(key);
+  // .NET's StringLength has a second text when it has a minimum (StringLengthAttribute_ValidationErrorIncludingMinimum):
+  // a table gives it as `tsazor.validation.stringLengthIncludingMinimum`, else the one text serves both.
+  const including = override?.messageKey === undefined && rule.kind === "stringLength" && rule.params.min !== undefined ? localizer?.raw("tsazor.validation.stringLengthIncludingMinimum") : undefined;
+  const localized = including ?? localizer?.raw(key);
   if (localized !== undefined) return formatMessage(localized, { displayName, ...rule.params });
   return english;
 }

@@ -26,6 +26,13 @@ Changes since 1.0.0-next.10:
   skins); such rows show the pointer and a hover background. `rowClass` and `rowStyle` give a row its own class and
   style from its item (`RowClass`, `RowStyle`): a failed run's row. The row click is a pointer convenience; the same
   action belongs in a cell as a link or a button for the keyboard and screen readers.
+- **German ships** (`@tsazor/ui`, `@tsazor/runtime`): `germanFrameworkTexts` from the new entry point
+  `@tsazor/ui/texts/de` holds every library text (`tsazor.ui.*`) and every built-in validation message
+  (`tsazor.validation.*`, .NET's German wording) — typed complete against the catalog (`FrameworkTexts`); an app
+  spreads it into its German table. Its own module, so an English-only bundle doesn't grow.
+  [docs/library-texts.md](docs/library-texts.md), generated from the catalog and checked in CI, lists every key with
+  its English and German text and the components that show it. `StringLength` with a `minimumLength` looks up
+  `tsazor.validation.stringLengthIncludingMinimum` first (.NET's second text), else `stringLength` as before.
 - **Link colors as tokens** (`@tsazor/fluent`): `--fui-foreground-link`, `--fui-foreground-link-hover` and
   `--fui-foreground-link-pressed` (Fluent 2's `colorBrandForegroundLink*`), per theme and part of `FluentToken`.
   `Link` takes them — at rest brand 70 in light where it was brand 80, as Fluent's link is — and plain `<a href>` in

@@ -267,6 +267,10 @@ the same way: one service, every instance follows it.
   library texts are missing from most tables on purpose.
 - **Not covered:** the texts an app passes in (labels, titles), and names and formats that come from
   `Intl` for a locale already (month and day names, numbers, dates).
+- **German ships (2026-11-18):** `germanFrameworkTexts` from `@tsazor/ui/texts/de` — every library text and
+  every validation message, typed complete against the catalog — spreads into an app's German table. A module of its
+  own, so an English-only app doesn't bundle it. [library-texts.md](library-texts.md), generated from the catalog,
+  lists every key with its English and German text and the components that show it.
 
 ---
 
