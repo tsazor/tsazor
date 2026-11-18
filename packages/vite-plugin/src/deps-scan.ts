@@ -39,10 +39,17 @@ export function tsazorBareImports(root: string): string[] {
   return [...found].sort();
 }
 
-/** The specifiers of a `.tsazor` file's `@import`s and of `import … from`s in its code (type-only ones left out). */
+/**
+ * The specifiers of a `.tsazor` file's `@import`s, of `import … from`s in its code (type-only ones left out) and of
+ * dynamic `import("…")`s — a package loaded on demand (`await import("leaflet")`) is found last, when Vite has
+ * already served the page.
+ */
 export function importSpecifiers(text: string): string[] {
   const specifiers: string[] = [];
   for (const match of text.matchAll(/^\s*@?import\s+(type\s+)?(?:[^"';]*?\s+from\s+)?["']([^"']+)["']/gm)) {
+    if (match[1] === undefined) specifiers.push(match[2]!);
+  }
+  for (const match of text.matchAll(/(typeof\s+)?\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) {
     if (match[1] === undefined) specifiers.push(match[2]!);
   }
   return specifiers;

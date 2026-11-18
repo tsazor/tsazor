@@ -45,11 +45,12 @@ const manifest = JSON.stringify({
 });
 
 describe("the .tsazor files' bare imports", () => {
-  it("reads @import and import lines, leaves out type-only ones", () => {
-    expect(importSpecifiers('@import { format } from "date-fns"\n@import type { X } from "y"\n@code {\n  import z from \'z/sub\';\n}\n@import "./side.css"')).toEqual([
+  it("reads @import, import and dynamic import(), leaves out type-only ones", () => {
+    expect(importSpecifiers('@import { format } from "date-fns"\n@import type { X } from "y"\n@code {\n  import z from \'z/sub\';\n}\n@import "./side.css"\n@code {\n  this.map = await import("leaflet");\n  type T = typeof import("only-a-type");\n}')).toEqual([
       "date-fns",
       "z/sub",
       "./side.css",
+      "leaflet",
     ]);
     expect([packageName("@scope/pkg/sub"), packageName("pkg/sub"), packageName("./x"), packageName("virtual:tsazor-routes")]).toEqual(["@scope/pkg", "pkg", undefined, undefined]);
   });

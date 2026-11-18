@@ -28,7 +28,7 @@ Changes since 1.0.0-next.10:
   client) in one `.slnx`, with an `.esproj` for Visual Studio and `.vscode` for F5 in VS Code.
 - **Packages only pages import are optimized at startup** (`@tsazor/vite-plugin`): Vite's dependency scan reads no
   `.tsazor` file, so such a package was optimized on the first page load, which could fail with 504 "Outdated Optimize
-  Dep" and leave the page empty. The plugin reads the imports of the project's `.tsazor` and `.ts` files and hands
+  Dep" and leave the page empty. The plugin reads the imports of the project's `.tsazor` and `.ts` files (dynamic `import("…")`s too) and hands
   the installed dependencies (not workspace links, not dev dependencies) to `optimizeDeps.include`.
 - **No pattern rule on a number field** (`@tsazor/dotnet`): .NET 10 writes a number as `"type": ["integer",
   "string"]` with the pattern of its string form; the generator made that a `@RegularExpression` on the number. A
