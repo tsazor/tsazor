@@ -27,7 +27,13 @@
   <ItemGroup>
     <PackageDownload Include="Sleipnir.Server.Codegen" Version="[$(SleipnirVersion)]" />
   </ItemGroup>
-  <Import Project="$(NuGetPackageRoot)sleipnir.server.codegen/$(SleipnirVersion)/build/Sleipnir.Server.Codegen.targets"
-          Condition="'$(NuGetPackageRoot)' != '' AND Exists('$(NuGetPackageRoot)sleipnir.server.codegen/$(SleipnirVersion)/build/Sleipnir.Server.Codegen.targets')" />
+  <PropertyGroup>
+    <_SleipnirCodegenTargets Condition="'$(NuGetPackageRoot)' != ''">$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))sleipnir.server.codegen/$(SleipnirVersion)/build/Sleipnir.Server.Codegen.targets</_SleipnirCodegenTargets>
+  </PropertyGroup>
+  <Import Project="$(_SleipnirCodegenTargets)" Condition="'$(_SleipnirCodegenTargets)' != '' AND Exists('$(_SleipnirCodegenTargets)')" />
+  <Target Name="SleipnirCodegenTargetsMissing" BeforeTargets="Build"
+          Condition="'$(_SleipnirCodegenTargets)' == '' OR !Exists('$(_SleipnirCodegenTargets)')">
+    <Error Text="Sleipnir.Server.Codegen's build targets were not found ('$(_SleipnirCodegenTargets)') — the contract drift gate cannot run. Restore first (dotnet restore)." />
+  </Target>
 
 </Project>
