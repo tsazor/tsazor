@@ -32,6 +32,10 @@ export type FluentToken =
   | "--fui-brand-background"
   | "--fui-brand-background-hover"
   | "--fui-brand-background-pressed"
+  // A link's text, at rest, hovered and pressed (Link, and plain links in a `.fui-links` container).
+  | "--fui-foreground-link"
+  | "--fui-foreground-link-hover"
+  | "--fui-foreground-link-pressed"
   // Shape, space, type and motion.
   | "--fui-radius-none"
   | "--fui-radius-sm"

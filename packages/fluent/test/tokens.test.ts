@@ -56,3 +56,21 @@ describe("the public tokens (D7: FluentToken, tokenOverrides)", () => {
     expect(internal).toEqual([]);
   });
 });
+
+describe("the link tokens (Fluent 2's colorBrandForegroundLink*)", () => {
+  const aliases = declarations(":root,\n.fui-provider,\n[data-fluent-theme] {");
+  const controls = readFileSync(path.resolve(import.meta.dirname, "..", "src", "styles", "controls.css"), "utf8");
+  const link = readFileSync(path.resolve(import.meta.dirname, "..", "src", "Link.tsazor.css"), "utf8");
+
+  it("take Fluent 2's brand steps in light and dark", () => {
+    const steps = (name: string) => [...aliases.get(name)!.matchAll(/--fui-brand-(\d+)/g)].map(([, step]) => Number(step));
+    expect(steps("--fui-foreground-link")).toEqual([70, 100]);
+    expect(steps("--fui-foreground-link-hover")).toEqual([60, 110]);
+    expect(steps("--fui-foreground-link-pressed")).toEqual([40, 90]);
+  });
+
+  it("color Link, and plain links only inside .fui-links", () => {
+    expect(link).toContain("color: var(--fui-foreground-link);");
+    expect(controls).toMatch(/\.fui-links a\[href\]:not\(\[class\*="fui-"\]\) \{\s*color: var\(--fui-foreground-link\);/);
+  });
+});

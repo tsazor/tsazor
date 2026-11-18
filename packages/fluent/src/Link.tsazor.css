@@ -7,14 +7,19 @@
   padding: 0;
   border: none;
   background: none;
-  color: var(--fui-brand-foreground, var(--fui-accent));
+  color: var(--fui-foreground-link);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
 }
 
 .fui-link:hover {
+  color: var(--fui-foreground-link-hover);
   text-decoration: underline;
+}
+
+.fui-link:active {
+  color: var(--fui-foreground-link-pressed);
 }
 
 .fui-link--subtle {

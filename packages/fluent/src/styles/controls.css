@@ -206,3 +206,26 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Plain links in app content — a "← All runs", a link in a paragraph — in the link colors of either theme: put
+   class="fui-links" on their container (FluentProvider's, a page's, an article's). Opt-in, so an app's own link styles
+   and the components' links stay as they are. */
+.fui-links a[href]:not([class*="fui-"]) {
+  color: var(--fui-foreground-link);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.fui-links a[href]:not([class*="fui-"]):hover {
+  color: var(--fui-foreground-link-hover);
+}
+
+.fui-links a[href]:not([class*="fui-"]):active {
+  color: var(--fui-foreground-link-pressed);
+}
+
+.fui-links a[href]:not([class*="fui-"]):focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+  border-radius: var(--fui-radius-sm);
+}

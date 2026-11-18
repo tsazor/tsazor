@@ -73,6 +73,11 @@ fills), radii, spacing, type, motion and shadows. The sheet's other tokens —
 the theme toggles, the neutral ramp, the controls' own — are internal and may
 change in any release.
 
+Links take `--fui-foreground-link`, `-hover` and `-pressed` (Fluent 2's `colorBrandForegroundLink*`: brand 70, 60 and
+40 in light, 100, 110 and 90 in dark) — `Link` does, and so do plain `<a href>` in a container with
+`class="fui-links"` (on `FluentProvider`, a page or an article): "← All runs" in app content then reads in both
+themes without app CSS. The class is opt-in, so an app's own link styles and the components' links stay as they are.
+
 ## Components (launch set)
 
 Provider + 25: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,

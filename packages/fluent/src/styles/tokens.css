@@ -361,6 +361,10 @@
   --fui-brand-background: var(--fui-if-light, var(--fui-brand-80)) var(--fui-if-dark, var(--fui-brand-70));
   --fui-brand-background-hover: var(--fui-if-light, var(--fui-brand-70)) var(--fui-if-dark, var(--fui-brand-80));
   --fui-brand-background-pressed: var(--fui-brand-40);
+  /* A link's text (Fluent's colorBrandForegroundLink*): Link, and plain links in a .fui-links container. */
+  --fui-foreground-link: var(--fui-if-light, var(--fui-brand-70)) var(--fui-if-dark, var(--fui-brand-100));
+  --fui-foreground-link-hover: var(--fui-if-light, var(--fui-brand-60)) var(--fui-if-dark, var(--fui-brand-110));
+  --fui-foreground-link-pressed: var(--fui-if-light, var(--fui-brand-40)) var(--fui-if-dark, var(--fui-brand-90));
   --fui-gap-sm: var(--fui-spacing-m);
   --fui-gap-md: var(--fui-spacing-l);
   --fui-height: var(--fui-height-m);
