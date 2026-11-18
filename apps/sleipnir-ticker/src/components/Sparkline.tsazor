@@ -20,8 +20,8 @@
     }
 
     /** Maps every point into a 0-100 × 0-100 SVG coordinate string. Points
-     *  without a price (the generated contract allows `price?: number`) are
-     *  skipped. */
+     *  without a price are skipped (defensive — the contract has made
+     *  `price` required since sleipnir-codegen 1.5). */
     private normalize(): string | null {
         const priced = this.points.filter((point): point is PricePoint & { price: number } => point.price !== undefined);
         const first = priced[0];

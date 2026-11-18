@@ -17,13 +17,14 @@ if (builder.Environment.IsDevelopment())
 var mode = builder.Configuration["TICKER_MODE"] ?? Environment.GetEnvironmentVariable("TICKER_MODE") ?? "auto";
 
 builder.Services.AddSingleton<TickerFeed>();
+builder.Services.AddSingleton<JobRunner>();
 builder.Services.AddSingleton(sp => new TickerService(
     sp.GetRequiredService<TickerFeed>(),
     mode,
     sp.GetRequiredService<ILogger<TickerService>>()));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TickerService>());
 
-// --- Sleipnir: Engine + Transporte (REST + WebSocket + SSE) ---
+// --- Sleipnir: engine + transports (REST + WebSocket + SSE) ---
 builder.Services.AddSleipnir(o =>
 {
     o.EnableDetailedErrors = builder.Environment.IsDevelopment();

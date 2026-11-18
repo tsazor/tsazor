@@ -530,8 +530,8 @@ importers:
         specifier: ^5.3.8
         version: 5.3.8(@popperjs/core@2.11.8)
       sleipnir-client:
-        specifier: ^1.4.3
-        version: 1.4.3(@microsoft/signalr@10.0.11)
+        specifier: ^1.8.0
+        version: 1.8.0(@microsoft/signalr@10.0.11)
     devDependencies:
       '@tsazor/cli':
         specifier: workspace:*
@@ -540,8 +540,8 @@ importers:
         specifier: ^1.63.0
         version: 1.63.0
       sleipnir-codegen:
-        specifier: ^1.4.3
-        version: 1.4.3(@microsoft/signalr@10.0.11)
+        specifier: ^1.8.0
+        version: 1.8.0(@microsoft/signalr@10.0.11)
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
@@ -2921,16 +2921,16 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  sleipnir-client@1.4.3:
-    resolution: {integrity: sha512-Lmf0AwNA+ZXN6Sia2AuWrnnNW2ZnNMd80WWfRoOVHMB2SFB1PsDdx9TKXT52z65M1ohVZQ+KxZDQ4v/xmpjOOg==}
+  sleipnir-client@1.8.0:
+    resolution: {integrity: sha512-ikJYvcQTnxOC5+W+xlZoAARU7UqKWg6p0thGf4HTRWOggPRHrKwgufRHVr5RoxVpQm7BMToMXDgb4D22+MJ1VQ==}
     peerDependencies:
       '@microsoft/signalr': '>=6.0.0'
     peerDependenciesMeta:
       '@microsoft/signalr':
         optional: true
 
-  sleipnir-codegen@1.4.3:
-    resolution: {integrity: sha512-WEHLBdNKJqRMnciqcm+Rw5t79D1Ap8c+wvI8c/BBBGpw/7Jgqt1ybGZZKsiIwL4V99aO/y3xzpyS+lJK7+4eMA==}
+  sleipnir-codegen@1.8.0:
+    resolution: {integrity: sha512-mHieakR+yaXdD32ZpLWhEZjmcgrxo9vyX0M6ZywJAFt1XeAv7lOjARmpHufZpi6DG+dbFCDdJ1YzG2JdRReVTQ==}
     hasBin: true
 
   source-map-js@1.2.1:
@@ -5075,7 +5075,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  sleipnir-client@1.4.3(@microsoft/signalr@10.0.11):
+  sleipnir-client@1.8.0(@microsoft/signalr@10.0.11):
     optionalDependencies:
       '@microsoft/signalr': 10.0.11
       ws: 8.22.0
@@ -5083,9 +5083,9 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  sleipnir-codegen@1.4.3(@microsoft/signalr@10.0.11):
+  sleipnir-codegen@1.8.0(@microsoft/signalr@10.0.11):
     dependencies:
-      sleipnir-client: 1.4.3(@microsoft/signalr@10.0.11)
+      sleipnir-client: 1.8.0(@microsoft/signalr@10.0.11)
     transitivePeerDependencies:
       - '@microsoft/signalr'
       - bufferutil

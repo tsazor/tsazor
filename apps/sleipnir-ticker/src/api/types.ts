@@ -1,34 +1,66 @@
 // Auto-generated Sleipnir data types. Properties are camelCase (wire) and
-// optional (discovery carries no nullability; callers narrow).
+// presence-aware: non-nullable properties are required (always present on
+// the wire); nullable properties are presence-optional (`?:`) because event
+// frames omit null values (WhenWritingNull) — the value can still be null,
+// so the `| null` remains.
 
-export interface TickerSnapshot {
-  symbol?: string;
-  lastPrice?: number;
-  priceChange?: number;
-  priceChangePercent?: number;
-  high?: number;
-  low?: number;
-  volume?: number;
-  quoteVolume?: number;
-  eventTimeMs?: number;
-  serverTimeUtc?: string;
-  mode?: string;
+export interface AnalysisJob {
+  id: number;
+  label: string;
+  points: number;
+  startedUtc: string;
+  state: string;
 }
 
-export interface TickerHistory {
-  symbol?: string;
-  points?: PricePoint[];
+export interface AnalysisRequest {
+  label: string;
+  points: number;
+}
+
+export interface AnalysisResult {
+  average: number;
+  changePercent: number;
+  max: number;
+  min: number;
+}
+
+export interface JobProgress {
+  jobId: number;
+  message: string;
+  percent: number;
+  result?: AnalysisResult | null;
+  seq: number;
+  state: string;
 }
 
 export interface PricePoint {
-  t?: number;
-  price?: number;
+  price: number;
+  t: number;
 }
 
 export interface TickerFeedStatus {
-  mode?: string;
-  state?: string;
   connectedSinceUtc?: string | null;
-  reconnects?: number;
   detail?: string | null;
+  mode: string;
+  reconnects: number;
+  state: string;
+}
+
+export interface TickerHistory {
+  points: PricePoint[];
+  symbol: string;
+}
+
+export interface TickerSnapshot {
+  eventTimeMs: number;
+  high: number;
+  lastPrice: number;
+  low: number;
+  mode: string;
+  priceChange: number;
+  priceChangePercent: number;
+  quoteVolume: number;
+  serverTimeUtc: string;
+  symbol: string;
+  volume: number;
 }
