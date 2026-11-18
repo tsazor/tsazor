@@ -85,14 +85,14 @@ An analysis job runs over the recorded price history in ten steps.
 
   Sleipnir has no field-error shape of its own yet; this convention (keys = the wire names of
   the parameter's properties) is the app's. `src/Pages/Jobs.tsazor` reads it (`fieldErrorsOf` in
-  `src/jobs.mjs`) into a `ValidationMessageStore` of the form's `EditContext`, so each message
-  shows in the field's `<ValidationMessage>`; a new submit clears the store, an edited field
-  drops its own messages.
+  `src/jobs.mjs`) and hands it to `ServerValidationErrors` (`@tsazor/runtime`), so each message shows in
+  the field's `<ValidationMessage>`; a new submit clears them, an edited field drops its own.
 - **`Jobs.Progress(jobId)`** is an event per entity. Each job owns a `ReplaySubject`: every
   subscriber gets the job's history first, then the live steps, then the completion — a page
   opened late, mid-run or after the end shows the whole job. Events carry `seq` (1, 2, 3, …);
-  `src/JobWatch.ts` drops a `seq` it has already applied. The page (`/jobs/{jobId}`) owns the
-  watch: `observe()` re-renders per event, its `disposeSignal` ends the subscription.
+  `src/job-progress.ts` wraps the call as a source, and `sequenced` drops a `seq` already seen.
+  The page (`/jobs/{jobId}`) observes it with `{ next, complete, error }`: a render per event,
+  `complete` marks the job done; a new job id or disposing the page ends the subscription.
 
 ## Structure
 
@@ -101,7 +101,7 @@ An analysis job runs over the recorded price history in ten steps.
 | `api/` | ASP.NET Core (net10.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated via `IObservable<TickerSnapshot>`), `JobsController` (Start/List + [SleipnirEvent] Progress per job), `TickerFeed` + `JobRunner` singletons, `BinanceTickerSource`/`SyntheticTickerSource` behind `ITickerSource`, the committed `contract.sleipnir.json` |
 | `src/api/` | Generated client (do not edit; `pnpm codegen`) |
 | `src/TickerStore.ts` | App-wide store: 1 SSE subscription for the app's lifetime |
-| `src/JobWatch.ts` | One job's progress stream (per page, sequenced, completes) |
+| `src/job-progress.ts` | One job's progress stream as an `observe` source (sequenced, completes) |
 | `src/Pages/` | `/` live dashboard (price, 24h stats, sparkline, event log) · `/history` ring-buffer table · `/jobs` form + job list · `/jobs/{jobId}` progress |
 | `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — scoped CSS isolation) · `EventLog.tsazor` |
 | `scripts/` | `verify.mjs` (E2E, self-starting) · `codegen.mjs` (from the contract file; `--check`, `--contract`, `--live`) |

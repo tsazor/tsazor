@@ -2,6 +2,5 @@
 declare function fieldErrorsOf(
     error: { code: number; details?: string | null } | null | undefined,
 ): Record<string, string[]> | null;
-declare function appendSequenced<T extends { seq: number }>(events: readonly T[], event: T): T[];
 declare function jobVariant(state: string | null | undefined): "success" | "danger" | "primary";
-export { fieldErrorsOf, appendSequenced, jobVariant };
+export { fieldErrorsOf, jobVariant };

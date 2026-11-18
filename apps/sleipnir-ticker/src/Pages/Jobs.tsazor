@@ -1,5 +1,5 @@
 @page "/jobs"
-@import { InputNumber, InputText, ValidationMessage, ValidationMessageStore } from "@tsazor/runtime"
+@import { InputNumber, InputText, ServerValidationErrors, ValidationMessage } from "@tsazor/runtime"
 @import type { AnalysisJob, AnalysisRequest } from "../api"
 @import { fieldErrorsOf, jobVariant } from "../jobs.mjs"
 @inject SleipnirClient Client
@@ -54,17 +54,13 @@
 @code {
     private model: AnalysisRequest = { label: "", points: 60 };
     private editContext = new EditContext(this.model);
-    /** The server's field errors, a store of their own next to any client-side validation. */
-    private serverErrors: ValidationMessageStore = this.editContext.createValidationMessageStore();
+    /** The server's field errors at their fields: a new submit starts without them, an edited field drops its own. */
+    private serverErrors = new ServerValidationErrors(this.editContext);
     private jobs: AnalysisJob[] = [];
     private submitting = false;
     private failure: string | null = null;
 
     protected override async onInitialized(): Promise<void> {
-        // TODO(runtime-helpers): the server-errors helper owns this clearing — a new submit
-        // starts without the last answer's messages, an edited field drops its own.
-        this.editContext.onValidationRequested.subscribe(() => this.serverErrors.clear());
-        this.editContext.onFieldChanged.subscribe((_, field) => this.serverErrors.clear(field));
         await this.loadJobs();
     }
 
@@ -77,11 +73,9 @@
                 this.Navigation.navigateTo(`/jobs/${response.data.id}`);
                 return;
             }
-            // TODO(runtime-helpers): the helper that applies server validation errors to an
-            // EditContext replaces this block (fieldErrorsOf + one addAll per field).
             const errors = fieldErrorsOf(response.error);
             if (errors !== null) {
-                for (const [field, messages] of Object.entries(errors)) this.serverErrors.addAll(field, messages);
+                this.serverErrors.apply(errors);
             } else {
                 this.failure = response.error?.message ?? `Call failed (code ${response.code}).`;
             }

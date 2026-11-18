@@ -4,7 +4,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { appendSequenced, fieldErrorsOf, jobVariant } from "../src/jobs.mjs";
+import { fieldErrorsOf, jobVariant } from "../src/jobs.mjs";
 
 test("fieldErrorsOf reads the field-error map from a 400's details", () => {
     const error = {
@@ -33,18 +33,6 @@ test("fieldErrorsOf skips entries that are not message lists", () => {
     assert.deepEqual(fieldErrorsOf({ code: 400, details: JSON.stringify({ label: "x", points: ["too few"] }) }), {
         points: ["too few"],
     });
-});
-
-test("appendSequenced keeps order and drops what was applied already", () => {
-    let events = [];
-    for (const seq of [1, 2, 3]) events = appendSequenced(events, { seq });
-    const before = events;
-    // A replay of the history (second subscription, reconnect) changes nothing.
-    for (const seq of [1, 2, 3]) events = appendSequenced(events, { seq });
-    assert.equal(events, before);
-    events = appendSequenced(events, { seq: 4 });
-    assert.deepEqual(events.map((e) => e.seq), [1, 2, 3, 4]);
-    assert.equal(before.length, 3);
 });
 
 test("jobVariant maps a job state to a Bootstrap color", () => {

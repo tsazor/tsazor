@@ -24,16 +24,6 @@ export function fieldErrorsOf(error) {
     return Object.keys(errors).length > 0 ? errors : null;
 }
 
-/**
- * Appends a sequenced event (`seq` 1, 2, 3, …) unless it was applied already — a replay after
- * a reconnect, or a second subscription, delivers the history again. Returns the same array
- * when the event is a duplicate, else a new one.
- */
-export function appendSequenced(events, event) {
-    const last = events.length > 0 ? events[events.length - 1].seq : 0;
-    return event.seq > last ? [...events, event] : events;
-}
-
 /** Bootstrap color of a job state. */
 export function jobVariant(state) {
     if (state === "done") return "success";

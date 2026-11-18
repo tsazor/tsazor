@@ -1,5 +1,6 @@
 @page "/jobs/{jobId:int}"
-@import JobWatch from "../JobWatch"
+@import { jobProgress } from "../job-progress"
+@import type { JobProgress } from "../api"
 @import { formatPct, formatUsd } from "../formatters.mjs"
 @import { jobVariant } from "../jobs.mjs"
 @inject SleipnirClient Client
@@ -8,31 +9,31 @@
     <p><NavLink Href="/jobs">← All jobs</NavLink></p>
     <h1>Job #@this.jobId</h1>
 
-    @if (this.watch.error !== null) {
-        <Alert Intent="danger">@this.watch.error</Alert>
+    @if (this.error !== null) {
+        <Alert Intent="danger">@this.error</Alert>
     }
 
     <Card>
         <CardBody>
-            <Progress Value="@(this.watch.latest?.percent ?? 0)" Striped="@(!this.watch.completed)" Animated="@(!this.watch.completed)"
-                      Intent="@jobVariant(this.watch.latest?.state)" Label="@(`${this.watch.latest?.percent ?? 0} %`)" AriaLabel="Job progress" />
+            <Progress Value="@(this.latest?.percent ?? 0)" Striped="@(!this.completed)" Animated="@(!this.completed)"
+                      Intent="@jobVariant(this.latest?.state)" Label="@(`${this.latest?.percent ?? 0} %`)" AriaLabel="Job progress" />
             <p class="job-state" role="status">@this.stateText</p>
-            @if (this.watch.latest?.result) {
+            @if (this.latest?.result) {
                 <dl class="job-result">
-                    <dt>Min</dt><dd>@formatUsd(this.watch.latest.result.min)</dd>
-                    <dt>Max</dt><dd>@formatUsd(this.watch.latest.result.max)</dd>
-                    <dt>Average</dt><dd>@formatUsd(this.watch.latest.result.average)</dd>
-                    <dt>Change</dt><dd>@formatPct(this.watch.latest.result.changePercent)</dd>
+                    <dt>Min</dt><dd>@formatUsd(this.latest.result.min)</dd>
+                    <dt>Max</dt><dd>@formatUsd(this.latest.result.max)</dd>
+                    <dt>Average</dt><dd>@formatUsd(this.latest.result.average)</dd>
+                    <dt>Change</dt><dd>@formatPct(this.latest.result.changePercent)</dd>
                 </dl>
             }
         </CardBody>
     </Card>
 
     <Card>
-        <CardHeader>Events (@this.watch.events.length)</CardHeader>
+        <CardHeader>Events (@this.events.length)</CardHeader>
         <CardBody>
             <ListGroup Flush="@true">
-                @for (const event of this.watch.events) {
+                @for (const event of this.events) {
                     <ListGroupItem>
                         <span class="seq">#@event.seq</span>
                         <span class="msg">@event.message</span>
@@ -46,28 +47,39 @@
 @code {
     @Parameter() jobId!: number;
 
-    private watch!: JobWatch;
-    private stopWatch: (() => void) | null = null;
+    /** The job's events in `seq` order, each once. */
+    private events: JobProgress[] = [];
+    /** True once the server completed the stream (the job is over). */
+    private completed = false;
+    private error: string | null = null;
+    private watchedId: number | null = null;
+    private stopWatching: (() => void) | null = null;
 
     protected override onParametersSet(): void {
-        if (this.watch?.jobId === this.jobId) return;
-        // One subscription per job: a new jobId (same page instance) ends the previous one;
-        // disposing the page ends the current one (both through the signal).
-        this.stopWatch?.();
-        const controller = new AbortController();
-        this.disposeSignal.addEventListener("abort", () => controller.abort(), { once: true });
-        this.watch = new JobWatch(this.Client, this.jobId, controller.signal);
-        const stopObserving = this.observe(this.watch);
-        this.stopWatch = () => {
-            stopObserving();
-            controller.abort();
-        };
+        if (this.watchedId === this.jobId) return;
+        // One subscription per job: a new jobId (same page instance) stops the previous one; disposing the page
+        // stops the current one.
+        this.stopWatching?.();
+        this.watchedId = this.jobId;
+        this.events = [];
+        this.completed = false;
+        this.error = null;
+        this.stopWatching = this.observe(jobProgress(this.Client, this.jobId), {
+            next: (event) => { this.events = [...this.events, event]; },
+            complete: () => { this.completed = true; },
+            error: (err) => { this.error = err instanceof Error ? err.message : String(err); },
+        });
+    }
+
+    /** The newest event (null before the first). */
+    private get latest(): JobProgress | null {
+        return this.events.at(-1) ?? null;
     }
 
     private get stateText(): string {
-        if (this.watch.error !== null) return "failed";
-        if (this.watch.completed) return "completed";
-        return this.watch.latest === null ? "waiting for the first event…" : "running";
+        if (this.error !== null) return "failed";
+        if (this.completed) return "completed";
+        return this.latest === null ? "waiting for the first event…" : "running";
     }
 }
 
