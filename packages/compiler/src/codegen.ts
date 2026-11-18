@@ -1128,6 +1128,17 @@ class Codegen {
         this.diagnostics.error("TZS016", directiveRange(d), parsed.message);
         continue;
       }
+      for (const binding of parsed.info.bindings) {
+        if (binding.local !== this.options.className) continue;
+        // TZS041: the component's class takes its name from the file; an import of the same name collides with it
+        // (TypeScript says only TS2440, "conflicts with local declaration", about a declaration the author never wrote).
+        const alias = binding.imported === "default" || binding.imported === "*" ? `${binding.local}Dto` : `{ ${binding.imported} as ${binding.local}Dto }`;
+        this.diagnostics.error(
+          "TZS041",
+          directiveRange(d),
+          `The component's class is named '${binding.local}' after its file, ${binding.local}.tsazor, and this import binds the same name. Import it under another name (${alias}) or rename the file (${binding.local}Page.tsazor).`,
+        );
+      }
       this.metadata.imports.push(parsed.info);
       this.ownImportDirectives.push({ value: d.value, pos: d.pos, valueStart: d.valueStart ?? d.pos });
       if (parsed.info.bindings.length === 0) sideEffects.add(parsed.info.specifier);

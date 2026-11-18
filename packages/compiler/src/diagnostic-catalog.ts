@@ -336,4 +336,12 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
       "A text input, a textarea or a select bound with `@bind` converts the text by the bound value's type at run time (K.7/K.8): a number parses back as a number, a `Decimal` as a `Decimal`, a `Date` as a date. A field declared `number | null` (`Decimal | null`, `Date | null`) that is null — from the start, or set so by code (a reset, an API's null) — has no type to go by, so it gets the text: a string in a number field (clearing the text keeps the value, as a failed TryParse). Blazor converts by the property's declared type; TypeScript erases it. Reported by `tsazor check` and the editor, which know the declared type: `<input @bind=\"price\" />` with `private price: number | null = null;`.",
     fix: "Bind an input that converts by itself: `<input type=\"number\" @bind=\"price\">` (`type=\"date\"` for a date), or a component — `NumberInput`, `DecimalInput`, `DateInput`, `DatePicker`. A number that is never null (`price: number = 0`) binds as it is; for a `<select>` of numbers, the skins' `Select` with `items` hands the option back typed.",
   },
+  {
+    code: "TZS041",
+    severity: "error",
+    description:
+      "A component's class takes its name from its file: `Overview.tsazor` declares the class `Overview`. An `@import` that binds the same name — a DTO from the API layer, a type of the same name — collides with it, and TypeScript reports only TS2440 (\"Import declaration conflicts with local declaration\") about a declaration the file doesn't show.",
+    example: '@* Example.tsazor *@\n@page "/"\n@import type { Example } from "../lib/types"\n\n@code {\n    private data: Example | null = null;\n}\n',
+    fix: "Import it under another name — `@import type { Overview as OverviewDto } from \"../lib/types\"` — or rename the file (`OverviewPage.tsazor`); a page's route comes from `@page`, not from its file name.",
+  },
 ];

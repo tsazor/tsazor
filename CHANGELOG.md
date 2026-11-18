@@ -20,6 +20,10 @@ Changes since 1.0.0-next.10:
   Run 2: 70, Warning"). One series colored by status, instead of a series per status padded with zeros.
 - **A chart's label axis thins its labels** (`@tsazor/charts`): with more labels than fit, it draws every n-th, so
   they no longer overlap; each bar and point still names its label in its hover title and in the table.
+- **TZS041: an import named like the component** (`@tsazor/compiler`): `Overview.tsazor` with
+  `@import type { Overview } from "../lib/types"` reports that the component's class is named after its file and
+  says the way out — an alias (`{ Overview as OverviewDto }`) or another file name. TypeScript had said only TS2440,
+  "conflicts with local declaration", about a declaration the file doesn't show.
 - **A bar or a slice of 0 draws nothing** (`@tsazor/charts`): no zero-height bar with a hover title ("Failure: 0"
   near a stacked bar's base), no empty slice; the table keeps the 0.
 

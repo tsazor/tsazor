@@ -101,6 +101,19 @@ describe("diagnostic ranges (A7)", () => {
     }
   });
 
+  it("TZS041: an @import that binds the component's own name — the file name is the cause, an alias the way out", () => {
+    const page = '@page "/"\n@import type { Overview } from "../lib/types"\n<p>x</p>\n';
+    const [error] = compileDiagnostics(page, { className: "Overview" }).filter((d) => d.code === "TZS041");
+    expect([error!.severity, textOf(page, error!)]).toEqual(["error", '@import type { Overview } from "../lib/types"']);
+    expect(error!.message).toContain("Overview.tsazor");
+    expect(error!.message).toContain("{ Overview as OverviewDto }");
+    expect(compileDiagnostics('@import Overview from "./x"\n', { className: "Overview" }).find((d) => d.code === "TZS041")!.message).toContain("(OverviewDto)");
+    // An alias, another name, or the same name inherited from _Imports.tsazor (dropped there) is fine.
+    for (const source of ['@import type { Overview as OverviewDto } from "../lib/types"\n', '@import type { Summary } from "../lib/types"\n']) {
+      expect(compileDiagnostics(source, { className: "Overview" }).filter((d) => d.code === "TZS041"), source).toEqual([]);
+    }
+  });
+
   it("TZS039: a @CascadingParameter() with neither a name nor a type, with the fix to the annotation's class", () => {
     // The Radzen port had 15: its spreadsheet tools got an UndoRedoStack as their worksheet, the nearest unnamed cascade.
     const tool = "<p>x</p>\n@code {\n    @CascadingParameter() worksheet?: Worksheet;\n}\n";
