@@ -36,8 +36,11 @@ export interface ObserveListener<T> {
  * (then a render: "live" turns "done"), `error` instead of the component's error path (nearest ErrorBoundary).
  */
 export interface ObserveHandlers<T> {
+  /** Each value; the component renders after it. */
   next?(value: T): void;
+  /** The source completed; the component renders after it, and again when an async one is done. */
   complete?(): void | PromiseLike<void>;
+  /** The source's error, instead of the component's error path. */
   error?(error: unknown): void;
 }
 
@@ -82,6 +85,7 @@ export class Sequenced<T> implements Subscribable<T> {
   #last: number | undefined;
   #completed = false;
 
+  /** A Sequenced over `source`, numbered by `sequenceOf`, after the number `after` if given (`sequenced` builds one). */
   constructor(
     private readonly source: Subscribable<T>,
     private readonly sequenceOf: (value: T) => number,

@@ -46,6 +46,7 @@ export class ServerValidationErrors {
   readonly #fields = new Set<string>();
   readonly #unsubscribe: Array<() => void> = [];
 
+  /** Puts a store of its own into `editContext`; `options` maps keys and says when its messages go. */
   constructor(
     /** The form's EditContext. */
     readonly editContext: EditContext,

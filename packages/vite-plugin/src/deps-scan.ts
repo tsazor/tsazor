@@ -33,7 +33,7 @@ export function tsazorBareImports(root: string): string[] {
     }
     for (const specifier of importSpecifiers(text)) {
       const name = packageName(specifier);
-      if (name !== undefined && dependencies.has(name) && !isLinked(root, name)) found.add(specifier);
+      if (name !== undefined && isCode(specifier) && dependencies.has(name) && !isLinked(root, name)) found.add(specifier);
     }
   }
   return [...found].sort();
@@ -53,6 +53,13 @@ export function packageName(specifier: string): string | undefined {
   if (/^(\.|\/|[a-zA-Z]:|virtual:|node:|\0)/.test(specifier)) return undefined;
   const parts = specifier.split("/");
   return specifier.startsWith("@") ? (parts.length >= 2 ? `${parts[0]}/${parts[1]}` : undefined) : parts[0];
+}
+
+/** Whether a specifier names code Vite can prebundle: not a stylesheet, an image or a JSON file (`pkg/x.css`). */
+function isCode(specifier: string): boolean {
+  const last = specifier.split("/").pop() ?? "";
+  const extension = /\.([a-z0-9]+)$/i.exec(last)?.[1]?.toLowerCase();
+  return extension === undefined || ["js", "mjs", "cjs"].includes(extension);
 }
 
 /** A package linked from outside any node_modules (a workspace package): its real path isn't in one. Not installed: linked. */

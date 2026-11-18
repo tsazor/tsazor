@@ -6,7 +6,9 @@ export type ConnectionPhase = "connecting" | "open" | "reconnecting" | "closed";
 
 /** A change of a ConnectionState: the phase it left and the phase it reached. */
 export interface ConnectionChange {
+  /** The phase it left. */
   readonly previous: ConnectionPhase;
+  /** The phase it reached. */
   readonly phase: ConnectionPhase;
   /** True when it reached `open` again after a `reconnecting` or `closed`: the moment to reload what was missed. */
   readonly reconnected: boolean;

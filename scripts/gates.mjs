@@ -82,7 +82,7 @@ function run(command, commandArgs, env = {}) {
 function ciCommands(job) {
   const yml = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   const body = yml.split(/^  (?=[\w-]+:\s*$)/m).find((part) => part.startsWith(`${job}:`)) ?? "";
-  return [...body.matchAll(/pnpm --filter (\S+) (verify\S*|build:pages)/g)].map((m) => `${m[1]} ${m[2]}`).sort();
+  return [...body.matchAll(/pnpm --filter (\S+) (verify\S*|build:pages|codegen:check)/g)].map((m) => `${m[1]} ${m[2]}`).sort();
 }
 
 /** Fails when the list above and ci.yml's e2e/engines jobs name different gates. */

@@ -242,9 +242,14 @@ try {
   const devUrl = settings.profiles.http.applicationUrl;
   const vitePort = /localhost:(\d+)/.exec(/DevServer\.Url = new Uri\("([^"]+)"\)/.exec(readFileSync(path.join(app.server, "Program.cs"), "utf8"))[1])[1];
   const development = start("dotnet", ["run", "--project", app.server, "--launch-profile", "http", "--no-build"], app.dir);
+  /** What the browser saw in Development: its console errors and failed responses, said when a check fails. */
+  const seen = [];
   try {
     await waitFor(devUrl, development);
     const page = await browser.newPage();
+    page.on("console", (message) => { if (message.type() === "error") seen.push(`console: ${message.text()}`); });
+    page.on("pageerror", (error) => seen.push(`pageerror: ${error.message}`));
+    page.on("response", (response) => { if (response.status() >= 400) seen.push(`${response.status()} ${response.url()}`); });
     await page.goto(devUrl, { waitUntil: "networkidle", timeout: 120_000 });
     try {
       await page.waitForSelector("h1", { timeout: 15_000 });
@@ -267,6 +272,8 @@ try {
     await page.close();
   } catch (error) {
     throw new Error(`${error.message}
+The browser saw:
+${seen.join("\n") || "(nothing)"}
 The server's output:
 ${development.output()}`);
   } finally {

@@ -64,9 +64,11 @@ describe("the .tsazor files' bare imports", () => {
       "src/api/models.ts": 'import { Decimal } from "@tsazor/primitives";\nimport type { Guid } from "@tsazor/primitives/guid";',
       "src/api/models.test.ts": 'import { expect } from "vitest";\nimport { x } from "sleipnir-client/test";',
       "vite.config.ts": 'import { defineConfig } from "date-fns/config";',
+      // Program.ts: a stylesheet is no dependency to prebundle; a .js subpath is.
+      "src/Program.ts": 'import "sleipnir-client/theme.css";\nimport "date-fns/locale/de.js";',
     });
     install(root, ["date-fns", "sleipnir-client", "@tsazor/dotnet", "@tsazor/primitives", "vitest"], ["@tsazor/runtime"]);
-    expect(tsazorBareImports(root)).toEqual(["@tsazor/dotnet", "@tsazor/primitives", "date-fns", "sleipnir-client/sse"]);
+    expect(tsazorBareImports(root)).toEqual(["@tsazor/dotnet", "@tsazor/primitives", "date-fns", "date-fns/locale/de.js", "sleipnir-client/sse"]);
   });
 
   it("the plugin's config hands them to optimizeDeps.include, unless discovery is off", () => {
