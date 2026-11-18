@@ -7,5 +7,6 @@
 @import { EditContext, AuthenticationState, AuthenticationStateProvider, TsazorHttp } from "@tsazor/runtime"
 @import type { RenderFragment, RouteData, ModelValidator } from "@tsazor/runtime"
 @* App types (Blazor: @using SleipnirTicker.*). *@
+@import { SleipnirClient } from "./api"
 @import type { PricePoint } from "./api"
 @import type { TickerLogEntry } from "./TickerStore"

@@ -4,11 +4,30 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <SleipnirVersion>1.8.1</SleipnirVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sleipnir.Server" Version="1.4.3" />
+    <PackageReference Include="Sleipnir.Server" Version="$(SleipnirVersion)" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
+
+  <!--
+    Contract drift gate (Sleipnir.Server.Codegen): every build regenerates the discovery contract
+    from the built assembly and fails when it differs from the committed contract.sleipnir.json.
+    After an intended contract change: SLEIPNIR_REGEN_GOLDEN=1 dotnet build, then `pnpm codegen`.
+
+    Sleipnir.Server.Codegen 1.8.x lists a dependency (Sleipnir.Codegen.Core) that is not published
+    on nuget.org, so a PackageReference fails restore with NU1101. The tool is self-contained in the
+    package (tasks/net8.0), so the package is downloaded without its dependencies and its build
+    targets are imported by hand. Replace both with
+    <PackageReference Include="Sleipnir.Server.Codegen" Version="$(SleipnirVersion)" PrivateAssets="all" />
+    once that dependency is published.
+  -->
+  <ItemGroup>
+    <PackageDownload Include="Sleipnir.Server.Codegen" Version="[$(SleipnirVersion)]" />
+  </ItemGroup>
+  <Import Project="$(NuGetPackageRoot)sleipnir.server.codegen/$(SleipnirVersion)/build/Sleipnir.Server.Codegen.targets"
+          Condition="'$(NuGetPackageRoot)' != '' AND Exists('$(NuGetPackageRoot)sleipnir.server.codegen/$(SleipnirVersion)/build/Sleipnir.Server.Codegen.targets')" />
 
 </Project>

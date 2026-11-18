@@ -97,6 +97,7 @@ jobs:
       - name: Sleipnir ticker (synthetic mode)
         run: |
           dotnet build apps/sleipnir-ticker/api
+          pnpm --filter sleipnir-ticker codegen:check
           pnpm --filter sleipnir-ticker verify
 
   # The browser gates in Firefox and WebKit (Playwright's builds; WebKit is

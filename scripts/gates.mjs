@@ -43,7 +43,7 @@ const GATES = [
     name: "Sleipnir ticker (synthetic mode)",
     engines: false,
     before: ["dotnet", "build", "apps/sleipnir-ticker/api"],
-    run: [["--filter", "sleipnir-ticker", "verify"]],
+    run: [["--filter", "sleipnir-ticker", "codegen:check"], ["--filter", "sleipnir-ticker", "verify"]],
   },
 ];
 

@@ -8,6 +8,7 @@
     "build": "tsazor check && vite build",
     "check": "tsazor check",
     "codegen": "node scripts/codegen.mjs",
+    "codegen:check": "node scripts/codegen.mjs --check",
     "dev": "vite",
     "preview": "vite preview",
     "test": "node --test test/*.test.mjs",
@@ -18,13 +19,13 @@
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8",
-    "sleipnir-client": "^1.4.3"
+    "sleipnir-client": "^1.8.0"
   },
   "devDependencies": {
     "@tsazor/cli": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "playwright-core": "^1.63.0",
-    "sleipnir-codegen": "^1.4.3",
+    "sleipnir-codegen": "^1.8.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.7"
   }
