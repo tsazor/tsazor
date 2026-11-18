@@ -1,7 +1,7 @@
 import type { LibraryText } from "../library-texts.js";
 
 /** The kinds of the built-in validation rules, as their reserved keys name them (`tsazor.validation.<kind>`). */
-type ValidationText =
+export type ValidationText =
   | "required"
   | "minLength"
   | "maxLength"

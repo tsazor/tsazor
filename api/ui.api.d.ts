@@ -1251,3 +1251,6 @@ export type FrameworkTexts = {
 
 // germanFrameworkTexts
 export declare const germanFrameworkTexts: FrameworkTexts;
+
+// ValidationText
+export type ValidationText = "required" | "minLength" | "maxLength" | "stringLength" | "stringLengthIncludingMinimum" | "range" | "precision" | "emailAddress" | "regularExpression" | "compare";
