@@ -60,6 +60,43 @@ export function serverEvents<T>(url: string, onState?: (state: StreamState) => v
   `source.close()` ends the connection. No `dispose()` of your own.
 - **The state callback** isn't a notification of the source, so it calls `stateHasChanged()` itself.
 
+## The connection's state, app-wide
+
+A badge in the header — "Live", "Reconnecting…", "Disconnected" — and a page that reloads what it missed when the
+connection comes back: both read the app's `ConnectionState` (`@tsazor/runtime`). It exists without a registration;
+whatever opens the connection reports into it, and every component that injects it renders on a change:
+
+```ts
+// An EventSource: its open and error events, by trackEventSource.
+trackEventSource(this.Connection, new EventSource("/api/events"));
+
+// A SignalR HubConnection: its own callbacks.
+connection.onreconnecting(() => state.report("reconnecting"));
+connection.onreconnected(() => state.report("open"));
+connection.onclose(() => state.report("closed"));
+await connection.start();
+state.report("open");
+```
+
+```razor
+@* The header *@
+<ConnectionStatus />
+
+@* A page that reloads after a drop *@
+@inject ConnectionState Connection
+@code {
+    protected override onInitialized(): void {
+        this.Connection.subscribe((change) => { if (change.reconnected) void this.reload(); });
+    }
+}
+```
+
+- **The phases:** `connecting` until it first opens, `open`, `reconnecting` while it comes back, `closed` when
+  it gave up. `change.reconnected` is true when it reaches `open` after a drop.
+- **`ConnectionStatus`** (both skins) is a status region: a screen reader hears a change. Its texts are the library
+  texts `connection.*`, German included. `state` shows another connection than the app's.
+- **More than one connection:** create a `ConnectionState` per connection and hand it to its `ConnectionStatus`.
+
 ## Reconnecting without losing events
 
 A connection drops: a proxy's timeout, a deploy, the laptop's lid. `EventSource` reconnects by itself after the

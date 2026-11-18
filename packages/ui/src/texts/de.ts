@@ -109,6 +109,12 @@ export const germanFrameworkTexts: FrameworkTexts = {
   "tsazor.ui.dataGrid.operator.empty": "ist leer",
   "tsazor.ui.dataGrid.operator.notEmpty": "ist nicht leer",
 
+  "tsazor.ui.connection.label": "Verbindung",
+  "tsazor.ui.connection.connecting": "Verbinde…",
+  "tsazor.ui.connection.open": "Live",
+  "tsazor.ui.connection.reconnecting": "Verbinde erneut…",
+  "tsazor.ui.connection.closed": "Getrennt",
+
   "tsazor.ui.sidebarNav.label": "Hauptnavigation",
   "tsazor.ui.scrollToTop.label": "Nach oben",
   "tsazor.ui.breadcrumb.label": "Brotkrumennavigation",

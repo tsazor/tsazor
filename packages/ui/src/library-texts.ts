@@ -96,6 +96,13 @@ export const libraryTextDefaults = catalog({
   "dataGrid.operator.empty": "is empty",
   "dataGrid.operator.notEmpty": "is not empty",
 
+  // ConnectionStatus: a live connection's phase (ConnectionState), and its name for a screen reader.
+  "connection.label": "Connection",
+  "connection.connecting": "Connecting…",
+  "connection.open": "Live",
+  "connection.reconnecting": "Reconnecting…",
+  "connection.closed": "Disconnected",
+
   "sidebarNav.label": "Main navigation",
   "scrollToTop.label": "Back to top",
   "breadcrumb.label": "breadcrumb",

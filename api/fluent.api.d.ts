@@ -364,6 +364,13 @@ export default class ColorPickerInput extends InputBase<string> {
 
 // ColumnAlign: re-exported from @tsazor/ui
 
+// ConnectionStatus
+export default class ConnectionStatus extends ComponentBase {
+    state?: ConnectionState;
+    size: "small" | "medium";
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // DataGrid
 export default class DataGrid<TGridItem> extends ComponentBase {
     items?: TGridItem[];

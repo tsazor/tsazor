@@ -91,6 +91,11 @@ where the language has them). *Shown by* names the components whose source uses 
 | `dataGrid.operator.lessThanOrEqual` | less than or equal | kleiner oder gleich | Fluent: DataGrid; Bootstrap: DataGrid |
 | `dataGrid.operator.empty` | is empty | ist leer | Fluent: DataGrid; Bootstrap: DataGrid |
 | `dataGrid.operator.notEmpty` | is not empty | ist nicht leer | Fluent: DataGrid; Bootstrap: DataGrid |
+| `connection.label` | Connection | Verbindung | Fluent: ConnectionStatus; Bootstrap: ConnectionStatus |
+| `connection.connecting` | Connecting… | Verbinde… | Fluent: ConnectionStatus; Bootstrap: ConnectionStatus |
+| `connection.open` | Live | Live | Fluent: ConnectionStatus; Bootstrap: ConnectionStatus |
+| `connection.reconnecting` | Reconnecting… | Verbinde erneut… | Fluent: ConnectionStatus; Bootstrap: ConnectionStatus |
+| `connection.closed` | Disconnected | Getrennt | Fluent: ConnectionStatus; Bootstrap: ConnectionStatus |
 | `sidebarNav.label` | Main navigation | Hauptnavigation | Fluent: SidebarNav; Bootstrap: SidebarNav |
 | `scrollToTop.label` | Back to top | Nach oben | Fluent: ScrollToTop; Bootstrap: ScrollToTop |
 | `breadcrumb.label` | breadcrumb | Brotkrumennavigation | Fluent: Breadcrumb; Bootstrap: Breadcrumb |

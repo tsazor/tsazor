@@ -233,6 +233,27 @@ export type ComponentType<T extends ComponentBase = ComponentBase> = ComponentDe
 // configureTransitions
 export declare function configureTransitions(settings: TransitionSettings): void;
 
+// ConnectionChange
+export interface ConnectionChange {
+    readonly previous: ConnectionPhase;
+    readonly phase: ConnectionPhase;
+    readonly reconnected: boolean;
+}
+
+// ConnectionPhase
+export type ConnectionPhase = "connecting" | "open" | "reconnecting" | "closed";
+
+// ConnectionState
+export declare class ConnectionState {
+    #private;
+    constructor(initial?: ConnectionPhase);
+    get phase(): ConnectionPhase;
+    get lastChange(): Date | undefined;
+    get isOpen(): boolean;
+    report(phase: ConnectionPhase): void;
+    subscribe(listener: (change: ConnectionChange) => void): () => void;
+}
+
 // createTsazorApp
 export declare function createTsazorApp(options: TsazorAppOptions): TsazorApp;
 
@@ -1328,6 +1349,9 @@ export declare function SupplyParameterFromQuery(options?: {
 
 // Token
 export type Token<T> = abstract new (...args: never[]) => T;
+
+// trackEventSource
+export declare function trackEventSource(state: ConnectionState, source: EventSource): () => void;
 
 // Transition
 export type Transition<E extends Element = Element> = (element: E, options: TransitionOptions) => TransitionConfig | (() => TransitionConfig);

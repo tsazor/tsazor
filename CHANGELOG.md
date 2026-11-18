@@ -26,6 +26,13 @@ Changes since 1.0.0-next.10:
   skins); such rows show the pointer and a hover background. `rowClass` and `rowStyle` give a row its own class and
   style from its item (`RowClass`, `RowStyle`): a failed run's row. The row click is a pointer convenience; the same
   action belongs in a cell as a link or a button for the keyboard and screen readers.
+- **The live connection's state** (`@tsazor/runtime`, `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`):
+  `ConnectionState` — `connecting`, `open`, `reconnecting`, `closed` — is the app's without a registration; whatever
+  opens the connection `report`s into it (`trackEventSource` does it for an EventSource; SignalR and Sleipnir by their
+  callbacks, recipes in the live-data guide). A component that injects it renders on a change; `subscribe` hands each
+  change with `reconnected` for the reload after a drop. `ConnectionStatus` in both skins shows it as a badge with a
+  dot — "Live", "Reconnecting…", "Disconnected" — in a status region; its texts are the library texts
+  `connection.*`.
 - **A server's field errors in a form** (`@tsazor/runtime`): `ServerValidationErrors` puts a
   `Record<string, string[]>` — ASP.NET Core's `ValidationProblemDetails.errors`, `@tsazor/dotnet`'s
   `result.validationErrors`, any backend's — into the EditContext as validation messages. Keys resolve against the

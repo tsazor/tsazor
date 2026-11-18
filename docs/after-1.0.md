@@ -16,7 +16,7 @@ Blazor re-renders it. The renderer is TypeScript and runs wherever JavaScript ru
 
 `@tsazor/sleipnir` binds a [Sleipnir](https://github.com/HolgerTheHuck/Sleipnir) backend as tightly as
 `@tsazor/dotnet` binds REST and OpenAPI: typed DTO classes with validation, errors as values, subscriptions that end
-with their component, the connection state and the sign-in as services. It is optional, a package of its own; nothing
+with their component, the sign-in as a service, and the connection reporting into the runtime's `ConnectionState`. It is optional, a package of its own; nothing
 in the core depends on it. The design: [design-sleipnir-binding.md](design-sleipnir-binding.md). Until then an app
 uses Sleipnir's generated client directly, as `apps/sleipnir-ticker` does.
 

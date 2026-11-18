@@ -93,6 +93,7 @@ export {
   type VirtualizeItemsProviderRequest,
   type VirtualizeItemsProviderResult,
 } from "./data/virtualize.js";
+export { ConnectionState, trackEventSource, type ConnectionChange, type ConnectionPhase } from "./data/connection-state.js";
 export { TsazorHttp, TsazorHttpError, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http.js";
 
 // Forms

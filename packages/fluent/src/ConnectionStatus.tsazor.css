@@ -1,0 +1,31 @@
+/* ConnectionStatus: the badge's dot pulses while the connection is being (re)opened; still when reduced motion is asked. */
+
+.fui-connection-status {
+  display: inline-flex;
+}
+
+.fui-connection-status__dot {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-inline-end: 0.4em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.fui-connection-status--connecting .fui-connection-status__dot,
+.fui-connection-status--reconnecting .fui-connection-status__dot {
+  animation: fui-connection-status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes fui-connection-status-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-connection-status__dot {
+    animation: none !important;
+  }
+}

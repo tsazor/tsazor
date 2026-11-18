@@ -1,0 +1,46 @@
+@** A live connection's phase (ConnectionState in @tsazor/runtime) as a subtle badge with a dot: "Live" (success),
+    "Connecting…" and "Reconnecting…" (warning), "Disconnected" (danger) — the library texts `connection.*`. A status
+    region, so a screen reader hears a change. By default the app's ConnectionState; `state` takes another (a second
+    connection). *@
+@import { ConnectionState, inject, type ConnectionPhase } from "@tsazor/runtime"
+@import { libraryTexts, type Intent } from "@tsazor/ui"
+
+<span role="status" aria-label="@t("connection.label")" class="@this.rootClass" @attributes="@additionalAttributes"><Badge Intent="@this.intent" Appearance="subtle" Size="@size"><span class="fui-connection-status__dot" aria-hidden="true"></span>@this.text</Badge></span>
+
+@code {
+    /** The connection to show; by default the app's ConnectionState. */
+    @Parameter() state?: ConnectionState;
+    /** small | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** `@attributes` on the status element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly t = libraryTexts();
+    private readonly appState = inject(ConnectionState);
+    private observed?: ConnectionState;
+    private stopObserving?: () => void;
+
+    protected override onParametersSet(): void {
+        // A `state` of its own renders on its changes too (the app's re-renders this through the injection).
+        if (this.state === this.observed) return;
+        this.stopObserving?.();
+        this.observed = this.state;
+        this.stopObserving = this.state !== undefined && this.state !== this.appState ? this.observe(this.state) : undefined;
+    }
+
+    private get phase(): ConnectionPhase {
+        return (this.state ?? this.appState).phase;
+    }
+
+    private get rootClass(): string {
+        return `fui-connection-status fui-connection-status--${this.phase}`;
+    }
+
+    private get intent(): Intent {
+        return this.phase === "open" ? "success" : this.phase === "closed" ? "danger" : "warning";
+    }
+
+    private get text(): string {
+        return this.t(`connection.${this.phase}`);
+    }
+}

@@ -70,6 +70,12 @@
 
 // configureTransitions: re-exported from @tsazor/runtime
 
+// ConnectionChange: re-exported from @tsazor/runtime
+
+// ConnectionPhase: re-exported from @tsazor/runtime
+
+// ConnectionState: re-exported from @tsazor/runtime
+
 // createFakeLocalization
 export declare function createFakeLocalization(options?: FakeLocalizationOptions): FakeLocalization;
 
@@ -392,6 +398,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // SupplyParameterFromQuery: re-exported from @tsazor/runtime
 
 // Token: re-exported from @tsazor/runtime
+
+// trackEventSource: re-exported from @tsazor/runtime
 
 // Transition: re-exported from @tsazor/runtime
 

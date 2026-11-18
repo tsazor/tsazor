@@ -678,6 +678,11 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.operator.lessThanOrEqual": string;
     readonly "dataGrid.operator.empty": string;
     readonly "dataGrid.operator.notEmpty": string;
+    readonly "connection.label": string;
+    readonly "connection.connecting": string;
+    readonly "connection.open": string;
+    readonly "connection.reconnecting": string;
+    readonly "connection.closed": string;
     readonly "sidebarNav.label": string;
     readonly "scrollToTop.label": string;
     readonly "breadcrumb.label": string;
