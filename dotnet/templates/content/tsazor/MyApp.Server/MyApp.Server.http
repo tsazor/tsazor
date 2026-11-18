@@ -1,0 +1,14 @@
+@MyApp.Server_HostAddress = http://localhost:5090
+
+GET {{MyApp.Server_HostAddress}}/api/weatherforecast
+Accept: application/json
+
+###
+
+# The server's validation: a 400 with a ValidationProblemDetails.
+POST {{MyApp.Server_HostAddress}}/api/signups
+Content-Type: application/json
+
+{ "name": "", "email": "not an address", "age": 12 }
+
+###

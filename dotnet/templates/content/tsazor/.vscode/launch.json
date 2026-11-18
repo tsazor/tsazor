@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server + Browser",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/MyApp.Server/bin/Debug/net10.0/MyApp.Server.dll",
+      "cwd": "${workspaceFolder}/MyApp.Server",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7090;http://localhost:5090"
+      },
+      "serverReadyAction": {
+        "action": "startDebugging",
+        "name": "Browser",
+        "pattern": "Now listening on: https://\S+"
+      }
+    },
+    {
+      "name": "Server",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/MyApp.Server/bin/Debug/net10.0/MyApp.Server.dll",
+      "cwd": "${workspaceFolder}/MyApp.Server",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7090;http://localhost:5090"
+      }
+    },
+    {
+      "name": "Browser",
+      "type": "msedge",
+      "request": "launch",
+      "url": "https://localhost:7090",
+      "webRoot": "${workspaceFolder}/MyApp.Client"
+    }
+  ]
+}

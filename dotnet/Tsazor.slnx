@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tsazor.AspNetCore/Tsazor.AspNetCore.csproj" />
+  </Folder>
+  <Folder Name="/templates/">
+    <Project Path="templates/Tsazor.Templates.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Tsazor.AspNetCore.Tests/Tsazor.AspNetCore.Tests.csproj" />
+  </Folder>
+</Solution>

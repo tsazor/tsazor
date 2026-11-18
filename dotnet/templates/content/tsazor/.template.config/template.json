@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "The Tsazor authors",
+  "classifications": [
+    "Web",
+    "SPA",
+    "TypeScript",
+    "Tsazor"
+  ],
+  "identity": "Tsazor.Templates.Hosted",
+  "groupIdentity": "Tsazor.Templates.Hosted",
+  "name": "Tsazor App with ASP.NET Core",
+  "description": "An ASP.NET Core server and a Tsazor app (Razor components in TypeScript) in one solution: the server serves the app, starts its Vite dev server in development and builds it on publish.",
+  "shortName": "tsazor",
+  "sourceName": "MyApp",
+  "preferNameDirectory": true,
+  "defaultName": "TsazorApp",
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "symbols": {
+    "ui": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "The component library of the app.",
+      "displayName": "Component library",
+      "defaultValue": "bootstrap",
+      "choices": [
+        {
+          "choice": "bootstrap",
+          "description": "@tsazor/bootstrap: Bootstrap's look, as in Blazor's templates"
+        },
+        {
+          "choice": "fluent",
+          "description": "@tsazor/fluent: Fluent UI's look"
+        },
+        {
+          "choice": "none",
+          "description": "No library: the starter's own CSS"
+        }
+      ]
+    },
+    "Framework": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "The target framework of the server.",
+      "displayName": "Framework",
+      "defaultValue": "net10.0",
+      "replaces": "net10.0",
+      "choices": [
+        {
+          "choice": "net10.0",
+          "description": ".NET 10 (long-term support)"
+        },
+        {
+          "choice": "net11.0",
+          "description": ".NET 11"
+        }
+      ]
+    },
+    "AspNetCoreVersion": {
+      "type": "generated",
+      "generator": "switch",
+      "replaces": "ASPNETCORE_VERSION",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(Framework == 'net11.0')",
+            "value": "11.0.0"
+          },
+          {
+            "condition": "",
+            "value": "10.0.15"
+          }
+        ]
+      }
+    },
+    "HttpPort": {
+      "type": "generated",
+      "generator": "port",
+      "parameters": {
+        "low": 5000,
+        "high": 5300
+      },
+      "replaces": "5090"
+    },
+    "HttpsPort": {
+      "type": "generated",
+      "generator": "port",
+      "parameters": {
+        "low": 7000,
+        "high": 7300
+      },
+      "replaces": "7090"
+    },
+    "DevServerPort": {
+      "type": "generated",
+      "generator": "port",
+      "parameters": {
+        "low": 5400,
+        "high": 5999
+      },
+      "replaces": "5173"
+    },
+    "skipRestore": {
+      "type": "parameter",
+      "datatype": "bool",
+      "description": "Skips the automatic restore of the server project on create.",
+      "displayName": "Skip restore",
+      "defaultValue": "false"
+    }
+  },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        ".template.config/**",
+        "MyApp.Client.*/**",
+        "**/[Bb]in/**",
+        "**/[Oo]bj/**",
+        "**/node_modules/**",
+        "**/*.user"
+      ]
+    },
+    {
+      "source": "./MyApp.Client.bootstrap/",
+      "target": "./MyApp.Client/",
+      "condition": "(ui == 'bootstrap')",
+      "exclude": [
+        "**/node_modules/**",
+        "**/dist/**"
+      ]
+    },
+    {
+      "source": "./MyApp.Client.fluent/",
+      "target": "./MyApp.Client/",
+      "condition": "(ui == 'fluent')",
+      "exclude": [
+        "**/node_modules/**",
+        "**/dist/**"
+      ]
+    },
+    {
+      "source": "./MyApp.Client.none/",
+      "target": "./MyApp.Client/",
+      "condition": "(ui == 'none')",
+      "exclude": [
+        "**/node_modules/**",
+        "**/dist/**"
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    {
+      "path": "MyApp.Server/MyApp.Server.csproj"
+    }
+  ],
+  "postActions": [
+    {
+      "id": "restore",
+      "condition": "(!skipRestore)",
+      "description": "Restores the server's NuGet packages.",
+      "manualInstructions": [
+        {
+          "text": "Run 'dotnet restore MyApp.Server'"
+        }
+      ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ]
+}

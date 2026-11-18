@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    dotnet new tsazor (docs/design-aspnetcore.md). The content is written at pack time by scripts/write-content.mjs:
+    content/tsazor plus the client, from create-tsazor's own scaffold. Needs the workspace built (pnpm -r build).
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Tsazor.Templates</PackageId>
+    <PackageType>Template</PackageType>
+    <Title>Tsazor templates</Title>
+    <Description>dotnet new tsazor: an ASP.NET Core server and a Tsazor app (Razor components in TypeScript) in one solution, ready for Visual Studio and VS Code.</Description>
+    <PackageTags>dotnet-new;templates;tsazor;spa;vite;aspnetcore;blazor</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- NU5128: a template package has no lib folder by design. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <_TsazorTemplateContent>$(MSBuildProjectDirectory)/obj/template-content/</_TsazorTemplateContent>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <Target Name="TsazorWriteTemplateContent" BeforeTargets="_GetPackageFiles">
+    <Exec Command="node &quot;$(MSBuildProjectDirectory)/scripts/write-content.mjs&quot; --out &quot;$(_TsazorTemplateContent)&quot;" />
+    <ItemGroup>
+      <_TsazorTemplateFile Include="$(_TsazorTemplateContent)**" />
+      <None Include="@(_TsazorTemplateFile)" Pack="true" PackagePath="content/" />
+    </ItemGroup>
+  </Target>
+
+</Project>

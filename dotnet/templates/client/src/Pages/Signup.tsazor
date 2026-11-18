@@ -1,0 +1,85 @@
+@page "/signup"
+@import { DataAnnotationsValidator, EditForm, InputNumber, InputText, ValidationMessage } from "@tsazor/runtime"
+@import { problemMessage } from "@tsazor/dotnet"
+@import { SignupRequest } from "../api/models"
+@import { ServerClient } from "../api/server"
+@inject TsazorHttp http
+
+<PageTitle>Sign up</PageTitle>
+
+<h1>Sign up</h1>
+
+<p>
+    The form checks the rules of the server's <code>SignupRequest</code> class before it sends: they come with the typed client
+    in <code>src/api</code>. The server checks them again, and one more that only it knows: try
+    <code>taken@@example.com</code>. Its errors show next to the fields.
+</p>
+
+<EditForm EditContext="@editContext" OnValidSubmit="@submit">
+    <DataAnnotationsValidator />
+    <div class="mb-3">
+        <label for="signup-name" class="form-label">Name</label>
+        <InputText id="signup-name" class="form-control" @bind="model.name" />
+        <ValidationMessage For="name" />
+    </div>
+    <div class="mb-3">
+        <label for="signup-email" class="form-label">Email</label>
+        <InputText id="signup-email" class="form-control" @bind="model.email" />
+        <ValidationMessage For="email" />
+    </div>
+    <div class="mb-3">
+        <label for="signup-age" class="form-label">Age</label>
+        <InputNumber id="signup-age" class="form-control" @bind="model.age" />
+        <ValidationMessage For="age" />
+    </div>
+    <button type="submit" class="btn btn-primary" disabled="@busy">Sign up</button>
+</EditForm>
+
+@if (message !== "") {
+    <p role="status">@message</p>
+}
+
+@code {
+    private model = new SignupRequest();
+    private editContext = new EditContext(this.model);
+    /** The server's errors, next to the client's own. */
+    private serverErrors = this.editContext.createValidationMessageStore();
+    private busy = false;
+    private message = "";
+
+    override onInitialized() {
+        // A field the user changes loses the server's error for it.
+        this.editContext.onFieldChanged.subscribe((_, field) => {
+            this.serverErrors.clear(field);
+            this.editContext.notifyValidationStateChanged();
+        });
+    }
+
+    private submit = EventCallback.bind(this, async () => {
+        this.busy = true;
+        this.message = "";
+        this.serverErrors.clear();
+        try {
+            const result = await new ServerClient(this.http).createSignup(this.model);
+            if (result.ok) {
+                this.message = result.body.message;
+            } else if (result.validationErrors) {
+                // ValidationProblemDetails: field → messages. The server's names are the JSON names.
+                for (const [key, messages] of Object.entries(result.validationErrors)) {
+                    this.serverErrors.addAll(this.fieldOf(key), messages);
+                }
+                this.editContext.notifyValidationStateChanged();
+            } else {
+                this.message = problemMessage(result);
+            }
+        } finally {
+            this.busy = false;
+        }
+    });
+
+    /** The model's field for a key of the server's errors ("Email", "email"); "" for the form as a whole. */
+    private fieldOf(key: string): string {
+        const name = key.split(".")[0]?.toLowerCase() ?? "";
+        return Object.keys(this.model).find((field) => field.toLowerCase() === name) ?? "";
+    }
+}
