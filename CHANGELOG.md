@@ -20,6 +20,12 @@ Changes since 1.0.0-next.10:
   Run 2: 70, Warning"). One series colored by status, instead of a series per status padded with zeros.
 - **A chart's label axis thins its labels** (`@tsazor/charts`): with more labels than fit, it draws every n-th, so
   they no longer overlap; each bar and point still names its label in its hover title and in the table.
+- **A DataGrid's row click, a row's own class and style** (`@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`):
+  `onRowClick` raises the row's item (Fluent UI Blazor's `OnRowClick`, MudDataGrid's `RowClick`) — not for a click on
+  a link, a button, a field or a label in the row, nor one that ends a text selection (`isRowClick`, shared by both
+  skins); such rows show the pointer and a hover background. `rowClass` and `rowStyle` give a row its own class and
+  style from its item (`RowClass`, `RowStyle`): a failed run's row. The row click is a pointer convenience; the same
+  action belongs in a cell as a link or a button for the keyboard and screen readers.
 - **TZS041: an import named like the component** (`@tsazor/compiler`): `Overview.tsazor` with
   `@import type { Overview } from "../lib/types"` reports that the component's class is named after its file and
   says the way out — an alias (`{ Overview as OverviewDto }`) or another file name. TypeScript had said only TS2440,

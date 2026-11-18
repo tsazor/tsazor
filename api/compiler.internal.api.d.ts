@@ -437,6 +437,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS038: "Code-like text in markup.";
     readonly TZS039: "Cascading parameter with neither a name nor a type.";
     readonly TZS040: "A text field bound to a number, a Decimal or a date that can be null.";
+    readonly TZS041: "An import named like the component.";
 };
 
 // DiagnosticBag

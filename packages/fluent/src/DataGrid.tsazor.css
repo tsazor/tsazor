@@ -162,6 +162,15 @@ th[aria-sort] .fui-datagrid__sort-indicator {
   cursor: pointer;
 }
 
+/* A grid with onRowClick: the row says it can be clicked, and answers the pointer. */
+.fui-datagrid__row--clickable {
+  cursor: pointer;
+}
+
+.fui-datagrid__row--clickable:hover {
+  background: var(--fui-control-fill-input-hover);
+}
+
 .fui-datagrid__row--selected {
   background: var(--fui-control-fill-selected);
 }

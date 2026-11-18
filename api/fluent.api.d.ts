@@ -403,6 +403,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     groupFormat?: (value: unknown) => string;
     detailContent?: (item: TGridItem) => RenderFragment;
     detailsMode: "multiple" | "single";
+    onRowClick?: EventCallback<TGridItem>;
+    rowClass?: (item: TGridItem) => string | null | undefined;
+    rowStyle?: (item: TGridItem) => string | null | undefined;
     scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void>;
     refreshDataAsync(): Promise<void>;
     sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;

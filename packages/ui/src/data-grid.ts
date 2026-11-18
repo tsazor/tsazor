@@ -995,6 +995,21 @@ function sameRule(active: GridFilterRule | undefined, rule: GridFilterRule | und
   return active !== undefined && rule !== undefined && active.operator === rule.operator && active.value === rule.value;
 }
 
+/**
+ * Whether a click in a grid row counts as the row's (`onRowClick`): not when it came from a control in the row — a
+ * link, a button, a field, a label, a summary, anything with a button-like role or editable — nor when it ended a
+ * text selection.
+ */
+export function isRowClick(event: MouseEvent): boolean {
+  const target = event.target;
+  const row = event.currentTarget;
+  if (!(target instanceof Element) || !(row instanceof Element)) return true;
+  const control = target.closest("a[href], button, input, select, textarea, label, summary, [contenteditable=''], [contenteditable='true'], [role='button'], [role='link'], [role='checkbox'], [role='switch'], [role='menuitem'], [role='tab']");
+  if (control !== null && row.contains(control)) return false;
+  const selection = typeof window !== "undefined" ? window.getSelection() : null;
+  return selection === null || selection.isCollapsed || !row.contains(selection.anchorNode);
+}
+
 /** The selection after a click on `item`'s selector: `single` replaces, `multiple` toggles. */
 export function toggleSelection<T>(selected: readonly T[], item: T, mode: SelectionMode): T[] {
   if (mode === "none") return [...selected];

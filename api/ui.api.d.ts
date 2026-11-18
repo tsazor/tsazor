@@ -582,6 +582,9 @@ export declare function isoTime(hours: number, minutes: number, seconds?: number
 // IsoTime
 export type IsoTime = string;
 
+// isRowClick
+export declare function isRowClick(event: MouseEvent): boolean;
+
 // KeyCombination
 export interface KeyCombination {
     readonly key: string;

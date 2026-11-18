@@ -394,6 +394,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     groupFormat?: (value: unknown) => string;
     detailContent?: (item: TGridItem) => RenderFragment;
     detailsMode: "multiple" | "single";
+    onRowClick?: EventCallback<TGridItem>;
+    rowClass?: (item: TGridItem) => string | null | undefined;
+    rowStyle?: (item: TGridItem) => string | null | undefined;
     responsive: boolean;
     virtualize: boolean;
     itemSize: number;

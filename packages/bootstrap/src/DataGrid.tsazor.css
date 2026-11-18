@@ -55,6 +55,15 @@
   font-weight: 600;
 }
 
+/* A grid with onRowClick: the row says it can be clicked, and answers the pointer. */
+.tz-grid-row-clickable {
+  cursor: pointer;
+}
+
+.tz-grid-row-clickable:hover > * {
+  --bs-table-bg-state: var(--bs-table-hover-bg);
+}
+
 /* The row in the grid's inline edit: it stands out from the rows around it. */
 .tz-grid-row-editing {
   background: rgba(var(--bs-primary-rgb), 0.05);

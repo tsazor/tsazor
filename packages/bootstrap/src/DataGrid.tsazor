@@ -11,7 +11,7 @@
 @import { ArrowDownUp, CaretDownFill, CaretUpFill, Filter, GripVertical } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode, EventCallback, type RenderFragment } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridColumnsSnapshot, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
+DataGridModel, isRowClick, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridColumnsSnapshot, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
 @import { gridExportCsv, startColumnResize, startColumnReorder } from "@tsazor/ui"
@@ -98,7 +98,7 @@ type IconValue,
                         }
                         <Virtualize Items="@virtualItems" ItemsProvider="@(this.itemsProvider !== undefined ? this.virtualProvider : undefined)" ItemSize="@itemSize" OverscanCount="@overscanCount" SpacerElement="tr" AnchorMode="@anchorMode" ItemComparer="@(itemComparer ?? Object.is)" InitialItemIndex="@initialItemIndex" @ref="virtualizer">
                             <ItemContent Context="row">
-                                <tr @key="this.keyOf(row)" class="@this.rowClass(row)" aria-rowindex="@(this.virtualIndexOf(row) + 2)">
+                                <tr @key="this.keyOf(row)" class="@this.rowClasses(row)" style="@this.rowStyleOf(row)" @onclick="(event: MouseEvent) => this.rowClicked(row, event)" aria-rowindex="@(this.virtualIndexOf(row) + 2)">
                                     @if (selectionMode === "multiple") {
                                         <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
                                     } else if (selectionMode === "single") {
@@ -146,7 +146,7 @@ type IconValue,
                             </tr>
                         } else {
                         const item = line.item;
-                        <tr @key="this.keyOf(item)" class="@this.rowClass(item)" @onkeydown="(event: KeyboardEvent) => this.editKey(item, event)">
+                        <tr @key="this.keyOf(item)" class="@this.rowClasses(item)" style="@this.rowStyleOf(item)" @onclick="(event: MouseEvent) => this.rowClicked(item, event)" @onkeydown="(event: KeyboardEvent) => this.editKey(item, event)">
                             @if (selectionMode === "multiple") {
                                 <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             } else if (selectionMode === "single") {
@@ -259,6 +259,17 @@ type IconValue,
     @Parameter() detailContent?: (item: TGridItem) => RenderFragment;
     /** "multiple" (default): each row's details open and close by themselves; "single": opening one closes the others. */
     @Parameter() detailsMode: "multiple" | "single" = "multiple";
+    /**
+     * Raised with a row's item when the row is clicked (Fluent UI Blazor's OnRowClick, MudDataGrid's RowClick) — not
+     * when the click was on a link, a button, a field or a label in the row, nor when it ended a text selection. A
+     * pointer convenience: the keyboard and a screen reader need the same action in a cell, as a link or a button
+     * (the row's name links to its page).
+     */
+    @Parameter() onRowClick?: EventCallback<TGridItem>;
+    /** A row's own class from its item (Fluent UI Blazor's RowClass, MudDataGrid's RowClassFunc): a failed run's row. */
+    @Parameter() rowClass?: (item: TGridItem) => string | null | undefined;
+    /** A row's own style from its item (Fluent UI Blazor's RowStyle, MudDataGrid's RowStyleFunc). */
+    @Parameter() rowStyle?: (item: TGridItem) => string | null | undefined;
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
     /**
@@ -635,11 +646,23 @@ type IconValue,
         return this.selectedItems.includes(item);
     }
 
-    private rowClass(item: TGridItem): string | null {
+    private rowClasses(item: TGridItem): string | null {
         const parts: string[] = [];
+        const own = this.rowClass?.(item);
+        if (own) parts.push(own);
+        if (this.onRowClick !== undefined) parts.push("tz-grid-row-clickable");
         if (this.selectionMode !== "none" && this.isSelected(item)) parts.push("table-active");
         if (this.model.isEditing(item)) parts.push("tz-grid-row-editing");
         return parts.length > 0 ? parts.join(" ") : null;
+    }
+
+    private rowStyleOf(item: TGridItem): string | null {
+        return this.rowStyle?.(item) || null;
+    }
+
+    private rowClicked(item: TGridItem, event: MouseEvent): Promise<void> | undefined {
+        if (this.onRowClick === undefined || !isRowClick(event)) return undefined;
+        return this.onRowClick.invokeAsync(item);
     }
 
     /** A row cell's content: the column's edit cell while its row is the edited one, else its cell. */

@@ -106,6 +106,7 @@ export {
   type SelectionMode,
   type SortDirection,
   type SortedProperty,
+  isRowClick,
 } from "./data-grid.js";
 export { startColumnResize, startColumnReorder, type ColumnResizeOptions, type ColumnReorderOptions } from "./grid-columns.js";
 export { startScheduleTimeDrag, isoDayTime, type ScheduleDragDraft, type ScheduleTimeDragOptions } from "./schedule-drag.js";

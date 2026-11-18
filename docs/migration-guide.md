@@ -212,6 +212,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `<MudChart ChartType="ChartType.Bar" Width="100%" Height="300px">` | `<Chart chartType="bar" width="760" height="300">` (`@tsazor/charts`): `width`/`height` are the drawing's units — its shape — and the chart takes its container's width; MudChart's are CSS lengths of the box |
 | `QuickGrid` / `FluentDataGrid ResizableColumns`, `MudDataGrid DragDropColumnReordering` | `DataGrid resizableColumns`, `reorderableColumns` — both off by default |
 | `MudDataGrid` `<ChildRowContent>` with a `HierarchyColumn`, `MudTable` `<ChildRowContent>` with your own toggle | the DataGrid's `<DetailContent Context="item">` with a `DetailsColumn` (`rowName` names the row in its label), or your own button calling `toggleDetailsAsync(item)` on an `@ref` (`isDetailsOpen`, `detailsId` for its aria-controls). `detailsMode="single"` keeps one open, as a MudTable that shows one row's child content does; give the grid an `itemKey` so open details survive a reload |
+| `FluentDataGrid OnRowClick`, `MudDataGrid RowClick`; `RowClass`/`RowClassFunc`, `RowStyle`/`RowStyleFunc` | `DataGrid onRowClick` (the row's item; not raised by a click on a link, a button or a field in the row), `rowClass`, `rowStyle` (functions of the item). The row click is for the pointer: put the same action in a cell as a link or a button for the keyboard and screen readers — the row's name linking to its page |
 
 ### JavaScript interop
 
