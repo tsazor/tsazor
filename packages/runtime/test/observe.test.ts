@@ -11,6 +11,7 @@ import {
   type RenderFragment,
   type RenderTreeBuilder,
   type ObserveSource,
+  sequenced,
 } from "../src/index";
 import {
   Renderer,
@@ -459,5 +460,123 @@ describe("dispatchExceptionAsync (Blazor parity)", () => {
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("caught: closed too late");
     expect(errors).toEqual([]);
+  });
+});
+
+/** A job's event stream: replays its history to each subscriber, then goes live; it can complete. */
+class JobStream {
+  readonly history: { seq: number; text: string }[] = [];
+  readonly observers = new Set<{ next(event: { seq: number; text: string }): void; complete(): void }>();
+  subscribe(observer: { next(event: { seq: number; text: string }): void; complete(): void }) {
+    this.observers.add(observer);
+    for (const event of this.history) observer.next(event);
+    return () => this.observers.delete(observer);
+  }
+  emit(seq: number, text: string): void {
+    this.history.push({ seq, text });
+    for (const observer of this.observers) observer.next({ seq, text });
+  }
+  complete(): void {
+    for (const observer of this.observers) observer.complete();
+  }
+}
+
+describe("observe(source, { next, complete, error })", () => {
+  it("runs complete when the source completes and renders; without it completion is ignored", async () => {
+    const stream = new JobStream();
+    class Page extends ComponentBase {
+      text = "";
+      state = "live";
+      protected override onInitialized(): void {
+        this.observe(stream, { next: (event) => { this.text += event.text; }, complete: () => { this.state = "done"; } });
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, `${this.state}:${this.text}`);
+      }
+    }
+    const { container, renderer } = await mountRemovable(Page);
+    stream.emit(1, "a");
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("live:a");
+    stream.complete();
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("done:a");
+  });
+
+  it("an async complete renders again when it's done (the final state loaded)", async () => {
+    const stream = new JobStream();
+    let resolveLoad: (value: string) => void = () => {};
+    class Page extends ComponentBase {
+      result = "";
+      protected override onInitialized(): void {
+        this.observe(stream, { complete: async () => { this.result = await new Promise<string>((resolve) => (resolveLoad = resolve)); } });
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, this.result || "running");
+      }
+    }
+    const { container, renderer } = await mountRemovable(Page);
+    stream.complete();
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("running");
+    resolveLoad("42 steps, OK");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("42 steps, OK");
+  });
+
+  it("an error handler takes the source's error instead of the error path", async () => {
+    let fail: (error: unknown) => void = () => {};
+    const source = { subscribe: (observer: { error(error: unknown): void }) => { fail = (error) => observer.error(error); } };
+    class Page extends ComponentBase {
+      message = "";
+      protected override onInitialized(): void {
+        this.observe(source, { error: (error) => { this.message = String(error); } });
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, this.message);
+      }
+    }
+    const { container, renderer } = await mountRemovable(Page);
+    fail("lost");
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("lost");
+  });
+});
+
+describe("sequenced", () => {
+  it("drops values whose number isn't above the last: a replay after a resubscribe reaches the page once", () => {
+    const stream = new JobStream();
+    const progress = sequenced(stream, (event) => event.seq);
+    const seen: number[] = [];
+    const listener = Object.assign(() => {}, {
+      next: (event: { seq: number }) => void seen.push(event.seq),
+      error: () => {},
+      complete: () => {},
+      onNext: () => {},
+      onError: () => {},
+      onComplete: () => {},
+    });
+    const first = progress.subscribe(listener as never) as () => void;
+    stream.emit(1, "a");
+    stream.emit(2, "b");
+    first();
+    stream.emit(3, "c");
+    progress.subscribe(listener as never); // the reconnect: history 1, 2, 3 replayed
+    stream.emit(2, "late duplicate");
+    stream.emit(4, "d");
+    expect(seen).toEqual([1, 2, 3, 4]);
+    expect([progress.lastSequence, progress.completed]).toEqual([4, false]);
+    stream.complete();
+    expect(progress.completed).toBe(true);
+  });
+
+  it("starts after a number the page already has", () => {
+    const stream = new JobStream();
+    stream.emit(1, "a");
+    stream.emit(2, "b");
+    const seen: number[] = [];
+    sequenced(stream, (event) => event.seq, 1).subscribe(Object.assign(() => {}, { next: (event: { seq: number }) => void seen.push(event.seq), error() {}, complete() {}, onNext() {}, onError() {}, onComplete() {} }) as never);
+    expect(seen).toEqual([2]);
   });
 });

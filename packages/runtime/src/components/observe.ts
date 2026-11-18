@@ -21,14 +21,24 @@ export interface ObserveListener<T> {
   next(value: T): void;
   /** Routes the source's error to the component's error path (nearest ErrorBoundary, else the error handler). */
   error(error: unknown): void;
-  /** Ignored: completion does not stop observing or re-render. */
+  /** Runs the `complete` handler and re-renders, if `observe` was given one; else ignored (a store never completes). */
   complete(): void;
   /** Same as calling the listener. */
   onNext(value: T): void;
   /** Same as `error`. */
   onError(error: unknown): void;
-  /** Same as `complete` (ignored). */
+  /** Same as `complete`. */
   onComplete(): void;
+}
+
+/**
+ * `observe`'s handlers, as an observer has them: `next` per value (then a render), `complete` when the source ends
+ * (then a render: "live" turns "done"), `error` instead of the component's error path (nearest ErrorBoundary).
+ */
+export interface ObserveHandlers<T> {
+  next?(value: T): void;
+  complete?(): void | PromiseLike<void>;
+  error?(error: unknown): void;
 }
 
 /** A source with a `subscribe` method (structural: Svelte-style stores, RxJS, Zustand, async handshakes). */
@@ -51,4 +61,63 @@ export function release(teardown: ObserveTeardown): unknown {
   if (typeof teardown === "function") return teardown();
   if (teardown != null && typeof teardown.unsubscribe === "function") return teardown.unsubscribe();
   return undefined;
+}
+
+/**
+ * A stream whose values carry a sequence number — the events of one job, replayed to a late subscriber and then live
+ * — with the duplicates dropped: a value whose number is not above the last one's (a replay after a reconnect, an
+ * event that overtook it) doesn't reach the listener. `lastSequence` and `completed` say where the stream stands.
+ * Transport-neutral: SSE, SignalR, a WebSocket, Sleipnir — anything `observe` takes as a subscribable.
+ *
+ * ```ts
+ * private readonly progress = sequenced(api.jobs.progress(this.jobId), (event) => event.seq);
+ * protected override onInitialized(): void {
+ *     this.observe(this.progress, { next: (event) => this.events.push(event), complete: () => this.reload() });
+ * }
+ * ```
+ *
+ * It drops; it doesn't reorder or fill a gap (a missed number stays missed — the source's replay is what fills it).
+ */
+export class Sequenced<T> implements Subscribable<T> {
+  #last: number | undefined;
+  #completed = false;
+
+  constructor(
+    private readonly source: Subscribable<T>,
+    private readonly sequenceOf: (value: T) => number,
+    /** The last number already seen (a page that loaded the history up to it): values up to it are dropped. */
+    after?: number,
+  ) {
+    this.#last = after;
+  }
+
+  /** The number of the last value let through (or `after`); undefined before the first. */
+  get lastSequence(): number | undefined {
+    return this.#last;
+  }
+
+  /** Whether the source completed. */
+  get completed(): boolean {
+    return this.#completed;
+  }
+
+  subscribe(listener: ObserveListener<T>): ObserveTeardown | PromiseLike<ObserveTeardown> {
+    const next = (value?: T): void => {
+      const sequence = this.sequenceOf(value as T);
+      if (this.#last !== undefined && sequence <= this.#last) return;
+      this.#last = sequence;
+      listener.next(value as T);
+    };
+    const complete = (): void => {
+      this.#completed = true;
+      listener.complete();
+    };
+    const error = (failure: unknown): void => listener.error(failure);
+    return this.source.subscribe(Object.assign((value?: T) => next(value), { next, error, complete, onNext: next, onError: error, onComplete: complete }));
+  }
+}
+
+/** A Sequenced over `source`: its values with the duplicates dropped, by `sequenceOf` (`(event) => event.seq`). */
+export function sequenced<T>(source: Subscribable<T>, sequenceOf: (value: T) => number, after?: number): Sequenced<T> {
+  return new Sequenced(source, sequenceOf, after);
 }

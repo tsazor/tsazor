@@ -744,6 +744,12 @@ createTsazorApp({
   that hold messages. Per rule, .NET's `ErrorMessage` parity:
   `@Required({ message: "…" })`, `@MinLength(1, { messageKey: "User.NameRequired" })`,
   `@Range(0, 10, { messageFactory: (ctx) => L.get("Order.Rating", ctx) })`.
+- **Server validation errors** — `new ServerValidationErrors(editContext)` and `apply(errors)` show a server's
+  field errors (`ValidationProblemDetails.errors`, any `Record<string, string[]>`) at their fields: a key
+  (`Steps[1].Hsn`, `$.steps[1].hsn`, `steps.1.hsn`) resolves against the model, segment by segment and ignoring
+  case, to the field `steps.1.hsn`; a key it can't resolve is the model's (`""`, the ValidationSummary). An edit
+  drops the field's messages, a submit all of them (`clearOnFieldChange`, `clearOnSubmit`); `map` names a key's
+  field itself. Blazor apps write the same against a `ValidationMessageStore`.
 - **`@bind:culture`** — number and `Decimal` binds (see [@bind](#bind-blazor-net-7-semantics)); display-side
   culture formatting lives on `CultureInfo.formatNumber`/`formatDate`. A5/B7 holds everywhere
   else: routing, query strings and data values stay invariant.
@@ -1049,6 +1055,13 @@ the assignment — so timers, callbacks and messages need no explicit call.
   Sleipnir's `onNext`/`onError`/`onComplete`), so each shape gets what it calls.
 - **Rendering:** a notification runs `onNext` (if given), then `stateHasChanged()` — the
   render queue coalesces a burst into one render; `shouldRender` is honoured as usual.
+- **Handlers:** `observe(source, { next, complete, error })` in place of `onNext`. `complete` runs when
+  the source completes and the component renders ("live" turns "done"); without it completion is ignored, as a store
+  never completes. `error` takes the source's error itself instead of the error path below.
+- **Sequenced streams:** `sequenced(source, (event) => event.seq)` drops a value whose number is not above the last
+  one's — the replay a resubscribe brings, an event that overtook another — and says `lastSequence` and
+  `completed`; any transport (SSE, SignalR, Sleipnir). [The live-data guide](guide-live-data.md#one-jobs-progress-history-live-done)
+  has the recipe.
 - **Errors:** an exception in `onNext`, a source's `error(…)` and a rejected handshake take
   the lifecycle error path (nearest `ErrorBoundary`, phase `lifecycle`); a throwing
   unsubscribe at dispose is a `dispose` error (fatal, as in Blazor).

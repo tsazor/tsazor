@@ -99,6 +99,44 @@ app.MapGet("/api/events", (HttpRequest request, OrderFeed feed, CancellationToke
 The skins app's endpoint (`apps/skins/scripts/events-endpoint.mjs`) ends every connection after five events on
 purpose; the gate waits for twelve and checks that the readings it shows are numbered without a gap or a repeat.
 
+## One job's progress: history, live, done
+
+A page shows one long-running job (`/jobs/42`). The server streams its events — a late subscriber gets the history
+first, then the live ones — numbers each, and completes the stream when the job is done. Three things the page needs:
+drop the events it has seen (a resubscribe replays them), know when the stream ended, and then load the final state
+once. `sequenced` does the first, `observe`'s `complete` the second:
+
+```razor
+@page "/jobs/{jobId}"
+@import { sequenced } from "@tsazor/runtime"
+@inject JobsApi Jobs
+
+<p>@(this.done ? "Done" : "Running…") — @this.events.length steps</p>
+
+@code {
+    @Parameter() jobId = "";
+    private events: JobEvent[] = [];
+    private done = false;
+    private result?: JobResult;
+
+    protected override onInitialized(): void {
+        const progress = sequenced(this.Jobs.progress(this.jobId), (event) => event.seq);
+        this.observe(progress, {
+            next: (event) => { this.events = [...this.events, event]; },
+            complete: async () => { this.done = true; this.result = await this.Jobs.result(this.jobId); },
+        });
+    }
+}
+```
+
+- `sequenced` drops a number it has seen; it doesn't fill a gap. The server's replay does: a resubscribe gets the
+  history again, and the duplicates fall away. A page that loaded the events up to 17 first starts after it:
+  `sequenced(source, seqOf, 17)`.
+- `complete` re-renders the page, and an async one again when it's done; its rejection reaches the nearest
+  ErrorBoundary, as `onNext`'s errors do.
+- The same works for SignalR (a `HubConnection.stream` is subscribable), a WebSocket wrapped in a subscribable, or
+  Sleipnir's generated client (`apps/sleipnir-ticker`'s jobs page).
+
 ## Into a chart
 
 A dashboard shows the last minutes as a line that moves on. The page keeps the window, and each event updates the

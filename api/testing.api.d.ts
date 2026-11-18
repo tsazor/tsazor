@@ -235,6 +235,8 @@ export interface FakeStore<T> {
 
 // NumberFormatInfo: re-exported from @tsazor/runtime
 
+// ObserveHandlers: re-exported from @tsazor/runtime
+
 // ObserveListener: re-exported from @tsazor/runtime
 
 // ObserveSource: re-exported from @tsazor/runtime
@@ -319,6 +321,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // Required: re-exported from @tsazor/runtime
 
+// resolveServerField: re-exported from @tsazor/runtime
+
 // ResponseInterceptor: re-exported from @tsazor/runtime
 
 // RouteData: re-exported from @tsazor/runtime
@@ -344,6 +348,16 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // SectionContent: re-exported from @tsazor/runtime
 
 // SectionOutlet: re-exported from @tsazor/runtime
+
+// sequenced: re-exported from @tsazor/runtime
+
+// Sequenced: re-exported from @tsazor/runtime
+
+// ServerFieldErrors: re-exported from @tsazor/runtime
+
+// ServerValidationErrors: re-exported from @tsazor/runtime
+
+// ServerValidationErrorsOptions: re-exported from @tsazor/runtime
 
 // ServiceCollection: re-exported from @tsazor/runtime
 

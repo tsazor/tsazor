@@ -142,6 +142,19 @@ if (result.ok) {
 }
 ```
 
+A form shows the server's field errors at their fields with `ServerValidationErrors` from `@tsazor/runtime`: it maps
+ASP.NET Core's keys (`Steps[1].Hsn`) onto the form model's fields (`steps.1.hsn`), puts what it can't map on the
+model (a ValidationSummary shows it), and drops a field's messages when it is edited:
+
+```ts
+private readonly serverErrors = new ServerValidationErrors(this.editContext);
+
+async save(): Promise<void> {
+    const result = await client.updateScenario(this.model);
+    if (!result.ok) this.serverErrors.apply(result.validationErrors);
+}
+```
+
 The generated files are GENERATED CODE (header line in the file); they belong in version
 control, so the build pipeline no longer needs .NET.
 

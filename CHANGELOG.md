@@ -26,6 +26,17 @@ Changes since 1.0.0-next.10:
   skins); such rows show the pointer and a hover background. `rowClass` and `rowStyle` give a row its own class and
   style from its item (`RowClass`, `RowStyle`): a failed run's row. The row click is a pointer convenience; the same
   action belongs in a cell as a link or a button for the keyboard and screen readers.
+- **A server's field errors in a form** (`@tsazor/runtime`): `ServerValidationErrors` puts a
+  `Record<string, string[]>` — ASP.NET Core's `ValidationProblemDetails.errors`, `@tsazor/dotnet`'s
+  `result.validationErrors`, any backend's — into the EditContext as validation messages. Keys resolve against the
+  model (`Steps[1].Hsn`, `$.steps[1].hsn` and `steps.1.hsn` are the field `steps.1.hsn`; PascalCase finds camelCase);
+  what doesn't resolve is the model's, for the ValidationSummary. An edit drops the field's messages, a submit all of
+  them; `map` overrides a key's field. `resolveServerField` is the mapping on its own.
+- **`observe` with handlers; sequenced streams** (`@tsazor/runtime`): `observe(source, { next, complete, error })`
+  — `complete` runs when the source completes and renders (an async one again when it's done), `error` takes the
+  source's error itself; with a function, or without `complete`, it behaves as before. `sequenced(source, seqOf)`
+  drops the values whose number isn't above the last one's (the replay of a resubscribe) and says `lastSequence` and
+  `completed`. The live-data guide has the recipe for one job's progress: history, live, done.
 - **German ships** (`@tsazor/ui`, `@tsazor/runtime`): `germanFrameworkTexts` from the new entry point
   `@tsazor/ui/texts/de` holds every library text (`tsazor.ui.*`) and every built-in validation message
   (`tsazor.validation.*`, .NET's German wording) — typed complete against the catalog (`FrameworkTexts`); an app

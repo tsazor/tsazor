@@ -6,7 +6,7 @@ import { parameterInfoOf } from "./parameter-metadata.js";
 import { componentInternals } from "./component-internals.js";
 import { EventCallbackWorkItem } from "./event-callback.js";
 import { collectAutoObserve, getCurrentServices, isAutoRender } from "../di/service-provider.js";
-import { DEV, release, type ObserveListener, type ObserveSource, type ObserveTeardown } from "./observe.js";
+import { DEV, release, type ObserveHandlers, type ObserveListener, type ObserveSource, type ObserveTeardown } from "./observe.js";
 
 /**
  * The settled promise a lifecycle returns when it completed synchronously;
@@ -230,8 +230,12 @@ export abstract class ComponentBase {
    * Errors in `onNext` and source errors take the lifecycle error path
    * (nearest ErrorBoundary). Blazor form: subscribe + `InvokeAsync(StateHasChanged)`
    * + unsubscribe in `Dispose`.
+   *
+   * With handlers (`{ next, complete, error }`) instead of `onNext`: `complete` runs when the source completes, and
+   * the component renders ("live" turns "done"); `error` takes the source's error instead of the error path. Without
+   * a `complete` handler, completion is ignored, as for a store.
    */
-  protected observe<T>(source: ObserveSource<T>, onNext?: (value: T) => void): () => void {
+  protected observe<T>(source: ObserveSource<T>, onNext?: ((value: T) => void) | ObserveHandlers<T>): () => void {
     if (this.#disposed) {
       // eslint-disable-next-line no-console
       if (DEV) console.warn(`[tsazor] ${this.constructor.name}: observe() after dispose is ignored.`);
@@ -253,14 +257,47 @@ export abstract class ComponentBase {
     let active = true;
     let teardown: ObserveTeardown;
     let controller: AbortController | undefined;
+    const handlers: ObserveHandlers<T> | undefined = typeof onNext === "function" ? { next: onNext } : onNext;
     const fail = (error: unknown): void => {
-      if (active) this.#reportError(error, "lifecycle");
+      if (!active) return;
+      if (handlers?.error === undefined) {
+        this.#reportError(error, "lifecycle");
+        return;
+      }
+      try {
+        handlers.error.call(this, error);
+      } catch (thrown) {
+        this.#reportError(thrown, "lifecycle");
+      }
+      this.#requestRender();
+    };
+    const complete = (): void => {
+      if (!active || handlers?.complete === undefined) return;
+      let result: unknown;
+      try {
+        result = (handlers.complete as () => unknown).call(this);
+      } catch (error) {
+        this.#reportError(error, "lifecycle");
+        return;
+      }
+      this.#requestRender();
+      // An async handler (load the final state) renders again when it's done; its rejection takes the error path.
+      if (isPromiseLike(result)) {
+        Promise.resolve(result).then(
+          () => {
+            if (active) this.#requestRender();
+          },
+          (error: unknown) => {
+            if (active) this.#reportError(error, "lifecycle");
+          },
+        );
+      }
     };
     const notify = (value?: T): void => {
       if (!active) return;
-      if (onNext !== undefined) {
+      if (handlers?.next !== undefined) {
         try {
-          onNext.call(this, value as T);
+          handlers.next.call(this, value as T);
         } catch (error) {
           fail(error);
           return;
@@ -284,14 +321,13 @@ export abstract class ComponentBase {
       controller = new AbortController();
       source(controller.signal, notify);
     } else {
-      const noop = (): void => {};
       const listener: ObserveListener<T> = Object.assign((value?: T) => notify(value), {
         next: notify,
         error: fail,
-        complete: noop,
+        complete,
         onNext: notify,
         onError: fail,
-        onComplete: noop,
+        onComplete: complete,
       });
       const result = source.subscribe(listener);
       if (isPromiseLike(result)) {

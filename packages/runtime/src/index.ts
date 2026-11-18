@@ -9,7 +9,8 @@ export { Parameter, CascadingParameter, EditorRequired, decorateFields, definePa
 export { Bindable, type BindableOptions } from "./components/bindable.js";
 export { State } from "./components/state.js";
 export { CascadingTypeParameter } from "./components/cascading-type-parameter.js";
-export type { ObserveSource, ObserveListener, ObserveTeardown, Subscribable } from "./components/observe.js";
+export type { ObserveHandlers, ObserveSource, ObserveListener, ObserveTeardown, Subscribable } from "./components/observe.js";
+export { Sequenced, sequenced } from "./components/observe.js";
 export { EventCallback, EventCallbackWorkItem } from "./components/event-callback.js";
 export { bindMethod } from "./components/bind-method.js";
 export { addAttachment, type Attachment } from "./components/attachment.js";
@@ -111,6 +112,7 @@ export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 export { FocusOnInvalidSubmit } from "./forms/focus-on-invalid-submit.js";
 export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";
+export { ServerValidationErrors, resolveServerField, type ServerFieldErrors, type ServerValidationErrorsOptions } from "./forms/server-validation-errors.js";
 export { StandardSchemaValidator, type StandardSchemaIssue, type StandardSchemaResult, type StandardSchemaV1 } from "./forms/standard-schema-validator.js";
 export { enableDataAnnotationsValidation } from "./forms/edit-context.js";
 export { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "./forms/input-file.js";

@@ -219,7 +219,7 @@ export declare abstract class ComponentBase {
     protected inject<T>(token: abstract new (...args: never[]) => T): T;
     get disposeSignal(): AbortSignal;
     protected dispatchExceptionAsync(error: unknown): Promise<void>;
-    protected observe<T>(source: ObserveSource<T>, onNext?: (value: T) => void): () => void;
+    protected observe<T>(source: ObserveSource<T>, onNext?: ((value: T) => void) | ObserveHandlers<T>): () => void;
 }
 
 // ComponentDefinition
@@ -845,6 +845,13 @@ export interface NumberFormatInfo {
     readonly positiveInfinitySymbol: string;
 }
 
+// ObserveHandlers
+export interface ObserveHandlers<T> {
+    next?(value: T): void;
+    complete?(): void | PromiseLike<void>;
+    error?(error: unknown): void;
+}
+
 // ObserveListener
 export interface ObserveListener<T> {
     (value?: T): void;
@@ -1030,6 +1037,9 @@ export declare function Required(options?: {
     allowEmptyStrings?: boolean;
 } & ValidationMessageOverride): FieldRuleDecorator;
 
+// resolveServerField
+export declare function resolveServerField(model: object, key: string): string;
+
 // ResponseInterceptor
 export type ResponseInterceptor = (response: Response, request: Request) => Response | Promise<Response>;
 
@@ -1128,6 +1138,42 @@ export declare class SectionOutlet extends ComponentBase {
     protected applyParameterValues(parameters: ParameterView): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     dispose(): void;
+}
+
+// sequenced
+export declare function sequenced<T>(source: Subscribable<T>, sequenceOf: (value: T) => number, after?: number): Sequenced<T>;
+
+// Sequenced
+export declare class Sequenced<T> implements Subscribable<T> {
+    #private;
+    private readonly source;
+    private readonly sequenceOf;
+    constructor(source: Subscribable<T>, sequenceOf: (value: T) => number, after?: number);
+    get lastSequence(): number | undefined;
+    get completed(): boolean;
+    subscribe(listener: ObserveListener<T>): ObserveTeardown | PromiseLike<ObserveTeardown>;
+}
+
+// ServerFieldErrors
+export type ServerFieldErrors = Readonly<Record<string, readonly string[]>>;
+
+// ServerValidationErrors
+export declare class ServerValidationErrors {
+    #private;
+    readonly editContext: EditContext;
+    private readonly options;
+    constructor(editContext: EditContext, options?: ServerValidationErrorsOptions);
+    apply(errors: ServerFieldErrors | null | undefined): void;
+    clear(field?: string): void;
+    fieldOf(key: string): string;
+    dispose(): void;
+}
+
+// ServerValidationErrorsOptions
+export interface ServerValidationErrorsOptions {
+    readonly map?: (key: string) => string | undefined;
+    readonly clearOnFieldChange?: boolean;
+    readonly clearOnSubmit?: boolean;
 }
 
 // ServiceCollection
