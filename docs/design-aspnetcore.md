@@ -107,11 +107,13 @@ dotnet run --project MyApp/MyApp.Server
 ## Found on the way (2026-11-18)
 
 - `@tsazor/dotnet` turns .NET 10's `"type": ["integer", "string"]` with its `pattern` into `@RegularExpression` on a
-  number field. The template avoids it with strict number handling (D-A11); the generator should drop that pattern.
+  number field. The template avoids it with strict number handling (D-A11). **Fixed 2026-11-18:** the generator
+  takes a pattern for string fields only.
 - Vite's dependency scan reads no `.tsazor` file: a package that only pages import is optimized when the first page
-  loads, and that load can fail with 504 "Outdated Optimize Dep" and no reload — with `npm run dev` alone as well. The
-  template lists the API client's packages in `optimizeDeps.include`; `@tsazor/vite-plugin` should feed the scan.
-  A rarer variant remains on a cold start (empty `node_modules/.vite`); the gate loads the page a second time then.
+  loads, and that load can fail with 504 "Outdated Optimize Dep" and no reload — with `npm run dev` alone as well.
+  **Fixed 2026-11-18 in `@tsazor/vite-plugin`:** it reads the imports of the project's `.tsazor` and `.ts` files and
+  hands the installed dependencies to `optimizeDeps.include`; the template's own list went. The gate still loads the
+  page a second time if the first stays empty, and says so.
 
 ## Not in this step
 

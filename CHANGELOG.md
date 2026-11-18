@@ -14,6 +14,26 @@ exception is `@tsazor/dotnet`, whose scope and API are settled between the relea
 
 Changes since 1.0.0-next.10:
 
+- **Tsazor.AspNetCore** (NuGet, new): hosts a Tsazor app in ASP.NET Core — `AddTsazor(o => o.ClientProject =
+  "../MyApp.Client")` and `app.MapTsazor()`. In Development every request no endpoint takes goes to the Vite dev
+  server, which the server starts when it isn't running (the HMR WebSocket and server-sent events included). Otherwise
+  the built files from `wwwroot`, read from disk on every request: `index.html` for a route without a file extension,
+  a real 404 for a missing file or API path, `no-cache` for `index.html`, a year `immutable` for `/assets`. Its build
+  targets run `npm install` on build and `npm run build` on a Release build and publish (incremental), put `dist` into
+  the publish output's `wwwroot`, and on request generate the typed client from the build-time OpenAPI document
+  (`TsazorGenerateApiClient`). [docs/design-aspnetcore.md](docs/design-aspnetcore.md).
+- **Tsazor.Templates** (NuGet, new): `dotnet new tsazor -n MyApp [--ui bootstrap|fluent|none] [--framework
+  net10.0|net11.0]` — MyApp.Server (ASP.NET Core, OpenAPI, validation as ValidationProblemDetails) and MyApp.Client
+  (create-tsazor's app with the server's weather forecast, a sign-up form that shows the server's errors, the typed
+  client) in one `.slnx`, with an `.esproj` for Visual Studio and `.vscode` for F5 in VS Code.
+- **Packages only pages import are optimized at startup** (`@tsazor/vite-plugin`): Vite's dependency scan reads no
+  `.tsazor` file, so such a package was optimized on the first page load, which could fail with 504 "Outdated Optimize
+  Dep" and leave the page empty. The plugin reads the imports of the project's `.tsazor` and `.ts` files and hands
+  the installed dependencies (not workspace links, not dev dependencies) to `optimizeDeps.include`.
+- **No pattern rule on a number field** (`@tsazor/dotnet`): .NET 10 writes a number as `"type": ["integer",
+  "string"]` with the pattern of its string form; the generator made that a `@RegularExpression` on the number. A
+  pattern now applies to string fields only.
+
 - **A color per point** (`@tsazor/charts`): `ChartSeries.categories` names each point's category ("OK", "Warning",
   "Failure"); a bar or a point takes its category's color — `ChartOptions.categoryColors` by name, else the
   palette's next — and the legend lists the categories, the hover title and the table name each point's ("Duration,

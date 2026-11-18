@@ -105,16 +105,6 @@ the server's build writes it anew from its OpenAPI document, so a changed C# rec
 `;
   });
 
-  // Vite's dependency scan reads no .tsazor file: the packages only the pages import (the API client's) would be found
-  // when the first page loads, and the re-optimization then fails that load (504 "Outdated Optimize Dep").
-  replace(
-    "vite.config.ts",
-    "    plugins: [tsazor()],\n",
-    "    plugins: [tsazor()],\n" +
-      "    // Imported only from .tsazor files, which Vite's dependency scan doesn't read: optimized up front.\n" +
-      '    optimizeDeps: { include: ["@tsazor/dotnet", "@tsazor/primitives"] },\n',
-  );
-
   // The solution folder has the editor settings.
   rmSync(path.join(client, ".vscode"), { recursive: true, force: true });
 

@@ -9,6 +9,7 @@ import { lazyRouteFilter } from "./lazy-routes.js";
 import { generateRoutesModule, listTsazorFilesUnder, scanRoutes, scanRootOf, scanTsazorModules } from "./routes.js";
 import { processScopedCss, scopeHashFor } from "./scoped-css.js";
 import { sharedDecoratorHelpers, transformTsazor } from "./transform.js";
+import { tsazorBareImports } from "./deps-scan.js";
 
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
@@ -77,6 +78,10 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
       // app's don't know. Only the app's own dependencies — Vite resolves a deduped package from the app's root.
       const dedupe = tsazorDependencies(path.resolve(options.root ?? userConfig.root ?? process.cwd()));
       if (dedupe.length > 0) build.resolve = { dedupe };
+      // Packages imported only from .tsazor files, which Vite's dependency scan can't read: optimized at startup, not
+      // on the first page load (deps-scan.ts). Vite merges the list with the app's own optimizeDeps.include.
+      const include = userConfig.optimizeDeps?.noDiscovery === true ? [] : tsazorBareImports(path.resolve(options.root ?? userConfig.root ?? process.cwd()));
+      if (include.length > 0) build.optimizeDeps = { include };
       // The app's own .ts files (code-behind, hand-written components) use
       // the runtime's standard decorators too. Vite's dev transform targets
       // esnext, which leaves decorators as written — no engine runs them

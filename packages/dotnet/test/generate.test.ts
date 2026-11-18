@@ -97,6 +97,28 @@ describe("generateClient — models.ts", () => {
     const none = models({ Note: { type: "object", properties: { text: { type: "string" } } } });
     expect(none).not.toContain("import");
   });
+
+  it("takes no pattern for a number that .NET 10 writes as integer or string (the pattern is its wire form's)", () => {
+    const models = generateClient({
+      openapi: "3.1.1",
+      info: { title: "Shop", version: "v1" },
+      paths: {},
+      components: {
+        schemas: {
+          Signup: {
+            type: "object",
+            properties: {
+              age: { type: ["integer", "string"], pattern: "^-?(?:0|[1-9]\\d*)$", format: "int32", minimum: 18, maximum: 120 },
+              code: { type: "string", pattern: "^[A-Z]{3}$" },
+            },
+          },
+        },
+      },
+    } as unknown as OpenApiDocument).files.find((f) => f.path === "models.ts")!.content;
+    expect(models).toContain("@Range(18, 120)");
+    expect(models.match(/@RegularExpression/g)).toHaveLength(1);
+    expect(models).toContain('@RegularExpression("^[A-Z]{3}$")');
+  });
 });
 
 describe("generateClient — client", () => {

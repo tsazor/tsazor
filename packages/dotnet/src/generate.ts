@@ -844,7 +844,9 @@ function validationDecorators(property: OpenApiSchema, isRequired: boolean): str
   if (isString && format === "email") {
     decorators.push("EmailAddress()");
   }
-  if (pattern !== undefined) {
+  // A pattern on a string field only: .NET 10 writes a number as `"type": ["integer", "string"]` with the pattern of
+  // its string form on the wire (`^-?(?:0|[1-9]\d*)$`), which is no rule for the number the field holds.
+  if (isString && pattern !== undefined) {
     decorators.push(`RegularExpression(${JSON.stringify(pattern)})`);
   }
   return decorators.filter((name) => name.length > 0);

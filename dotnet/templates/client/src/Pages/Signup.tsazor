@@ -1,5 +1,5 @@
 @page "/signup"
-@import { DataAnnotationsValidator, EditForm, InputNumber, InputText, ValidationMessage } from "@tsazor/runtime"
+@import { DataAnnotationsValidator, EditForm, InputNumber, InputText, ServerValidationErrors, ValidationMessage } from "@tsazor/runtime"
 @import { problemMessage } from "@tsazor/dotnet"
 @import { SignupRequest } from "../api/models"
 @import { ServerClient } from "../api/server"
@@ -42,33 +42,21 @@
 @code {
     private model = new SignupRequest();
     private editContext = new EditContext(this.model);
-    /** The server's errors, next to the client's own. */
-    private serverErrors = this.editContext.createValidationMessageStore();
+    /** The server's errors at their fields: an edited field drops its own, a new submit all of them. */
+    private serverErrors = new ServerValidationErrors(this.editContext);
     private busy = false;
     private message = "";
-
-    override onInitialized() {
-        // A field the user changes loses the server's error for it.
-        this.editContext.onFieldChanged.subscribe((_, field) => {
-            this.serverErrors.clear(field);
-            this.editContext.notifyValidationStateChanged();
-        });
-    }
 
     private submit = EventCallback.bind(this, async () => {
         this.busy = true;
         this.message = "";
-        this.serverErrors.clear();
         try {
             const result = await new ServerClient(this.http).createSignup(this.model);
             if (result.ok) {
                 this.message = result.body.message;
             } else if (result.validationErrors) {
-                // ValidationProblemDetails: field → messages. The server's names are the JSON names.
-                for (const [key, messages] of Object.entries(result.validationErrors)) {
-                    this.serverErrors.addAll(this.fieldOf(key), messages);
-                }
-                this.editContext.notifyValidationStateChanged();
+                // ValidationProblemDetails: "Email" lands at the field email; a key it can't place, at the form.
+                this.serverErrors.apply(result.validationErrors);
             } else {
                 this.message = problemMessage(result);
             }
@@ -76,10 +64,4 @@
             this.busy = false;
         }
     });
-
-    /** The model's field for a key of the server's errors ("Email", "email"); "" for the form as a whole. */
-    private fieldOf(key: string): string {
-        const name = key.split(".")[0]?.toLowerCase() ?? "";
-        return Object.keys(this.model).find((field) => field.toLowerCase() === name) ?? "";
-    }
 }
