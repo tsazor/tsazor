@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json.schemastore.org/ide.host",
+  "order": 0,
+  "unsupportedHosts": [],
+  "symbolInfo": [
+    {
+      "id": "ui",
+      "name": { "text": "Component library" },
+      "description": { "text": "The component library of the Tsazor app: Bootstrap, Fluent UI or none." },
+      "isVisible": true
+    },
+    {
+      "id": "Framework",
+      "isVisible": true
+    },
+    {
+      "id": "skipRestore",
+      "isVisible": false
+    }
+  ]
+}

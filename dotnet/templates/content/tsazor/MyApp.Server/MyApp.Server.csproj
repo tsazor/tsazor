@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MyApp.Server</RootNamespace>
+
+    <!-- Tsazor.AspNetCore: npm install on build; npm run build on Release builds and publish; dist into wwwroot. -->
+    <TsazorClientProject>..\MyApp.Client</TsazorClientProject>
+    <!-- The typed client in MyApp.Client/src/api, from the OpenAPI document every build writes (obj/MyApp.Server.json). -->
+    <TsazorGenerateApiClient>true</TsazorGenerateApiClient>
+    <TsazorApiClientArguments>--name Server</TsazorApiClientArguments>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tsazor.AspNetCore" Version="TSAZOR_VERSION" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="ASPNETCORE_VERSION" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="ASPNETCORE_VERSION">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

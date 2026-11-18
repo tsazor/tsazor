@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.7204101">
+  <!--
+    The client in Visual Studio: npm, the tests, the TypeScript debugger. MyApp.Server starts the Vite dev server
+    itself (Tsazor.AspNetCore), so F5 on the server is enough; started as a project of its own, this one runs it on
+    the port the server expects. The server's build installs and builds the client: not this project.
+  -->
+  <PropertyGroup>
+    <StartupCommand>npm run dev -- --port 5173 --strictPort</StartupCommand>
+    <JavaScriptTestRoot>src\</JavaScriptTestRoot>
+    <JavaScriptTestFramework>Vitest</JavaScriptTestFramework>
+    <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+    <ShouldRunBuildScript>false</ShouldRunBuildScript>
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+  </PropertyGroup>
+</Project>

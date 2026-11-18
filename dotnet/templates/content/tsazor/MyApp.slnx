@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MyApp.Client/MyApp.Client.esproj">
+    <Build Project="false" />
+  </Project>
+  <Project Path="MyApp.Server/MyApp.Server.csproj" />
+</Solution>

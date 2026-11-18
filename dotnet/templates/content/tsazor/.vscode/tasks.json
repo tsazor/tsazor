@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "detail": "dotnet build of the server; its first build runs npm install in the client",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/MyApp.Server/MyApp.Server.csproj", "/property:GenerateFullPaths=true", "/consoleloggerparameters:NoSummary"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "npm install",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/MyApp.Client" },
+      "problemMatcher": []
+    },
+    {
+      "label": "vite",
+      "detail": "The Vite dev server on the port the server expects; the server starts it itself when it isn't running",
+      "type": "shell",
+      "command": "npm run dev -- --port 5173 --strictPort",
+      "options": { "cwd": "${workspaceFolder}/MyApp.Client" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": { "regexp": "^x{0}$" },
+        "background": { "activeBegin": "VITE v", "beginsPattern": "VITE v", "endsPattern": "ready in" }
+      }
+    },
+    {
+      "label": "test (client)",
+      "type": "shell",
+      "command": "npm test",
+      "options": { "cwd": "${workspaceFolder}/MyApp.Client" },
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
