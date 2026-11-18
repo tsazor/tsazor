@@ -143,3 +143,37 @@ jobs:
         run: pnpm --filter blazor-parity verify
       - name: The starter
         run: pnpm --filter starter verify
+
+  # The .NET side (docs/design-aspnetcore.md): Tsazor.AspNetCore's tests, both NuGet packages, and `dotnet new tsazor`
+  # end to end — the npm packages from a fresh Verdaccio, the apps built, published and driven in Edge.
+  dotnet:
+    name: .NET — Tsazor.AspNetCore and dotnet new tsazor
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+            11.0.x
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - name: Tsazor.AspNetCore — built for net10.0 and net11.0, its tests
+        run: dotnet test dotnet/Tsazor.slnx -c Release
+      - name: Pack — Tsazor.AspNetCore, Tsazor.Templates (the template's client from create-tsazor)
+        run: |
+          dotnet pack dotnet/src/Tsazor.AspNetCore -c Release
+          dotnet pack dotnet/templates -c Release
+      - name: dotnet new tsazor — each --ui built, the Bootstrap app published, served and run in development
+        run: node dotnet/scripts/template-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: .release/nuget/*.nupkg
