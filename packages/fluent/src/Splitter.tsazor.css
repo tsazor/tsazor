@@ -1,0 +1,77 @@
+/* Splitter — panes side by side (or stacked) with a bar between each two: a hairline that turns brand on hover, while
+   dragged and on focus. */
+
+.fui-splitter {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fui-splitter--vertical {
+  flex-direction: column;
+}
+
+.fui-splitter__pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.fui-splitter__pane--collapsed {
+  overflow: hidden;
+}
+
+.fui-splitter__bar {
+  position: relative;
+  flex: none;
+  width: var(--fui-splitter-bar, 8px);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.fui-splitter--vertical > .fui-splitter__bar {
+  width: auto;
+  height: var(--fui-splitter-bar, 8px);
+  cursor: row-resize;
+}
+
+/* The hairline in the middle of the bar. */
+.fui-splitter__bar::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  width: 1px;
+  background: var(--fui-stroke-2);
+  transform: translateX(-50%);
+  transition: background var(--fui-duration-fast) var(--fui-ease-standard), width var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-splitter--vertical > .fui-splitter__bar::before {
+  inset-block-start: 50%;
+  inset-inline: 0;
+  width: auto;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.fui-splitter__bar:hover::before,
+.fui-splitter__bar:active::before,
+.fui-splitter__bar:focus-visible::before {
+  width: 3px;
+  background: var(--fui-brand-background);
+}
+
+.fui-splitter--vertical > .fui-splitter__bar:hover::before,
+.fui-splitter--vertical > .fui-splitter__bar:active::before,
+.fui-splitter--vertical > .fui-splitter__bar:focus-visible::before {
+  width: auto;
+  height: 3px;
+}
+
+.fui-splitter__bar:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}

@@ -1,0 +1,10 @@
+@import { checkout } from "./basket"
+
+<p class="checkout">@checkout([0.1, 0.2])</p>
+
+<h2>Numbers and dates</h2>
+<ul>
+    <li><code>7 / 2</code> → @(7 / 2), <code>Math.trunc(7 / 2)</code> → @Math.trunc(7 / 2)</li>
+    <li><code>Number.MAX_SAFE_INTEGER</code> → @Number.MAX_SAFE_INTEGER</li>
+    <li><code>new Date(2026, 9, 2)</code> → @(new Date(2026, 9, 2).toDateString())</li>
+</ul>

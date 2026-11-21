@@ -1,0 +1,53 @@
+@* Client/Pages/Identity/RoleModal.razor(.cs): shown by the DialogService with the role to edit, or a new one (its id
+   null — the disabled id field stays empty). A saved role closes the dialog; the page tells the hub. *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { RoleRequest } from "../../Application/Identity"
+@import { roleRequestValidators } from "../../Application/Validators/Identity"
+@inject RoleManager roleManager
+@inject Toaster toaster
+
+<FluentForm model="@roleModel" validators="@validators" onValidSubmit="@saveAsync" novalidate>
+    <Dialog title="@(isNew ? L("Add Role") : L("Update Role"))">
+        <ChildContent>
+            <div class="bh-form-grid">
+                <TextInput label="@L("Role ID")" value="@(roleModel.id ?? "")" disabled />
+                <TextInput label="@L("Role Name")" @bind-Value="roleModel.name" />
+                <TextInput label="@L("Description")" @bind-Value="roleModel.description" />
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            @if (isNew) {
+                <Button type="submit" intent="success">@L("Save Role")</Button>
+            } else {
+                <Button type="submit" intent="secondary">@L("Update Role")</Button>
+            }
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() roleModel = new RoleRequest();
+
+    private readonly L = localizerFor("RoleModal");
+    private readonly validators = roleRequestValidators(localizerFor("RoleRequestValidator"));
+
+    private get isNew(): boolean {
+        return this.roleModel.id === null;
+    }
+
+    private async saveAsync(): Promise<void> {
+        const response = await this.roleManager.saveAsync(this.roleModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close();
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

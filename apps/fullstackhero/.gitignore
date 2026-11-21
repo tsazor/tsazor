@@ -1,0 +1,6 @@
+node_modules
+dist
+*.local
+# The fullstackhero clone (scripts/backend.mjs) and the acceptance run's output (scripts/acceptance.mjs).
+.backend
+.tmp

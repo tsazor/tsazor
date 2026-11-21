@@ -1,0 +1,21 @@
+@page "/counter-persistent"
+@inject CounterState State
+
+<h1>Persistent counter</h1>
+
+<p>
+    Unlike <NavLink Href="/counter">Counter</NavLink>, this count survives navigation: the page
+    is disposed when you leave it (like in Blazor), but the count lives in an injected
+    <code>CounterState</code> service registered in <code>Program.ts</code>.
+</p>
+
+<div class="card">
+    <p class="count-display" role="status">Current count: <strong>@State.count</strong></p>
+    <button class="btn" @onclick="increment">Click me</button>
+</div>
+
+@code {
+    private increment() {
+        this.State.increment();
+    }
+}

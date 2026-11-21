@@ -1,0 +1,29 @@
+@** A CSS grid layout (`d-grid`): a fixed number of equal columns, or responsive auto-fill tracks when
+    `minChildWidth` is set; the gap from the spacing scale — the same parameters as the Fluent skin's
+    Grid. (Bootstrap's 12-column `.row`/`.col` system stays available for page layout.) *@
+@import { withClass } from "./attributes"
+<div style="@gridStyle" @attributes="@withClass(gridClass, additionalAttributes)">@childContent</div>
+
+@code {
+    /** Column count when no minChildWidth is given. */
+    @Parameter() columns: number = 3;
+    /** Gap between tracks: xs | s | m | l | xl (Bootstrap's gap-1 … gap-5); no gap when omitted. */
+    @Parameter() gap?: "xs" | "s" | "m" | "l" | "xl";
+    /** Responsive minimum column width (CSS length, e.g. "240px"): as many columns as fit. */
+    @Parameter() minChildWidth?: string;
+    /** The grid items; each child fills one cell. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the grid element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private static readonly GAPS = { xs: 1, s: 2, m: 3, l: 4, xl: 5 } as const;
+
+    private get gridClass(): string {
+        return this.gap ? `d-grid gap-${Grid.GAPS[this.gap]}` : "d-grid";
+    }
+
+    private get gridStyle(): string {
+        const track = this.minChildWidth ? `repeat(auto-fill, minmax(${this.minChildWidth}, 1fr))` : `repeat(${this.columns}, 1fr)`;
+        return `grid-template-columns: ${track}`;
+    }
+}

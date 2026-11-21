@@ -4,6 +4,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* A Button with href is an <a>: no link underline. */
+  text-decoration: none;
   gap: var(--fui-gap-sm);
   height: var(--fui-height);
   padding: 0 var(--fui-spacing-l);
@@ -34,17 +36,17 @@
 }
 
 .fui-button--primary {
-  background: var(--fui-accent);
+  background: var(--fui-brand-background);
   color: var(--fui-foreground-on-brand);
   border-color: transparent;
 }
 
 .fui-button--primary:hover {
-  background: var(--fui-accent-hover);
+  background: var(--fui-brand-background-hover);
 }
 
 .fui-button--primary:active {
-  background: var(--fui-accent-active);
+  background: var(--fui-brand-background-pressed);
   color: var(--fui-foreground-on-brand-selected);
 }
 
@@ -93,4 +95,87 @@
 .fui-button--primary:disabled {
   background: var(--fui-foreground-disabled);
   color: var(--fui-background-1);
+}
+/* Outline: no fill, a visible stroke. */
+.fui-button--outline {
+  background: transparent;
+}
+
+.fui-button--outline:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+/* Status colors on the filled (primary) button. */
+.fui-button--primary.fui-button--success {
+  background: var(--fui-color-green-filled);
+  color: #FFFFFF;
+}
+
+.fui-button--primary.fui-button--danger {
+  background: var(--fui-color-red-filled);
+  color: #FFFFFF;
+}
+
+.fui-button--primary.fui-button--warning {
+  background: var(--fui-color-amber-filled);
+  color: #FFFFFF;
+}
+
+.fui-button--primary.fui-button--info {
+  background: var(--fui-color-blue-1);
+  color: #FFFFFF;
+}
+
+.fui-button--primary.fui-button--success:hover,
+.fui-button--primary.fui-button--danger:hover,
+.fui-button--primary.fui-button--warning:hover,
+.fui-button--primary.fui-button--info:hover {
+  filter: brightness(0.92);
+}
+
+/* The color as ink on the light appearances (outline, subtle, transparent). */
+.fui-button--ink-brand {
+  color: var(--fui-brand-background);
+}
+
+.fui-button--ink-success {
+  color: var(--fui-color-green-1);
+}
+
+.fui-button--ink-danger {
+  color: var(--fui-color-red-1);
+}
+
+.fui-button--ink-warning {
+  color: var(--fui-color-amber-1);
+}
+
+.fui-button--ink-info {
+  color: var(--fui-color-blue-1);
+}
+
+.fui-button--outline.fui-button--ink-brand,
+.fui-button--outline.fui-button--ink-success,
+.fui-button--outline.fui-button--ink-danger,
+.fui-button--outline.fui-button--ink-warning,
+.fui-button--outline.fui-button--ink-info {
+  border-color: currentColor;
+}
+
+/* Icon slots (iconStart/iconEnd): the icon keeps its own size; an icon-only button is square. */
+.fui-button__icon {
+  flex: none;
+}
+
+.fui-button--icon-only {
+  min-width: var(--fui-height);
+  padding: 0;
+}
+
+.fui-button--icon-only.fui-button--small {
+  min-width: var(--fui-height-s);
+}
+
+.fui-button--icon-only.fui-button--large {
+  min-width: var(--fui-height-l);
 }

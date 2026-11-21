@@ -4,20 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "server": "node server/server.mjs",
+    "api": "node server/server.mjs",
+    "build": "tsazor check && vite build",
+    "check": "tsazor check",
     "dev": "vite",
-    "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "verify": "node scripts/verify-pizza.mjs"
   },
   "dependencies": {
+    "@tsazor/dotnet": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8",
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
     "@types/leaflet": "^1.9.12",
     "playwright-core": "^1.63.0",
     "typescript": "^5.9.2",

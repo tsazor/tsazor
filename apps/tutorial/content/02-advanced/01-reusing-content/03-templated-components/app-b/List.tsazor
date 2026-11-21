@@ -1,0 +1,13 @@
+@import type { RenderFragment } from "@tsazor/runtime"
+@typeparam TItem
+
+<ul class="list">
+    @foreach (const item of items) {
+        <li>@itemTemplate?.(item)</li>
+    }
+</ul>
+
+@code {
+    @Parameter() items: TItem[] = [];
+    @Parameter() itemTemplate?: (item: TItem) => RenderFragment;
+}

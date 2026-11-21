@@ -1,0 +1,96 @@
+@** One pane of a Splitter (Fluent UI Blazor's FluentMultiSplitterPane; also MultiSplitterPane), and the bar after it.
+    `size` (% or px; without it the pane takes the room left), `min`, `max`; `resizable` (default) lets its bar move;
+    `collapsible` lets Enter on a bar, or a double-click on it, collapse it; `collapsed` starts it collapsed. `label`
+    names the bar after it for screen readers ("Resize the navigation"). *@
+@import { uniqueId } from "@tsazor/ui"
+@import type Splitter from "./Splitter.tsazor"
+@import { libraryTexts } from "@tsazor/ui"
+
+<div class="@this.paneClass" id="@this.id" style="@(`flex: ${this.flex}`)" @ref="element">@childContent</div>
+@if (splitter?.hasBarAfter(this)) {
+    <div class="tz-splitter__bar" role="separator" tabindex="@(this.reachable ? 0 : -1)" aria-orientation="@(splitter.orientation === "horizontal" ? "vertical" : "horizontal")" aria-controls="@this.id" aria-label="@(label ?? t("splitter.resize"))" aria-valuenow="@this.values.now" aria-valuemin="@this.values.min" aria-valuemax="@this.values.max" @onkeydown="(e) => splitter!.keydown(this, e)" @onpointerdown="(e) => splitter!.pointerdown(this, e)" @onpointermove="(e) => splitter!.pointermove(e)" @onpointerup="() => splitter!.pointerup()" @onpointercancel="() => splitter!.pointerup()" @ondblclick="() => this.toggleNearest()"></div>
+}
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The pane's size: % or px ("30%", "240px"); without it the pane takes the room left. */
+    @Parameter() size?: string;
+    /** Its smallest size (% or px). */
+    @Parameter() min?: string;
+    /** Its largest size (% or px). */
+    @Parameter() max?: string;
+    /** Its bar moves (the default). */
+    @Parameter() resizable = true;
+    /** It can be collapsed (Enter on its bar, or a double-click on it). */
+    @Parameter() collapsible = false;
+    /** It starts collapsed. */
+    @Parameter() collapsed = false;
+    /** Names the bar after the pane for screen readers. */
+    @Parameter() label?: string;
+    /** The pane's content. */
+    @Parameter() childContent?: RenderFragment;
+
+    /** Resolved from the enclosing Splitter. */
+    @CascadingParameter({ name: "BootstrapSplitter" }) splitter?: Splitter;
+
+    /** The pane's place, set by the splitter. */
+    index = -1;
+    /** @internal The pane's element, which the splitter measures. */
+    element?: HTMLDivElement;
+    /** @internal The size it had before it collapsed. */
+    restoreSize?: number;
+    private readonly id = uniqueId("tz-splitter-pane");
+    private collapsedNow?: boolean;
+    private collapsedGiven?: boolean;
+
+    /** The bar takes Tab when it moves or collapses a pane: Enter must reach a collapse a double-click can do. */
+    private get reachable(): boolean {
+        return this.resizable || this.splitter?.collapsibleAt(this) !== undefined;
+    }
+
+    get isCollapsed(): boolean {
+        return this.collapsedNow ?? this.collapsed;
+    }
+
+    private get flex(): string {
+        return this.splitter?.flexOf(this) ?? "1 1 0px";
+    }
+
+    private get values(): { now: number; min: number; max: number } {
+        return this.splitter?.barValues(this) ?? { now: 0, min: 0, max: 100 };
+    }
+
+    private get paneClass(): string {
+        return this.isCollapsed ? "tz-splitter__pane tz-splitter__pane--collapsed" : "tz-splitter__pane";
+    }
+
+    protected override onInitialized(): void {
+        this.splitter?.registerPane(this);
+    }
+
+    /** A new `collapsed` from the page wins over a collapse by the bar. */
+    protected override onParametersSet(): void {
+        if (this.collapsedGiven !== this.collapsed) this.collapsedNow = undefined;
+        this.collapsedGiven = this.collapsed;
+    }
+
+    dispose(): void {
+        this.splitter?.unregisterPane(this);
+    }
+
+    /** @internal */
+    setCollapsed(collapsed: boolean): void {
+        this.collapsedNow = collapsed;
+    }
+
+    /** A double-click on the bar: the collapsible pane beside it collapses or expands. */
+    private async toggleNearest(): Promise<void> {
+        await this.splitter?.keydown(this, new KeyboardEvent("keydown", { key: "Enter" }));
+    }
+
+    /** @internal Renders again (the splitter's sizes changed). */
+    refresh(): void {
+        this.stateHasChanged();
+    }
+}

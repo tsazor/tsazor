@@ -1,0 +1,47 @@
+@** A code panel: the code as text, the language name, and the copy button that puts it on the
+    clipboard (with the old browser's fallback; "Copied" in place of the label for a moment). *@
+@import { Typography, Button } from "@tsazor/bootstrap"
+
+<div class="sz-code">
+    <div class="sz-code__bar">
+        <Typography As="span">Tsazor</Typography>
+        <Button Appearance="outline" Size="small" OnClick="@(() => this.copy())" AriaLabel="Copy the code to the clipboard">
+            @(this.copied ? "Copied" : "Copy")
+        </Button>
+    </div>
+    <pre><code>@this.code</code></pre>
+</div>
+
+@code {
+    /** The code text, shown and copied as it is. */
+    @Parameter() code: string = "";
+    private copied = false;
+    private revert?: number;
+
+    /** Puts the code on the clipboard; the fallback is a temporary textarea, for a non-secure page. */
+    private async copy(): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(this.code);
+        } catch {
+            const holder = document.createElement("textarea");
+            holder.value = this.code;
+            holder.style.position = "fixed";
+            holder.style.opacity = "0";
+            document.body.append(holder);
+            holder.select();
+            document.execCommand("copy");
+            holder.remove();
+        }
+        this.copied = true;
+        clearTimeout(this.revert);
+        this.revert = window.setTimeout(() => {
+            this.copied = false;
+            this.stateHasChanged();
+        }, 2000);
+        this.stateHasChanged();
+    }
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => clearTimeout(this.revert));
+    }
+}

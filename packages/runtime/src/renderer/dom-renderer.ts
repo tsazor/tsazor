@@ -1,73 +1,236 @@
-import { FrameType } from "../render-tree/frame-type";
-import type { RenderTreeFrame } from "../render-tree/render-tree";
-import { getFrameChildren, getFrameSubtreeLength } from "../render-tree/render-tree";
-import { attributeMap, matchChildren } from "../render-tree/diff";
-import { EventCallback } from "../components/event-callback";
-import type { ComponentState } from "./component-state";
-import type { Renderer } from "./renderer";
-
-interface FrameContext {
-  /** DOM node new frames render into. */
-  parentDom: Node;
-  /** Right boundary for insertions (e.g. the component's end marker), or null. */
-  boundary: Node | null;
-  /** Last rendered DOM node at this level; content goes after it. */
-  lastNode: Node | null;
-}
-
-interface EventHandlerRecord {
-  callback: EventCallback<never>;
-  flags: number;
-  listener: (event: Event) => void;
-}
-
-const elementHandlers = new WeakMap<Element, Map<string, EventHandlerRecord>>();
-
-/** Renderer of the most recently constructed DomRenderer; used for event tracking. */
-let activeRenderer: Renderer | null = null;
+import { FrameType } from "../render-tree/frame-type.js";
+import type { RenderTreeFrame } from "../render-tree/render-tree.js";
+import { getFrameSubtreeLength } from "../render-tree/render-tree.js";
+import { RenderTreeEditType, type RenderTreeEdit } from "../render-tree/diff.js";
+import type { EventCallback } from "../components/event-callback.js";
+import type { ComponentState } from "./component-state.js";
+import { selectOf, setAttributeValue, syncSelectValue, type EventHandlerHost } from "./dom-attributes.js";
+import { DomJournal } from "./dom-journal.js";
+import { attachmentHost } from "./attachment-host.js";
+import { motionHost, type MotionWork } from "./motion-host.js";
+import { hasPortals, LogicalChildren, LogicalRange, markLeaving, nextLogicalSibling, portalElement, removeLogicalChild, sweepPortals } from "./logical-range.js";
+import type { Renderer } from "./renderer.js";
+import { componentInternals } from "../components/component-internals.js";
 
 /**
- * Applies render tree frames to the real DOM (initial render and diff-based
- * updates). Blazor sends a RenderBatch over the WASM boundary; since Tsazor's
- * renderer runs in the same realm, diffing and patching happen in one pass.
+ * Applies a diff's edit list to the real DOM (Blazor's BrowserRenderer). The
+ * diff itself never touches the DOM; this walks the edits once, resolving
+ * sibling indices against the live DOM with a forward cursor per level
+ * (edits within a level are ordered by ascending sibling index). A level is
+ * the logical children (see LogicalRange) of the component's own range or of
+ * an element; child components and markup blocks are ranges and move or
+ * disappear as a unit.
+ *
+ * Application is transactional: every mutation of DOM that existed before
+ * the pass is journaled (DomJournal), and a pass that throws part-way is
+ * rolled back before the error propagates — the DOM then again shows the
+ * component's retained live tree, which stays the diff base of its next
+ * pass. Limits: side effects outside the DOM tree are not undone (element
+ * reference captures and custom-element callbacks that already ran, focus
+ * or selection lost by moving a node, caret position after a value reset).
  */
-export class DomRenderer {
-  constructor(private readonly renderer: Renderer) {
-    activeRenderer = renderer;
+export class DomRenderer implements EventHandlerHost {
+  private readonly journal = new DomJournal();
+  private applying = false;
+  /**
+   * F2: the batch's attachment work, flat `(state, element, name, value)`
+   * entries (see AttachmentHost.run); null while there is none. Attachments
+   * run at the batch end, so applying edits only queues them — a pass that
+   * rolls back drops what it queued.
+   */
+  private attachmentWork: unknown[] | null = null;
+  /** F4/F5: the batch's motion work (see MotionHost); null while there is none. Rolled back like attachmentWork. */
+  private motionWork: MotionWork[] | null = null;
+
+  /** Created by `Renderer`, which owns exactly one DomRenderer. */
+  constructor(private readonly renderer: Renderer) {}
+
+  /**
+   * Runs a DOM event's handler for a listener bound while
+   * rendering `state`: the invocation is tracked by this DomRenderer's own
+   * renderer (waitUntilIdle), failures go to its error handler.
+   */
+  invokeEventHandler(state: ComponentState, callback: EventCallback<never>, event: Event): void {
+    const invocation = callback
+      .invokeAsync(event as never)
+      .catch((error) => this.renderer.handleComponentError(error, state, "event"));
+    this.renderer.trackFor(state, invocation, `${state.component.constructor.name || "a component"}: ${event.type} handler`);
   }
 
-  /** First render of a component: builds DOM between its markers. */
-  renderInitial(state: ComponentState, frames: RenderTreeFrame[]): void {
-    const nodes: Node[] = [];
-    const ctx: FrameContext = {
-      parentDom: state.startMarker.parentNode!,
-      boundary: state.endMarker,
-      lastNode: state.startMarker,
-    };
-    this.processRange(state, frames, -1, frames.length, null, -1, ctx, nodes);
-    state.renderedNodes = nodes;
+  /**
+   * Applies the edits of one render pass of `state`; `frames` is its new
+   * render tree. All or nothing: throws after rolling back what it applied.
+   */
+  applyEdits(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[]): void {
+    // Passes never nest (renders requested meanwhile only queue); a fresh
+    // journal keeps a nested call safe anyway.
+    const nested = this.applying;
+    const journal = nested ? new DomJournal() : this.journal;
+    const queued = this.attachmentWork?.length ?? 0;
+    const queuedMotion = this.motionWork?.length ?? 0;
+    this.applying = true;
+    try {
+      this.applyEditsJournaled(state, frames, edits, journal);
+      journal.clear();
+    } catch (error) {
+      journal.rollback();
+      if (this.attachmentWork !== null) this.attachmentWork.length = queued;
+      if (this.motionWork !== null) this.motionWork.length = queuedMotion;
+      throw error;
+    } finally {
+      this.applying = nested;
+    }
   }
 
-  /** Diff-and-patch: compares new frames against the previous tree and patches the DOM. */
-  renderUpdate(state: ComponentState, oldFrames: RenderTreeFrame[], newFrames: RenderTreeFrame[]): void {
-    const nodes: Node[] = [];
-    const ctx: FrameContext = {
-      parentDom: state.startMarker.parentNode!,
-      boundary: state.endMarker,
-      lastNode: state.startMarker,
-    };
-    this.processRange(state, newFrames, -1, newFrames.length, oldFrames, -1, ctx, nodes);
-    state.renderedNodes = nodes;
+  private applyEditsJournaled(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[], journal: DomJournal): void {
+    const stack: LogicalChildren[] = [];
+    let level = new LogicalChildren(state.range);
+    /** Selects whose options this pass changed: their value is re-synced at the end. */
+    let selects: HTMLSelectElement[] | null = null;
+    /** F2: whether this pass already queued the check for removed attached elements. */
+    let removed = false;
+    /** F4: whether this is the component's first render (local intros don't play). */
+    const firstPass = !componentInternals.firstRenderCompleted(state.component);
+
+    for (let i = 0; i < edits.length; i++) {
+      const edit = edits[i]!;
+      switch (edit.type) {
+        case RenderTreeEditType.PrependFrame: {
+          if (motionHost !== null) this.measureLevel(level);
+          const before = level.at(edit.siblingIndex);
+          level.seek(edit.siblingIndex, this.insertFrame(state, frames, edit.referenceFrameIndex, level.parent, before, journal, firstPass));
+          selects = touchSelect(selects, level.parent);
+          break;
+        }
+        case RenderTreeEditType.RemoveFrame: {
+          const first = level.at(edit.siblingIndex)!;
+          if (motionHost !== null) {
+            this.measureLevel(level);
+            if (!removed) this.queueMotion({ op: "sweep" });
+          }
+          if (motionHost?.leaves(state, first)) {
+            // F4: an outro plays — the child stays in the DOM, skipped by indexing, until it ends.
+            const next = nextLogicalSibling(first);
+            markLeaving(first, journal);
+            this.queueMotion({ op: "leave", state, first });
+            level.seek(edit.siblingIndex, next);
+          } else {
+            level.seek(edit.siblingIndex, removeLogicalChild(first, journal));
+          }
+          selects = touchSelect(selects, level.parent);
+          // F2: the removed subtree may hold attached elements — checked once per pass.
+          if (attachmentHost !== null && !removed) this.queueAttachment(state, null, null, null);
+          removed = true;
+          break;
+        }
+        case RenderTreeEditType.SetAttribute: {
+          const frame = frames[edit.referenceFrameIndex]!;
+          const element = portalElement(level.at(edit.siblingIndex)) as Element;
+          if (frame.frameType === FrameType.Attachment) this.queueDirective(state, element, frame.attributeName!, frame.attributeValue, false, firstPass);
+          else setAttributeValue(this, state, element, frame.attributeName!, frame.attributeValue, frame.eventHandlerFlags ?? 0, journal);
+          break;
+        }
+        case RenderTreeEditType.RemoveAttribute: {
+          const name = edit.removedAttributeName!;
+          const element = portalElement(level.at(edit.siblingIndex)) as Element;
+          // F2: `@attach…` is an attachment frame's name (the `@` namespace is reserved).
+          if (name.charCodeAt(0) === 64) {
+            if (isAttachName(name)) this.queueAttachment(state, element, name, null);
+            else this.queueMotion({ op: "remove", state, element, name });
+          } else setAttributeValue(this, state, element, name, null, 0, journal);
+          break;
+        }
+        case RenderTreeEditType.UpdateText: {
+          const node = level.at(edit.siblingIndex)!;
+          const text = String(frames[edit.referenceFrameIndex]!.textContent);
+          journal.property(node, "nodeValue");
+          node.nodeValue = text;
+          break;
+        }
+        case RenderTreeEditType.UpdateMarkup: {
+          const before = removeLogicalChild(level.at(edit.siblingIndex)!, journal);
+          level.seek(edit.siblingIndex, insertMarkup(frames[edit.referenceFrameIndex]!.markupContent!, level.parent, before, journal));
+          selects = touchSelect(selects, level.parent);
+          break;
+        }
+        case RenderTreeEditType.StepIn: {
+          const element = portalElement(level.at(edit.siblingIndex)) as Element;
+          stack.push(level);
+          level = new LogicalChildren(element);
+          break;
+        }
+        case RenderTreeEditType.StepOut:
+          level = stack.pop()!;
+          break;
+        case RenderTreeEditType.PermutationListEntry: {
+          if (motionHost !== null) this.measureLevel(level);
+          const moves: Array<{ from: number; to: number }> = [];
+          for (; edits[i]!.type !== RenderTreeEditType.PermutationListEnd; i++) {
+            moves.push({ from: edits[i]!.siblingIndex, to: edits[i]!.moveToSiblingIndex });
+          }
+          level.permute(moves, journal);
+          selects = touchSelect(selects, level.parent);
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    if (selects !== null) {
+      for (const select of selects) syncSelectValue(select, journal);
+    }
+    // An element `portal` moved goes with its placeholder, also when an ancestor was removed.
+    if (removed && hasPortals()) sweepPortals();
   }
 
-  /** Removes the whole output of a disposed component (markers + content). */
-  removeComponentOutput(state: ComponentState): void {
-    removeBetween(state.startMarker, state.endMarker);
-    state.startMarker.parentNode?.removeChild(state.startMarker);
-    state.endMarker.parentNode?.removeChild(state.endMarker);
+  /** F2: queues an attachment change of `element` (`element === null`: check for removed attached elements). */
+  private queueAttachment(state: ComponentState, element: Element | null, name: string | null, value: unknown): void {
+    (this.attachmentWork ??= []).push(state, element, name, value);
   }
 
-  /** @internal Replaces the slot-children map after a render pass. */
+  /**
+   * An element directive frame (`@attach…`, or F4/F5 `@in`, `@out`,
+   * `@transition`, `@animate`) was set: `inserted` with its element.
+   */
+  private queueDirective(state: ComponentState, element: Element, name: string, value: unknown, inserted: boolean, firstPass: boolean): void {
+    if (isAttachName(name)) {
+      if (inserted && typeof value !== "function") return;
+      this.queueAttachment(state, element, name, value);
+    } else {
+      this.queueMotion({ op: "set", state, element, name, value, inserted, firstPass });
+    }
+  }
+
+  private queueMotion(work: MotionWork): void {
+    (this.motionWork ??= []).push(work);
+  }
+
+  /**
+   * F5: before the first structural edit of a level in this pass, queues the
+   * boxes of its animated children (FLIP's "first"); a no-op without any.
+   */
+  private measureLevel(level: LogicalChildren): void {
+    if (level.measured || !motionHost!.animates) return;
+    level.measured = true;
+    const work = (this.motionWork ??= []);
+    for (const node of level.list()) motionHost!.measure(node, work);
+  }
+
+  /** F4/F5: hands the batch's motion work over (null when there is none) and starts a new list. */
+  takeMotionWork(): MotionWork[] | null {
+    const work = this.motionWork;
+    this.motionWork = null;
+    return work;
+  }
+
+  /** F2: hands the batch's attachment work over (null when there is none) and starts a new list. */
+  takeAttachmentWork(): unknown[] | null {
+    const work = this.attachmentWork;
+    this.attachmentWork = null;
+    return work;
+  }
+
+  /** Replaces the slot-children map after a render pass. */
   commitSlotChildren(state: ComponentState): void {
     state.slotChildren.clear();
     for (const [key, value] of state.newSlotChildren) {
@@ -76,529 +239,225 @@ export class DomRenderer {
     state.newSlotChildren.clear();
   }
 
-  private processRange(
-    state: ComponentState,
-    newFrames: RenderTreeFrame[],
-    newParentIndex: number,
-    newSubtreeLength: number,
-    oldFrames: RenderTreeFrame[] | null,
-    oldParentIndex: number,
-    ctx: FrameContext,
-    nodes: Node[],
-  ): void {
-    const newChildren = directChildren(newFrames, newParentIndex, newSubtreeLength);
-    const match = oldFrames !== null ? matchChildren(oldFrames, oldParentIndex, newFrames, newParentIndex) : null;
-
-    for (const { index, frame } of newChildren) {
-      const oldIndex = match?.matches.get(index) ?? null;
-      this.processFrame(state, newFrames, index, frame, oldFrames, oldIndex, ctx, nodes);
-    }
-
-    // Remove old children that no longer exist (innermost first).
-    if (match && match.removed.length > 0) {
-      for (let i = match.removed.length - 1; i >= 0; i--) {
-        this.removeOldFrame(state, oldFrames!, match.removed[i]!);
-      }
-    }
-  }
-
-  private processFrame(
-    state: ComponentState,
-    newFrames: RenderTreeFrame[],
-    newIndex: number,
-    frame: RenderTreeFrame,
-    oldFrames: RenderTreeFrame[] | null,
-    oldIndex: number | null,
-    ctx: FrameContext,
-    nodes: Node[],
-  ): void {
-    let oldFrame: RenderTreeFrame | null = null;
-    if (oldIndex !== null && oldFrames !== null) {
-      const candidate = oldFrames[oldIndex]!;
-      if (candidate.frameType === frame.frameType) {
-        oldFrame = candidate;
-      } else {
-        // Same slot, different frame kind: rebuild from scratch.
-        this.removeOldFrame(state, oldFrames, oldIndex);
-        oldIndex = null;
-      }
-    }
-
+  /**
+   * Inserts frame `index` (with its whole subtree) before `before`; returns
+   * its first DOM node. `journal` is null while building a detached subtree.
+   */
+  private insertFrame(state: ComponentState, frames: RenderTreeFrame[], index: number, parent: Node, before: Node | null, journal: DomJournal | null, firstPass: boolean): Node {
+    const frame = frames[index]!;
     switch (frame.frameType) {
-      case FrameType.Element:
-        this.processElement(state, newFrames, newIndex, frame, oldFrames, oldIndex, oldFrame, ctx, nodes);
-        break;
-      case FrameType.Text:
-        this.processText(newFrames, newIndex, frame, oldFrames, oldIndex, oldFrame, state, ctx, nodes);
-        break;
+      case FrameType.Element: {
+        const element = createElementIn(frame.elementName!, parent);
+        const end = index + getFrameSubtreeLength(frame);
+        let i = index + 1;
+        // The element's own preamble: attributes, event handlers, attachments
+        // and reference captures (Blazor's InputFile order) — children start
+        // after it. The capture action fires here, on the fresh element; an
+        // attachment is queued for the batch end (F2).
+        for (; i < end; i++) {
+          const attribute = frames[i]!;
+          const type = attribute.frameType;
+          if (type === FrameType.Attribute) {
+            setAttributeValue(this, state, element, attribute.attributeName!, attribute.attributeValue, attribute.eventHandlerFlags ?? 0, null);
+          } else if (type === FrameType.ElementReferenceCapture) {
+            attribute.elementReferenceCaptureAction?.(element);
+          } else if (type === FrameType.Attachment) {
+            this.queueDirective(state, element, attribute.attributeName!, attribute.attributeValue, true, firstPass);
+          } else {
+            break;
+          }
+        }
+        // Build the fresh subtree into the detached element first, then insert
+        // the completed tree in one shot: mass creates then cost one insertion
+        // per element instead of one per node (10k rows = ~3n insertBefore -> n).
+        this.insertChildFrames(state, frames, i, end, element, firstPass);
+        // Blazor's deferred select value: the options exist only now.
+        if (element.tagName === "SELECT") syncSelectValue(element as HTMLSelectElement, null);
+        journal?.position(element);
+        parent.insertBefore(element, before);
+        return element;
+      }
+      case FrameType.Text: {
+        const text = document.createTextNode(String(frame.textContent));
+        journal?.position(text);
+        parent.insertBefore(text, before);
+        return text;
+      }
       case FrameType.Markup:
-        this.processMarkup(newFrames, newIndex, frame, oldFrames, oldIndex, oldFrame, state, ctx, nodes);
-        break;
-      case FrameType.Region:
-        this.processRange(state, newFrames, newIndex, getFrameSubtreeLength(frame), oldFrames, oldIndex ?? -1, ctx, nodes);
-        break;
-      case FrameType.Component:
-        this.processComponentFrame(state, newFrames, newIndex, frame, oldFrames, oldIndex, oldFrame, ctx, nodes);
-        break;
-      case FrameType.ElementReferenceCapture:
-        if (ctx.parentDom instanceof Element) {
-          frame.elementReferenceCaptureAction?.(ctx.parentDom);
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  private processElement(
-    state: ComponentState,
-    newFrames: RenderTreeFrame[],
-    newIndex: number,
-    frame: RenderTreeFrame,
-    oldFrames: RenderTreeFrame[] | null,
-    oldIndex: number | null,
-    oldFrame: RenderTreeFrame | null,
-    ctx: FrameContext,
-    nodes: Node[],
-  ): void {
-    const canUpdate =
-      oldFrame !== null &&
-      oldFrame.frameType === FrameType.Element &&
-      oldFrame.elementName === frame.elementName &&
-      typeof oldIndex === "number" &&
-      oldIndex >= 0;
-
-    if (canUpdate) {
-      const node = state.renderedNodes[oldIndex!] as Element | undefined;
-      if (node) {
-        this.updateElementAttributes(node, oldFrames!, oldIndex!, newFrames, newIndex);
-        positionNode(node, ctx);
-        nodes[newIndex] = node;
-        ctx.lastNode = node;
-        this.processRange(
-          state,
-          newFrames,
-          newIndex,
-          getFrameSubtreeLength(frame),
-          oldFrames,
-          oldIndex!,
-          { parentDom: node, boundary: null, lastNode: null },
-          nodes,
-        );
-        return;
-      }
-    }
-
-    if (oldIndex !== null && oldIndex >= 0 && oldFrames !== null) {
-      // Old frame existed but could not be reused; clean up stale output.
-      this.removeOldFrame(state, oldFrames, oldIndex);
-    }
-
-    const element = document.createElement(frame.elementName!);
-    applyAttributes(element, frame, newFrames, newIndex);
-    nodes[newIndex] = element;
-    ctx.lastNode = element;
-
-    // Build the fresh subtree into the detached element first, then insert
-    // the completed tree in one shot: mass creates then cost one insertion
-    // per element instead of one per node (10k rows = ~3n insertBefore -> n).
-    this.processRange(
-      state,
-      newFrames,
-      newIndex,
-      getFrameSubtreeLength(frame),
-      null,
-      -1,
-      { parentDom: element, boundary: null, lastNode: null },
-      nodes,
-    );
-    insertNode(element, ctx);
-  }
-
-  private processText(
-    _newFrames: RenderTreeFrame[],
-    newIndex: number,
-    frame: RenderTreeFrame,
-    _oldFrames: RenderTreeFrame[] | null,
-    oldIndex: number | null,
-    oldFrame: RenderTreeFrame | null,
-    state: ComponentState,
-    ctx: FrameContext,
-    nodes: Node[],
-  ): void {
-    const node = oldFrame && oldIndex !== null ? (state.renderedNodes[oldIndex] as Text | undefined) : undefined;
-    if (node && oldFrame) {
-      if (oldFrame.textContent !== frame.textContent) {
-        node.nodeValue = String(frame.textContent);
-      }
-      positionNode(node, ctx);
-      nodes[newIndex] = node;
-      ctx.lastNode = node;
-    } else {
-      const textNode = document.createTextNode(String(frame.textContent));
-      insertNode(textNode, ctx);
-      nodes[newIndex] = textNode;
-      ctx.lastNode = textNode;
-    }
-  }
-
-  private processMarkup(
-    _newFrames: RenderTreeFrame[],
-    newIndex: number,
-    frame: RenderTreeFrame,
-    _oldFrames: RenderTreeFrame[] | null,
-    oldIndex: number | null,
-    oldFrame: RenderTreeFrame | null,
-    state: ComponentState,
-    ctx: FrameContext,
-    nodes: Node[],
-  ): void {
-    const anchor = oldFrame && oldIndex !== null ? (state.renderedNodes[oldIndex] as Comment | undefined) : undefined;
-    if (anchor && oldFrame && oldFrame.markupContent === frame.markupContent) {
-      positionMarkup(anchor, ctx);
-      nodes[newIndex] = anchor;
-      ctx.lastNode = findMarkupEnd(anchor);
-    } else {
-      if (anchor && oldIndex !== null && oldIndex >= 0 && oldFrame) {
-        const end = findMarkupEnd(anchor);
-        removeBetween(anchor, end);
-        anchor.parentNode?.removeChild(end);
-        anchor.parentNode?.removeChild(anchor);
-      }
-      const [start, end] = insertMarkup(frame.markupContent!, ctx);
-      markupEnds.set(start, end);
-      nodes[newIndex] = start;
-      ctx.lastNode = end;
-    }
-  }
-
-  private processComponentFrame(
-    state: ComponentState,
-    newFrames: RenderTreeFrame[],
-    newIndex: number,
-    frame: RenderTreeFrame,
-    oldFrames: RenderTreeFrame[] | null,
-    oldIndex: number | null,
-    oldFrame: RenderTreeFrame | null,
-    ctx: FrameContext,
-    nodes: Node[],
-  ): void {
-    const childState = oldIndex !== null && oldIndex >= 0 ? state.slotChildren.get(oldIndex) : undefined;
-    const canUpdate = childState !== undefined && oldFrame !== null && this.isSameComponentType(oldFrame.componentType, frame.componentType);
-
-    if (canUpdate && childState) {
-      if (oldFrame && oldFrame.componentType !== frame.componentType) {
-        // Hot-swapped module: adopt the new definition in place, keep state.
-        this.renderer.hmrSwap(oldFrame.componentType, frame.componentType);
-      }
-      positionComponent(childState, ctx);
-      state.newSlotChildren.set(newIndex, childState);
-      nodes[newIndex] = childState.startMarker;
-      ctx.lastNode = childState.endMarker;
-      this.renderer.setComponentParameters(childState, attributeMap(newFrames, newIndex));
-      return;
-    }
-
-    if (oldIndex !== null && oldIndex >= 0 && oldFrames !== null) {
-      this.removeOldFrame(state, oldFrames, oldIndex);
-    }
-
-    const child = this.renderer.attachComponent(state, frame, attributeMap(newFrames, newIndex), ctx);
-    state.newSlotChildren.set(newIndex, child);
-    nodes[newIndex] = child.startMarker;
-    ctx.lastNode = child.endMarker;
-  }
-
-  /** Identity match, or a hot-swapped module reusing the same class name. */
-  private isSameComponentType(a: unknown, b: unknown): boolean {
-    if (a === b) return true;
-    const name = (a as { name?: string } | null)?.name;
-    const otherName = (b as { name?: string } | null)?.name;
-    return name !== undefined && name !== "" && name === otherName && this.renderer.wasHmrSwapped(name);
-  }
-
-  private updateElementAttributes(
-    node: Element,
-    oldFrames: RenderTreeFrame[],
-    oldIndex: number,
-    newFrames: RenderTreeFrame[],
-    newIndex: number,
-  ): void {
-    // Fast path: attribute runs are contiguous after the start frame, and
-    // typical updates repeat the same names in the same order. A linear
-    // pair-walk then compares them without building the two side Maps
-    // (the per-element allocation dominating diff cost on wide lists).
-    if (this.updateAttributesFastPath(node, oldFrames, oldIndex, newFrames, newIndex)) return;
-
-    const oldAttrs = attributeMap(oldFrames, oldIndex);
-    const newAttrs = attributeMap(newFrames, newIndex);
-
-    for (const [name, { frame }] of newAttrs) {
-      const oldEntry = oldAttrs.get(name);
-      if (!oldEntry) {
-        setAttributeFrame(node, frame);
-      } else if (!attributeValueSame(oldEntry.frame, frame)) {
-        setAttributeFrame(node, frame, oldEntry.frame);
-      }
-    }
-    for (const [name, { frame }] of oldAttrs) {
-      if (!newAttrs.has(name)) {
-        removeAttributeFrame(node, name, frame);
-      }
-    }
-  }
-
-  /** Linear fast path; returns false when the runs differ in length/order. */
-  private updateAttributesFastPath(
-    node: Element,
-    oldFrames: RenderTreeFrame[],
-    oldIndex: number,
-    newFrames: RenderTreeFrame[],
-    newIndex: number,
-  ): boolean {
-    const newEnd = attributeRunEnd(newFrames, newIndex);
-    const oldEnd = attributeRunEnd(oldFrames, oldIndex);
-    if (newEnd - newIndex !== oldEnd - oldIndex) return false;
-    let n = newIndex + 1;
-    for (let o = oldIndex + 1; o < oldEnd; o++, n++) {
-      const newFrame = newFrames[n]!;
-      const oldFrame = oldFrames[o]!;
-      if (newFrame.attributeName !== oldFrame.attributeName) return false;
-      if (!attributeValueSame(oldFrame, newFrame)) {
-        setAttributeFrame(node, newFrame, oldFrame);
-      }
-    }
-    return true;
-  }
-
-  private removeOldFrame(state: ComponentState, oldFrames: RenderTreeFrame[], oldIndex: number): void {
-    const frame = oldFrames[oldIndex]!;
-    const node = state.renderedNodes[oldIndex];
-    switch (frame.frameType) {
-      case FrameType.Element:
-      case FrameType.Text:
-        node?.parentNode?.removeChild(node);
-        break;
-      case FrameType.Markup:
-        if (node) {
-          const end = findMarkupEnd(node as Comment);
-          removeBetween(node, end);
-          node.parentNode?.removeChild(end);
-          node.parentNode?.removeChild(node);
-        }
-        break;
-      case FrameType.Region:
-        // Remove the region's children recursively (innermost first).
-        for (const { index } of getFrameChildren(oldFrames, oldIndex).reverse()) {
-          this.removeOldFrame(state, oldFrames, index);
-        }
-        break;
+        return insertMarkup(frame.markupContent!, parent, before, journal);
       case FrameType.Component: {
-        const child = state.slotChildren.get(oldIndex);
-        if (child) {
-          this.renderer.disposeComponent(child);
-          this.removeComponentOutput(child);
-        }
-        break;
+        // Instantiated by the renderer from the diff's component list before the edits run.
+        const child = state.newSlotChildren.get(index)!;
+        child.range.insertBefore(parent, before, journal);
+        return child.range.start;
       }
       default:
-        break;
+        throw new Error(`Unexpected frame type ${frame.frameType as number} in PrependFrame.`);
     }
   }
+
+  /** Appends the child frames [start, end) of a new element (regions flattened). */
+  private insertChildFrames(state: ComponentState, frames: RenderTreeFrame[], start: number, end: number, parent: Element, firstPass: boolean): void {
+    let i = start;
+    while (i < end) {
+      const frame = frames[i]!;
+      switch (frame.frameType) {
+        case FrameType.Attribute:
+        case FrameType.EventHandler:
+        case FrameType.Attachment:
+          break;
+        case FrameType.Region:
+          this.insertChildFrames(state, frames, i + 1, i + getFrameSubtreeLength(frame), parent, firstPass);
+          break;
+        case FrameType.ElementReferenceCapture:
+          frame.elementReferenceCaptureAction?.(parent);
+          break;
+        default:
+          this.insertFrame(state, frames, i, parent, null, null, firstPass);
+          break;
+      }
+      i += getFrameSubtreeLength(frame);
+    }
+  }
+}
+
+/** Whether an element directive frame's name is an `@attach` (F2); the others are motion directives (F4/F5). */
+function isAttachName(name: string): boolean {
+  return name.startsWith("@attach");
+}
+
+/** Adds the select owning the options under `parent` (if any) to the pass's re-sync list. */
+function touchSelect(selects: HTMLSelectElement[] | null, parent: Node): HTMLSelectElement[] | null {
+  const select = selectOf(parent);
+  if (select === null) return selects;
+  if (selects === null) return [select];
+  if (!selects.includes(select)) selects.push(select);
+  return selects;
 }
 
 /* ------------------------------------------------------------------ */
-/* Attribute application                                               */
+/* Namespaces                                                          */
 /* ------------------------------------------------------------------ */
 
-function attributeValueSame(oldFrame: RenderTreeFrame, newFrame: RenderTreeFrame): boolean {
-  if (newFrame.attributeValue instanceof EventCallback || oldFrame.attributeValue instanceof EventCallback) {
-    return (
-      oldFrame.attributeValue instanceof EventCallback &&
-      newFrame.attributeValue instanceof EventCallback &&
-      (oldFrame.attributeValue as EventCallback<never>).equals(newFrame.attributeValue as EventCallback<never>)
-    );
-  }
-  return oldFrame.attributeValue === newFrame.attributeValue;
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+/** Blazor's BrowserRenderer rule: SVG namespace for <svg> and for children of
+ *  SVG elements, except inside <foreignObject> (which hosts HTML again). */
+function isSvgContext(parent: Node): boolean {
+  const element = parent as Element;
+  return element.namespaceURI === SVG_NAMESPACE && element.localName !== "foreignObject";
 }
 
-/** Sets a newly added or changed attribute. `oldFrame` enables listener rebinding checks. */
-function setAttributeFrame(element: Element, frame: RenderTreeFrame, oldFrame?: RenderTreeFrame): void {
-  const name = frame.attributeName!;
-  const value = frame.attributeValue;
-
-  // Blazor conditional-attribute semantics: null/undefined = absent attribute
-  // (`aria-label="@maybeUndefined"` never renders an empty attribute).
-  if (value === null || value === undefined) {
-    element.removeAttribute(name);
-    return;
-  }
-
-  if (value instanceof EventCallback) {
-    const existing = elementHandlers.get(element)?.get(name);
-    if (existing && oldFrame && existing.callback.equals(value as unknown as EventCallback<never>)) {
-      return;
-    }
-    bindCallback(element, name, value as unknown as EventCallback<never>, frame.eventHandlerFlags ?? 0);
-    return;
-  }
-  if (typeof value === "function") {
-    // Unbound handler: no owning component, so no automatic re-render.
-    const existing = elementHandlers.get(element)?.get(name);
-    if (existing && oldFrame?.attributeValue === value) return;
-    const callback = EventCallback.unbound(value as (arg: never) => void | Promise<void>);
-    bindCallback(element, name, callback, frame.eventHandlerFlags ?? 0);
-    return;
-  }
-  if (typeof value === "boolean") {
-    if (value) element.setAttribute(name, "");
-    else element.removeAttribute(name);
-    return;
-  }
-  if (name in element) {
-    (element as unknown as Record<string, unknown>)[name] = value;
-  } else {
-    element.setAttribute(name, value === null || value === undefined ? "" : String(value));
-  }
-}
-
-function removeAttributeFrame(element: Element, name: string, frame: RenderTreeFrame): void {
-  const value = frame.attributeValue;
-  if (value instanceof EventCallback || typeof value === "function" || frame.eventHandlerName) {
-    const record = elementHandlers.get(element)?.get(toDomEventName(name));
-    if (record) {
-      element.removeEventListener(toDomEventName(name), record.listener);
-      elementHandlers.get(element)?.delete(toDomEventName(name));
-    }
-    return;
-  }
-  element.removeAttribute(name);
-}
-
-/** End (exclusive) of the contiguous attribute run after a start frame. */
-function attributeRunEnd(frames: RenderTreeFrame[], startIndex: number): number {
-  const end = startIndex + getFrameSubtreeLength(frames[startIndex]!);
-  let i = startIndex + 1;
-  while (i < end && frames[i]!.frameType === FrameType.Attribute) i++;
-  return i;
-}
-
-function applyAttributes(element: Element, startFrame: RenderTreeFrame, frames: RenderTreeFrame[], startIndex: number): void {
-  const end = startIndex + getFrameSubtreeLength(startFrame);
-  for (let i = startIndex + 1; i < end; i++) {
-    const frame = frames[i]!;
-    if (frame.frameType === FrameType.Attribute) {
-      setAttributeFrame(element, frame);
-    } else {
-      break;
-    }
-  }
-}
-
-/** Maps a markup attribute name (@onclick) to the DOM event name (click). */
-function toDomEventName(attributeName: string): string {
-  return attributeName.toLowerCase().startsWith("on") ? attributeName.slice(2).toLowerCase() : attributeName;
-}
-
-function bindCallback(element: Element, attributeName: string, callback: EventCallback<never>, flags: number): void {
-  const eventName = toDomEventName(attributeName);
-  let map = elementHandlers.get(element);
-  if (!map) {
-    map = new Map<string, EventHandlerRecord>();
-    elementHandlers.set(element, map);
-  }
-  const existing = map.get(eventName);
-  if (existing) {
-    element.removeEventListener(eventName, existing.listener);
-  }
-  const listener = (event: Event): void => {
-    if (flags & 1) event.preventDefault(); // PreventDefault
-    if (flags & 2) event.stopPropagation(); // StopPropagation
-    const invocation = callback
-      .invokeAsync(event as never)
-      .catch((error) => reportError(error, `Event handler '${eventName}' failed`));
-    if (activeRenderer) {
-      activeRenderer.track(invocation);
-    }
-  };
-  element.addEventListener(eventName, listener);
-  map.set(eventName, { callback, flags, listener });
-}
-
-function reportError(error: unknown, context: string): void {
-  // eslint-disable-next-line no-console
-  console.error(`[tsazor] ${context}:`, error);
+function createElementIn(tagName: string, parent: Node): Element {
+  return tagName === "svg" || isSvgContext(parent)
+    ? document.createElementNS(SVG_NAMESPACE, tagName)
+    : document.createElement(tagName);
 }
 
 /* ------------------------------------------------------------------ */
-/* Markup helpers                                                      */
+/* Markup blocks                                                       */
 /* ------------------------------------------------------------------ */
 
-const markupEnds = new WeakMap<Comment, Comment>();
-
-function insertMarkup(markup: string, ctx: FrameContext): [Comment, Comment] {
-  const start = document.createComment("bl-tsazor:markup");
-  const end = document.createComment("/bl-tsazor:markup");
-  insertNode(start, ctx);
-  insertNode(end, ctx);
-  const template = document.createElement("template");
-  template.innerHTML = markup;
-  const parent = start.parentNode!;
-  while (template.content.firstChild) {
-    parent.insertBefore(template.content.firstChild, end);
+/**
+ * Inserts a markup block; returns its first node. F1a: the string is parsed
+ * once (per context) and every insertion imports a copy of the parsed nodes.
+ * A block of exactly one node — every compiler-emitted static block — is
+ * inserted as that node, tracked like an element frame's node; any other
+ * shape (MarkupString content) goes into a logical range between markers.
+ */
+function insertMarkup(markup: string, parent: Node, before: Node | null, journal: DomJournal | null): Node {
+  const parsed = parsedMarkup(markup, parent);
+  if (parsed.childNodes.length === 1) {
+    const node = document.importNode(parsed.firstChild!, true);
+    journal?.position(node);
+    parent.insertBefore(node, before);
+    return node;
   }
-  return [start, end];
+  const range = new LogicalRange("bl-tsazor:markup");
+  const content = document.importNode(parsed, true);
+  content.insertBefore(range.start, content.firstChild);
+  content.appendChild(range.end);
+  journal?.restore(range, removeRange, null);
+  parent.insertBefore(content, before);
+  return range.start;
 }
 
-function findMarkupEnd(start: Comment): Comment {
-  return markupEnds.get(start) ?? (start.nextSibling as Comment) ?? start;
-}
+/** The table structure a table part is parsed in, and how deep its content sits. */
+const TABLE_WRAPPERS: Record<string, { open: string; close: string; depth: number }> = {
+  td: { open: "<table><tbody><tr>", close: "</tr></tbody></table>", depth: 3 },
+  th: { open: "<table><tbody><tr>", close: "</tr></tbody></table>", depth: 3 },
+  tr: { open: "<table><tbody>", close: "</tbody></table>", depth: 2 },
+  thead: { open: "<table>", close: "</table>", depth: 1 },
+  tbody: { open: "<table>", close: "</table>", depth: 1 },
+  tfoot: { open: "<table>", close: "</table>", depth: 1 },
+  caption: { open: "<table>", close: "</table>", depth: 1 },
+  colgroup: { open: "<table>", close: "</table>", depth: 1 },
+  col: { open: "<table><colgroup>", close: "</colgroup></table>", depth: 2 },
+};
 
-function positionMarkup(start: Comment, ctx: FrameContext): void {
-  const end = findMarkupEnd(start);
-  const reference = ctx.lastNode ? ctx.lastNode.nextSibling : ctx.parentDom.firstChild;
-  if (start !== reference) {
-    ctx.parentDom.insertBefore(start, reference);
-    ctx.parentDom.insertBefore(end, start.nextSibling);
+/** Parsed markup per string, for HTML and SVG contexts; bounded, since MarkupString content can be anything. */
+const MARKUP_CACHE_SIZE = 1000;
+const markupCache = { html: new Map<string, DocumentFragment>(), svg: new Map<string, DocumentFragment>() };
+
+function parsedMarkup(markup: string, parent: Node): DocumentFragment {
+  const cache = isSvgContext(parent) ? markupCache.svg : markupCache.html;
+  let parsed = cache.get(markup);
+  if (parsed === undefined) {
+    parsed = parseMarkup(markup, parent);
+    if (cache.size >= MARKUP_CACHE_SIZE) cache.delete(cache.keys().next().value!);
+    cache.set(markup, parsed);
   }
+  return parsed;
 }
 
-function removeBetween(start: Node, end: Node): void {
-  const parent = start.parentNode;
-  if (!parent) return;
-  let current = start.nextSibling;
-  while (current && current !== end) {
-    const next = current.nextSibling;
-    parent.removeChild(current);
-    current = next;
+/**
+ * Trusted Types (E1): under `require-trusted-types-for 'script'`, `innerHTML`
+ * only takes TrustedHTML. MarkupString is the app's own statement that a
+ * string is safe HTML (as in Blazor), so the runtime's policy — named
+ * `tsazor`, to be allowed by the CSP's `trusted-types` directive — passes it
+ * through unchanged; it does not sanitize. Created on first use; without
+ * Trusted Types, or when the CSP doesn't allow the name, plain strings.
+ */
+let markupPolicy: { createHTML(markup: string): unknown } | null | undefined;
+function trustedHtml(markup: string): string {
+  if (markupPolicy === undefined) {
+    const factory = (globalThis as { trustedTypes?: { createPolicy(name: string, rules: { createHTML(input: string): string }): { createHTML(markup: string): unknown } } }).trustedTypes;
+    try {
+      markupPolicy = factory?.createPolicy("tsazor", { createHTML: (input) => input }) ?? null;
+    } catch {
+      markupPolicy = null; // the CSP doesn't allow 'tsazor': innerHTML reports the violation itself
+    }
   }
+  return (markupPolicy ? markupPolicy.createHTML(markup) : markup) as string;
 }
 
-function insertNode(node: Node, ctx: FrameContext): void {
-  ctx.parentDom.insertBefore(node, ctx.boundary);
-}
-
-function positionNode(node: Node, ctx: FrameContext): void {
-  const reference = ctx.lastNode ? ctx.lastNode.nextSibling : ctx.parentDom.firstChild;
-  if (node !== reference) {
-    ctx.parentDom.insertBefore(node, reference);
+/** Parses markup into a fragment; inside SVG it is parsed in an <svg> element
+ *  so <circle>, <path>… get the SVG namespace (Blazor's sharedSvgElemForParsing). */
+function parseMarkup(markup: string, parent: Node): DocumentFragment {
+  if (!isSvgContext(parent)) {
+    const template = document.createElement("template");
+    // Table parts (a static <td> block inside a dynamic <tr>) are parsed inside
+    // their table structure: parsers without the template's table modes
+    // (happy-dom, older engines) would otherwise drop the tags.
+    const wrapper = TABLE_WRAPPERS[/^<([a-z]+)/.exec(markup)?.[1] ?? ""];
+    if (wrapper === undefined) {
+      template.innerHTML = trustedHtml(markup);
+      return template.content;
+    }
+    template.innerHTML = trustedHtml(`${wrapper.open}${markup}${wrapper.close}`);
+    let host: ParentNode = template.content;
+    for (let level = 0; level < wrapper.depth; level++) host = host.firstElementChild!;
+    const fragment = document.createDocumentFragment();
+    while (host.firstChild) fragment.appendChild(host.firstChild);
+    return fragment;
   }
+  const svg = document.createElementNS(SVG_NAMESPACE, "svg");
+  svg.innerHTML = trustedHtml(markup);
+  const fragment = document.createDocumentFragment();
+  while (svg.firstChild) fragment.appendChild(svg.firstChild);
+  return fragment;
 }
 
-function positionComponent(childState: { startMarker: Comment; endMarker: Comment }, ctx: FrameContext): void {
-  const reference = ctx.lastNode ? ctx.lastNode.nextSibling : ctx.parentDom.firstChild;
-  if (childState.startMarker !== reference) {
-    ctx.parentDom.insertBefore(childState.startMarker, reference);
-    ctx.parentDom.insertBefore(childState.endMarker, childState.startMarker.nextSibling);
-  }
-}
-
-/** Direct child frames of a frame range (attribute frames are not children). */
-function directChildren(
-  frames: RenderTreeFrame[],
-  parentIndex: number,
-  subtreeLength: number,
-): Array<{ index: number; frame: RenderTreeFrame }> {
-  void subtreeLength;
-  return getFrameChildren(frames, parentIndex);
+function removeRange(range: LogicalRange): void {
+  range.remove();
 }

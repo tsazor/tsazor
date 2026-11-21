@@ -1,0 +1,96 @@
+@* pages/settings/profile.tsx: ProfileSettings — read-only view of identity fields (server doesn't expose an
+   /update-me endpoint for these yet) plus avatar upload via the presigned ImageInput flow. Username, email, and name
+   are intentionally not editable from here — they require admin involvement, which is correct for a multi-tenant
+   operator console. The image mutation is a plain handler: the PUT, a toast, and the ["identity","profile"] key
+   invalidated (the topbar's avatar reads it too). *@
+@page "/settings/profile"
+@layout SettingsLayout
+@authorize
+@import { Fingerprint, ShieldCheck, UserRound } from "lucide"
+@import { getMyProfile, setProfileImage, type UserDto } from "@/api/users"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import ImageInput from "@/components/file/ImageInput.tsazor"
+@import SettingsLayout from "./SettingsLayout.tsazor"
+
+@if (profile.result.isLoading) {
+    <LoadingRow label="Loading profile" />
+} else if (profile.result.isError) {
+    <ErrorBand message="@(profile.result.error instanceof ApiRequestError ? (profile.result.error.problem?.detail ?? profile.result.error.message) : "Failed to load profile.")" />
+} else if (user) {
+    <div class="space-y-5 fsh-enter">
+        @* Avatar — presigned upload via ImageInput, no base64 data: URLs *@
+        <SettingsSection title="Avatar" icon="@UserRound" description="Shown in the topbar and on your activity. Square crops work best — JPG, PNG, or WebP.">
+            <ImageInput value="@(user.imageUrl ?? "")" valueChanged="@onImageChange" ownerType="User" ownerId="@(user.id ?? null)" shape="circle" />
+        </SettingsSection>
+
+        @* Identity — read-only; admin must update these server-side *@
+        <SettingsSection title="Identity" icon="@Fingerprint" description="Your account details. These are managed by an administrator — contact one if changes are needed.">
+            <div class="grid gap-5 sm:grid-cols-2">
+                <SettingsField id="profile-username" label="Username">
+                    <Input id="profile-username" value="@(user.userName ?? "")" readonly class="font-mono bg-[var(--color-muted)] cursor-not-allowed" />
+                </SettingsField>
+                <SettingsField id="profile-display" label="Display name">
+                    <Input id="profile-display" value="@displayName" readonly class="bg-[var(--color-muted)] cursor-not-allowed" />
+                </SettingsField>
+                <SettingsField id="profile-email" label="Email">
+                    <Input id="profile-email" type="email" value="@(user.email ?? "")" readonly class="font-mono bg-[var(--color-muted)] cursor-not-allowed" />
+                    @if (user.emailConfirmed !== undefined) {
+                        <p class="mt-1 text-[11px] text-[var(--color-muted-foreground)]">@(user.emailConfirmed ? "Address verified" : "Not yet verified")</p>
+                    }
+                </SettingsField>
+                <SettingsField id="profile-phone" label="Phone">
+                    <Input id="profile-phone" value="@(user.phoneNumber ?? "—")" readonly class="font-mono bg-[var(--color-muted)] cursor-not-allowed" />
+                </SettingsField>
+            </div>
+        </SettingsSection>
+
+        @* Status badges *@
+        <SettingsSection title="Account status" icon="@ShieldCheck" description="Runtime flags on this account. Contact an operator to change them.">
+            <div class="flex flex-wrap items-center gap-2">
+                <Badge variant="@(user.isActive ? "success" : "muted")" class="font-mono uppercase tracking-[0.14em]">@(user.isActive ? "Active" : "Disabled")</Badge>
+                <Badge variant="@(user.emailConfirmed ? "info" : "warning")" class="font-mono uppercase tracking-[0.14em]">@(user.emailConfirmed ? "Email confirmed" : "Email pending")</Badge>
+                <Badge variant="@(user.twoFactorEnabled ? "success" : "outline")" class="font-mono uppercase tracking-[0.14em]">@(user.twoFactorEnabled ? "2FA enabled" : "2FA off")</Badge>
+            </div>
+        </SettingsSection>
+    </div>
+}
+
+@code {
+    private readonly profile = new Query(() => ({ queryKey: ["identity", "profile"], queryFn: getMyProfile }));
+
+    protected override onInitialized(): void {
+        this.observe(this.profile);
+    }
+
+    private get user(): UserDto | undefined {
+        return this.profile.result.data;
+    }
+
+    private get displayName(): string {
+        const user = this.user;
+        if (!user) return "Account";
+        return [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.userName || user.email || "Account";
+    }
+
+    private onImageChange(next: string): Promise<void> {
+        return this.setImage(next.length > 0 ? next : null);
+    }
+
+    /** The original's imageMutation: mutate() reports a failure as a toast, never as a rejection. */
+    private async setImage(url: string | null): Promise<void> {
+        try {
+            await setProfileImage(url);
+            toast.success("Profile image updated");
+            void queryClient.invalidateQueries({ queryKey: ["identity", "profile"] });
+        } catch (err) {
+            const message =
+                err instanceof ApiRequestError
+                    ? (err.problem?.detail ?? err.problem?.title ?? err.message)
+                    : "Failed to update profile image";
+            toast.error(message);
+        }
+    }
+}

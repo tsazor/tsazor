@@ -1,0 +1,12 @@
+@page "/orders/{id:int}"
+@inject NavigationManager navigation
+<h2>Order #@id</h2>
+<p><button @onclick="back">Back to orders</button></p>
+
+@code {
+    @Parameter() id = 0;
+
+    back() {
+        this.navigation.navigateTo("/orders");
+    }
+}

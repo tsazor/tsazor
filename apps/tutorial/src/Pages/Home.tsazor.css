@@ -1,0 +1,155 @@
+.home {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.home-main {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+.intro h1 {
+    font-size: 2.1rem;
+    line-height: 1.2;
+    margin: 0 0 1rem;
+}
+
+.intro p {
+    line-height: 1.6;
+    max-width: 44rem;
+}
+
+.lead {
+    font-size: 1.125rem;
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--bg-sunken);
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+}
+
+.resume {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0 0;
+}
+
+.resume-where {
+    color: var(--fg-muted);
+}
+
+h2 {
+    font-size: 1.35rem;
+    margin: 2.5rem 0 0.5rem;
+}
+
+.track-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.track-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    background: var(--surface);
+}
+
+.track-card--chosen {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.track-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.track-card p {
+    margin: 0 0 1rem;
+    line-height: 1.5;
+    color: var(--fg-muted);
+}
+
+.track-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.button {
+    display: inline-block;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.button--primary {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+    color: var(--accent-fg);
+}
+
+.link {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--accent-strong);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.parts-track {
+    color: var(--fg-muted);
+    font-weight: 400;
+    font-size: 1rem;
+}
+
+.part-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.part {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+}
+
+.part h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+}
+
+.chapters {
+    margin: 0;
+    padding-left: 1.25rem;
+    line-height: 1.9;
+}
+
+.count {
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+    margin-left: 0.35rem;
+}
+
+.index-hint {
+    margin-top: 1.5rem;
+    color: var(--fg-muted);
+}

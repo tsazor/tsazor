@@ -1,0 +1,58 @@
+{
+  "name": "@tsazor/ui",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/ui#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Behavior core of the Tsazor component library: unstyled behaviors as attachments (focus trap, dismiss, roving focus, positioning), ids and the shared vocabulary — the skins @tsazor/bootstrap and @tsazor/fluent build on it.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./kit": {
+      "types": "./dist/kit.d.ts",
+      "default": "./dist/kit.js"
+    },
+    "./texts/de": {
+      "types": "./dist/texts/de.d.ts",
+      "default": "./dist/texts/de.js"
+    }
+  },
+  "sideEffects": false,
+  "tsazor": {
+    "internal": [
+      "./kit"
+    ]
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@tsazor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@tsazor/runtime": "workspace:*",
+    "happy-dom": "^21.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

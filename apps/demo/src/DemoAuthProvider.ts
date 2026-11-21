@@ -7,7 +7,7 @@ import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, createUser
 export class DemoAuthProvider extends AuthenticationStateProvider {
   private current = ANONYMOUS;
 
-  getState(): Promise<AuthenticationState> {
+  getAuthenticationStateAsync(): Promise<AuthenticationState> {
     return Promise.resolve(this.current);
   }
 
@@ -21,6 +21,3 @@ export class DemoAuthProvider extends AuthenticationStateProvider {
     this.notifyAuthenticationStateChanged(this.current);
   }
 }
-
-// Local @inject services are imported as default (codegen convention).
-export default DemoAuthProvider;

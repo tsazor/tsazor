@@ -1,0 +1,69 @@
+@** Renders Bootstrap's `.pagination`: Previous, one button per page, and Next, with the current
+    page marked active. It does not change the page itself: it raises onPageChanged, and the parent
+    updates `page`. *@
+@import type { Size } from "@tsazor/ui"
+@import { sizeSuffix } from "./vocabulary"
+@import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+<nav aria-label="@(ariaLabel ?? t("pagination.label"))" @attributes="@withClass(null, additionalAttributes)">
+    <ul class="@this.listClass">
+        <li class="@this.prevClass"><button type="button" class="page-link" aria-label="@t("pagination.previous")" aria-disabled="@(page <= 1 ? "true" : null)" @onclick="goPrev">@t("pagination.previousText")</button></li>
+        @for (let i = 1; i <= pageCount; i++) {
+            <li class="@this.itemClass(i)"><button type="button" class="page-link" aria-label="@t("pagination.goTo", { page: i })" aria-current="@this.currentText(i)" @onclick="() => this.select(i)">@i</button></li>
+        }
+        <li class="@this.nextClass"><button type="button" class="page-link" aria-label="@t("pagination.next")" aria-disabled="@(page >= pageCount ? "true" : null)" @onclick="goNext">@t("pagination.nextText")</button></li>
+    </ul>
+</nav>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The current page (1-based); parent-owned, changed via OnPageChanged. */
+    @Parameter() page: number = 1;
+    /** Total number of pages. */
+    @Parameter() pageCount: number = 1;
+    /** small, medium (default) or large. */
+    @Parameter() size: Size = "medium";
+    /** Names the navigation for screen readers ("Pagination" by default). */
+    @Parameter() ariaLabel?: string;
+    /** Fired when the user picks a different page, with the new page number (1-based). */
+    @Parameter() onPageChanged?: EventCallback<number>;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private select(page: number): Promise<void> | undefined {
+        if (page === this.page) return undefined;
+        return this.onPageChanged?.invokeAsync(page);
+    }
+
+    private goPrev(): Promise<void> | undefined {
+        return this.page > 1 ? this.onPageChanged?.invokeAsync(this.page - 1) : undefined;
+    }
+
+    private goNext(): Promise<void> | undefined {
+        return this.page < this.pageCount ? this.onPageChanged?.invokeAsync(this.page + 1) : undefined;
+    }
+
+    private get listClass(): string {
+        const parts = ["pagination"];
+        const suffix = sizeSuffix(this.size);
+        if (suffix) parts.push(`pagination-${suffix}`);
+        return parts.join(" ");
+    }
+
+    private currentText(page: number): string | null {
+        return page === this.page ? "page" : null;
+    }
+
+    private itemClass(page: number): string {
+        return page === this.page ? "page-item active" : "page-item";
+    }
+
+    private get prevClass(): string {
+        return this.page <= 1 ? "page-item disabled" : "page-item";
+    }
+
+    private get nextClass(): string {
+        return this.page >= this.pageCount ? "page-item disabled" : "page-item";
+    }
+}

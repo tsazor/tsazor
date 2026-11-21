@@ -12,7 +12,8 @@
  * Run: node scripts/verify-pizza.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const APP = "http://localhost:5301";
 const API = "http://localhost:5300";
@@ -64,7 +65,7 @@ function check(condition, label) {
 async function main() {
   await ensureServices();
 
-  const browser = await chromium.launch({ channel: "msedge", headless: true });
+  const browser = await launchBrowser(playwright);
   const page = await browser.newPage();
   const errors = [];
   page.on("console", (m) => {
@@ -92,7 +93,7 @@ async function main() {
     await page.locator(".pizza-cards li").nth(2).click();
     await page.waitForTimeout(400);
     // Toppings are name-sorted; option values are their index.
-    await page.locator(".dialog select.custom-select").selectOption("0");
+    await page.locator(".dialog select.form-select").selectOption("0");
     await page.waitForTimeout(200);
     await page.locator(".dialog-buttons .btn-success").click();
     await page.waitForTimeout(400);
@@ -114,6 +115,18 @@ async function main() {
     await fields.nth(3).fill("London");
     await fields.nth(4).fill("Greater London");
     await fields.nth(5).fill("NW1 6XE");
+    // Leave the field before clicking: its change event (on blur) re-validates
+    // and removes the last validation message, which shifts the button ~24px
+    // between mousedown and mouseup — the click would miss (same in Blazor).
+    await fields.nth(5).blur();
+    await page.waitForTimeout(200);
+    // Count order-status polls: the Poller ticks every 4 s, so a runaway
+    // interval (e.g. a non-numeric Interval → 0 ms) shows up as a request storm.
+    let orderPolls = 0;
+    const pollStart = Date.now();
+    page.on("request", (r) => {
+      if (r.method() === "GET" && /\/orders\/\d+$/.test(new URL(r.url()).pathname)) orderPolls++;
+    });
     await page.locator(".checkout-button").click();
     await page.waitForTimeout(1500);
     check(/\/myorders\/\d+$/.test(page.url()), "valid submit navigates to order details");
@@ -121,13 +134,22 @@ async function main() {
     /* --- Order details: map + Poller status progression --- */
     check((await text(".track-order-title p")) === "Status: Preparing", "initial status is Preparing");
     check((await page.locator(".delivery-map").count()) === 1, "delivery map present");
-    await page.waitForTimeout(1000);
-    check((await page.locator(".leaflet-tile-loaded").count()) > 0, "leaflet tiles loaded");
+    // Tiles come from the public OSM servers: wait for the first one instead of
+    // a fixed delay (a 1 s sleep made this check flaky on slow responses). WebKit
+    // took 10 s for the first tile in two of five runs (Edge: milliseconds) — a
+    // connection delay to the tile server, not the app's — so allow 30 s; the
+    // delivery window (60 s) still covers the status checks below.
+    const tilesLoaded = await page
+      .waitForSelector(".leaflet-tile-loaded", { timeout: 30_000 })
+      .then(() => true, () => false);
+    check(tilesLoaded, "leaflet tiles loaded");
     check((await page.locator(".leaflet-popup-content").allTextContents()).includes("You"), "'You' marker popup open");
     const wait = PREPARATION_MS - (Date.now() % 1000) + 3000;
     await page.waitForTimeout(wait);
     check((await text(".track-order-title p")) === "Status: Out for delivery", "Poller advances status to Out for delivery");
     check((await page.locator(".leaflet-marker-icon").count()) === 2, "driver marker appears next to 'You'");
+    const maxPolls = Math.ceil((Date.now() - pollStart) / 4000) + 3; // initial load + one tick per 4 s + slack
+    check(orderPolls <= maxPolls, `order polling stays at the 4 s interval (${orderPolls} requests, max ${maxPolls})`);
 
     /* --- MyOrders --- */
     await page.goto(`${APP}/myorders`, { waitUntil: "networkidle" });

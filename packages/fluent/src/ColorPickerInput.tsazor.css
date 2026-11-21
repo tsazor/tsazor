@@ -1,0 +1,57 @@
+/* ColorPickerInput — a hex field with a button that shows the color; the picker opens below it on a surface. */
+
+.fui-color-picker-input__field {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+}
+
+.fui-color-picker-input__field > .fui-input {
+  flex: 1;
+  min-inline-size: 0;
+  font-family: var(--fui-font-family-mono, monospace);
+}
+
+.fui-color-picker-input__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  block-size: 32px;
+  padding: 0 var(--fui-spacing-s) 0 var(--fui-spacing-xs);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+}
+
+.fui-color-picker-input__button:hover:not(:disabled) {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-color-picker-input__button:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-color-picker-input__button:disabled {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-color-picker-input__swatch {
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--fui-radius-sm);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+}
+
+.fui-color-picker-input__popup {
+  padding: var(--fui-spacing-s);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+  z-index: var(--fui-z-dialog);
+}

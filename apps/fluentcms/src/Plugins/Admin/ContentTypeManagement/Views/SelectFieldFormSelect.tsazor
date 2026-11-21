@@ -1,0 +1,11 @@
+@* A single-select field as a dropdown (FluentCMS's SelectFieldFormSelect). *@
+@inherits BaseFieldValueView<string | null, SelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import { selectOptions, type SelectFieldModel } from "../field-models"
+
+<Select @bind-Value="fieldValue.value" label="@field.label" required="@field.required">
+    <option value="">@(field.placeholder || "")</option>
+    @foreach (const option of selectOptions(field.options)) {
+        <option value="@option">@option</option>
+    }
+</Select>

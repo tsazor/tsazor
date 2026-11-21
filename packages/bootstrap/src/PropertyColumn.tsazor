@@ -1,0 +1,85 @@
+@** A DataGrid column showing one property of the row: `<PropertyColumn Property="(o) => o.total"
+    Format="(v) => v.toFixed(2)" Sortable="true" />`. The title defaults to the property's name,
+    taken from the lambda (`(o) => o.customer` ⇒ "customer"); sorting compares the property's
+    values. Setting `filterable="true"` offers the grid's built-in filter over the values. Place it
+    inside a DataGrid: it takes the grid's row type. *@
+@typeparam TGridItem
+@typeparam TProp
+@import { DataGridModel, GridSort, type ColumnAlign, type GridAggregate } from "@tsazor/ui"
+@import { propertyPath, propertyTitle } from "@tsazor/ui/kit"
+@{ this.register(); }
+
+@code {
+    /** The grid this column belongs to. */
+    @CascadingParameter({ type: DataGridModel }) grid?: DataGridModel<TGridItem>;
+    /** The property shown in the cells: `(o) => o.customer`. */
+    @Parameter() property!: (item: TGridItem) => TProp;
+    /** Formats a value for its cell (default: the value as text, empty for null/undefined). */
+    @Parameter() format?: (value: TProp) => string;
+    /** The header text (default: the property's name). */
+    @Parameter() title?: string;
+    /** Sorts by the property when the header is clicked. */
+    @Parameter() sortable: boolean = false;
+    /** The property name an itemsProvider gets in getSortByProperties() (default: the lambda's path). */
+    @Parameter() sortKey?: string;
+    /** The direction of the first click (and of the default sort). */
+    @Parameter() initialSortDirection?: "ascending" | "descending";
+    /** Sorts the grid by this column from the start. */
+    @Parameter() isDefaultSortColumn: boolean = false;
+    /** Cell and header alignment: start, center or end (numbers: end). */
+    @Parameter() align?: ColumnAlign;
+    /** Extra class for the cells. */
+    @Parameter() class?: string;
+    /** Header content instead of the title text. */
+    @Parameter() headerContent?: RenderFragment;
+    /** Options shown below the header when its options button is clicked (QuickGrid's ColumnOptions). */
+    @Parameter() columnOptions?: RenderFragment;
+    /** Offers the grid's built-in filter over this column's values. */
+    @Parameter() filterable: boolean = false;
+    /** The property name an itemsProvider gets in getFilterByProperties() (default: the lambda's path). */
+    @Parameter() filterKey?: string;
+    /**
+     * The column's footer summary: a kind (sum, avg, count, min, max) over the property's values,
+     * formatted like a cell, or your own aggregate over the rows.
+     */
+    @Parameter() aggregate?: GridAggregate<TGridItem>;
+    /** The cell a row in the grid's edit shows (the row's context — your inputs around the row's values), instead of the property's. */
+    @Parameter() editContent?: (item: TGridItem) => RenderFragment;
+    /** The column's stable key (a snapshot's and a server's name for it; default: the lambda's path). */
+    @Parameter() columnKey?: string;
+
+    private register(): void {
+        const grid = this.grid;
+        if (grid === undefined) throw new Error("PropertyColumn must be placed inside a DataGrid.");
+        const property = this.property;
+        const format = this.format;
+        const text = (item: TGridItem): string => {
+            const value = property(item);
+            if (format !== undefined) return format(value);
+            return value === null || value === undefined ? "" : String(value);
+        };
+        grid.addColumn({
+            owner: this,
+            title: this.title ?? propertyTitle(property) ?? "",
+            headerContent: this.headerContent,
+            columnOptions: this.columnOptions,
+            cell: (item) => (builder) => builder.addContent(0, text(item)),
+            sortable: this.sortable,
+            sortBy: this.sortable ? GridSort.byAscending(property) : undefined,
+            sortKey: this.sortKey ?? propertyPath(property),
+            initialSortDirection: this.initialSortDirection,
+            isDefaultSortColumn: this.isDefaultSortColumn,
+            align: this.align,
+            className: this.class,
+            filterable: this.filterable,
+            filterBy: (item: TGridItem) => property(item),
+            filterKey: this.filterKey ?? propertyPath(property),
+            aggregate: this.aggregate,
+            aggregateBy: (item: TGridItem) => property(item),
+            aggregateFormat: format !== undefined ? (value: unknown) => format(value as TProp) : undefined,
+            editContent: this.editContent,
+            columnKey: this.columnKey ?? propertyPath(property),
+            csv: (item: TGridItem) => text(item),
+        });
+    }
+}

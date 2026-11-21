@@ -10,13 +10,16 @@ import {
   NavLink,
   NavLinkMatch,
   Parameter,
-  Renderer,
   RouteView,
   Router,
   ServiceCollection,
-  matchRoute,
 } from "../src/index";
+import {
+  Renderer,
+  matchRoute,
+} from "../src/internal";
 import { defineComponent } from "../src/index";
+import { navLinkMatches } from "../src/routing/nav-link";
 import type { RenderFragment, RenderTreeBuilder } from "../src/index";
 
 /* Layout ------------------------------------------------------------------ */
@@ -105,6 +108,34 @@ describe("route matching", () => {
   });
 });
 
+describe("NavLink matching over absolute URIs (Blazor .NET 8, A7)", () => {
+  const h = "http://host";
+  it.each([
+    // href (absolute), current, match, active
+    [`${h}/app/counter`, `${h}/app/counter`, NavLinkMatch.All, true],
+    [`${h}/app/counter`, `${h}/APP/Counter`, NavLinkMatch.All, true], // case-insensitive
+    [`${h}/app/counter/`, `${h}/app/counter`, NavLinkMatch.All, true], // trailing slash on the href only
+    [`${h}/app/counter`, `${h}/app/counter/`, NavLinkMatch.All, false],
+    [`${h}/app/counter`, `${h}/app/counter?x=1`, NavLinkMatch.All, true], // query ignored
+    [`${h}/app/counter`, `${h}/app/counter#top`, NavLinkMatch.All, true], // fragment ignored
+    [`${h}/app/counter?x=1`, `${h}/app/counter?x=1`, NavLinkMatch.All, true],
+    [`${h}/app/counter?x=1`, `${h}/app/counter`, NavLinkMatch.All, false],
+    [`${h}/app/counter`, `${h}/app/counter/5`, NavLinkMatch.All, false],
+    [`${h}/app/counter`, `${h}/app/counter/5`, NavLinkMatch.Prefix, true],
+    [`${h}/app/counter`, `${h}/app/counter?x=1`, NavLinkMatch.Prefix, true],
+    [`${h}/app/counter`, `${h}/app/counters`, NavLinkMatch.Prefix, false], // no separator
+    [`${h}/app/counter`, `${h}/app/counter-2`, NavLinkMatch.Prefix, false], // '-' is unreserved
+    [`${h}/app/counter/`, `${h}/app/counter/5`, NavLinkMatch.Prefix, true],
+    [`${h}/app/`, `${h}/app/anything`, NavLinkMatch.Prefix, true], // the base covers the app
+    [`${h}/app/`, `${h}/app`, NavLinkMatch.All, true],
+    [`${h}/app/`, `${h}/app/anything`, NavLinkMatch.All, false],
+    [`${h}/app/x`, `${h}/other/x`, NavLinkMatch.Prefix, false],
+    [`${h}/app/x`, `http://elsewhere/app/x`, NavLinkMatch.All, false],
+  ])("%s at %s (match %s) → %s", (href, current, match, expected) => {
+    expect(navLinkMatches(href, current, match)).toBe(expected);
+  });
+});
+
 describe("Router + RouteView + NavLink", () => {
   it("renders the matching page inside its layout with active NavLink", async () => {
     const navigation = freshNavigation();
@@ -135,6 +166,34 @@ describe("Router + RouteView + NavLink", () => {
     const links = [...document.querySelectorAll("a")];
     expect(links.map((a) => a.className)).toEqual(["", "active", ""]);
     expect(links.map((a) => a.getAttribute("aria-current"))).toEqual([null, "page", null]);
+  });
+
+  it("puts every other attribute on the anchor and joins class with the active class (Blazor's AdditionalAttributes)", async () => {
+    const navigation = freshNavigation();
+    navigation.navigateTo("/counter");
+    const renderer = buildApp(navigation);
+
+    class Menu extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        for (const [index, href] of ["/", "/counter"].entries()) {
+          b.openComponent(index * 10, defineComponent(NavLink));
+          b.addAttribute(index * 10 + 1, "class", "nav-link");
+          b.addAttribute(index * 10 + 2, "Href", href);
+          b.addAttribute(index * 10 + 3, "Match", NavLinkMatch.All);
+          b.addAttribute(index * 10 + 4, "title", `Go to ${href}`);
+          b.addAttribute(index * 10 + 5, "data-test", "nav");
+          b.closeComponent();
+        }
+      }
+    }
+    renderer.renderInContainer(Menu, container());
+    await renderer.waitUntilIdle();
+
+    const links = [...document.querySelectorAll("a")];
+    expect(links.map((a) => a.className)).toEqual(["nav-link", "nav-link active"]);
+    expect(links.map((a) => a.getAttribute("title"))).toEqual(["Go to /", "Go to /counter"]);
+    expect(links.map((a) => a.dataset.test)).toEqual(["nav", "nav"]);
+    expect(links.map((a) => a.getAttribute("aria-current"))).toEqual([null, "page"]);
   });
 
   it("passes URL parameters into the page component", async () => {
@@ -200,6 +259,72 @@ describe("Router + RouteView + NavLink", () => {
     await renderer.waitUntilIdle();
     // /fetch is not in the manifest → nothing rendered (no notFound configured).
     expect(document.querySelector("h1")).toBeNull();
+  });
+
+  it("wraps a nested layout in its own @layout, outward (Blazor's LayoutView), keeping the outer one across pages", async () => {
+    // SettingsLayout's `@layout MainLayout` — the compiler's `static layout` (Blazor's [Layout]).
+    class SettingsLayout extends LayoutComponentBase {
+      static layout = MainLayout;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "section");
+        b.addAttribute(1, "class", "settings");
+        this.Body?.(b);
+        b.closeElement();
+      }
+    }
+    // A layout chain that comes back to itself ends at the repeat.
+    class Loop extends LayoutComponentBase {
+      static layout: unknown;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "div");
+        b.addAttribute(1, "class", "loop");
+        this.Body?.(b);
+        b.closeElement();
+      }
+    }
+    Loop.layout = Loop;
+    class LoopPage extends ComponentBase {
+      static layout = Loop;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, "looped");
+      }
+    }
+    const nested = [
+      { template: "/", type: HomePage, layout: MainLayout },
+      { template: "/settings", type: CounterPage, layout: SettingsLayout },
+      // No manifest layout: the page's own (Blazor's [Layout] on the page).
+      { template: "/loop", type: LoopPage },
+    ];
+    const navigation = freshNavigation();
+    navigation.navigateTo("/");
+    const renderer = buildApp(navigation);
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Router));
+        b.addAttribute(1, "Routes", nested);
+        b.addAttribute(2, "Found", (routeData: unknown) => (inner: RenderTreeBuilder) => {
+          inner.openComponent(0, defineComponent(RouteView));
+          inner.addAttribute(1, "RouteData", routeData);
+          inner.closeComponent();
+        });
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    await renderer.waitUntilIdle();
+    const shell = document.querySelector(".layout");
+    expect(document.querySelector(".settings")).toBeNull();
+
+    navigation.navigateTo("/settings");
+    await renderer.waitUntilIdle();
+    expect(document.querySelector(".layout main .settings h1")?.textContent).toBe("Counter: 0");
+    // The shell is the same element: MainLayout kept its instance.
+    expect(document.querySelector(".layout")).toBe(shell);
+
+    navigation.navigateTo("/loop");
+    await renderer.waitUntilIdle();
+    expect(document.querySelectorAll(".loop")).toHaveLength(1);
+    expect(document.querySelector(".loop")?.textContent).toBe("looped");
   });
 
   it("does not intercept ctrl-clicks or external links", async () => {

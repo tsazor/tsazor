@@ -1,0 +1,10 @@
+.boxes {
+    display: flex;
+    gap: 1rem;
+}
+
+/* ::deep reaches into the child components rendered inside .boxes. */
+.boxes ::deep .box {
+    background: #c4b5fd;
+    border-radius: 12px;
+}

@@ -1,0 +1,6 @@
+<header class="shop">
+    <strong>Corner shop</strong>
+    <CartBadge />
+</header>
+
+<Products />

@@ -13,7 +13,7 @@
         <tbody>
             @foreach (var row in rows)
             {
-                <tr class="@(row.Id == selectedId ? "selected" : "")">
+                <tr @key="row.Id" class="@(row.Id == selectedId ? "selected" : "")">
                     <td class="col-id">@row.Id</td>
                     <td class="col-title" @onclick="@(e => Select(row))">@row.Label</td>
                     <td class="col-remove" @onclick="@(e => Remove(row))"><span aria-hidden="true">x</span></td>

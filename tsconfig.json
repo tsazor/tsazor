@@ -4,6 +4,12 @@
     { "path": "packages/runtime" },
     { "path": "packages/compiler" },
     { "path": "packages/vite-plugin" },
-    { "path": "packages/testing" }
+    { "path": "packages/testing" },
+    { "path": "packages/cli" },
+    { "path": "packages/dotnet" },
+    { "path": "packages/primitives" },
+    { "path": "packages/ui" },
+    { "path": "packages/worker" },
+    { "path": "packages/create-tsazor" }
   ]
 }

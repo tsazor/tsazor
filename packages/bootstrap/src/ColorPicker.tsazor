@@ -1,0 +1,280 @@
+@** A color picker (Fluent UI Blazor's FluentColorPicker, MudBlazor's MudColorPicker; Bootstrap has none): the color as hex text
+    ("#0f6cbd"), bound with @bind-selectedColor. `view` swatch (default) is a palette of swatches, ten shades a hue;
+    wheel the color wheel's hexagons; both are radio groups — the arrows move and pick, a swatch says its color's name
+    and code. hsv is a square for saturation and brightness and a bar for the hue, each a slider for the keys (Shift
+    for big steps) and the pointer. `palette` replaces the colors; with `findClosestColor` (default) the nearest one
+    is marked when the color isn't in it. `onPick` is raised by a deliberate choice (a click, Enter or Space, the end
+    of a drag) — a ColorPickerInput closes on it. The same parameters as the Fluent skin's ColorPicker. *@
+@import type { Attachment } from "@tsazor/runtime"
+@import { type ColorPickerLabels, type Orientation } from "@tsazor/ui"
+@import {
+    closestColor, hexToHsv, hsvToHex, normalizeHexColor, swatchKeyTarget, swatchPalette, wheelKeyTarget,
+    wheelLayout, wheelPalette, wheelRowSizes, type Hsv,
+} from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+@import { colorPickerLabelsFrom } from "@tsazor/ui/kit"
+
+<div @attributes="@this.rootAttributes" @ref="root">
+    @if (this.view === "hsv") {
+        <div class="tz-color-picker__square" role="slider" tabindex="0" aria-roledescription="@t("colorPicker.squareRoleDescription")" aria-label="@this.text.square"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.round(this.hsv.s * 100)"
+             aria-valuetext="@this.text.squareValue(Math.round(this.hsv.s * 100), Math.round(this.hsv.v * 100), this.current ?? hsvToHex(this.hsv))"
+             style="@(`--tz-color-picker-hue: ${hsvToHex({ h: this.hsv.h, s: 1, v: 1 })}`)" @attach="this.squareDrag" @onkeydown="this.squareKey">
+            <span class="tz-color-picker__indicator" style="@(`inset-inline-start: ${this.hsv.s * 100}%; top: ${(1 - this.hsv.v) * 100}%; background: ${this.current ?? "transparent"}`)"></span>
+        </div>
+        <div class="tz-color-picker__hue" role="slider" tabindex="0" aria-orientation="vertical" aria-label="@this.text.hue"
+             aria-valuemin="0" aria-valuemax="360" aria-valuenow="@Math.round(this.hsv.h)" aria-valuetext="@this.text.hueValue(Math.round(this.hsv.h), hsvToHex({ h: this.hsv.h, s: 1, v: 1 }))"
+             @attach="this.hueDrag" @onkeydown="this.hueKey">
+            <span class="tz-color-picker__hue-indicator" style="@(`top: ${(this.hsv.h / 360) * 100}%`)"></span>
+        </div>
+    } else if (this.view === "wheel") {
+        <svg class="tz-color-picker__wheel" viewBox="@this.wheel.viewBox" role="radiogroup" aria-label="@(this.ariaLabel ?? t("colorPicker.label"))">
+            @for (let i = 0; i < this.wheelColors.length; i++) {
+                <polygon class="tz-color-picker__hexagon" role="radio" points="@this.wheel.hexagons[i]!.points" fill="@this.wheelColors[i]"
+                         stroke="@this.wheelColors[i]" data-index="@i" tabindex="@(i === this.tabStop ? 0 : -1)" aria-checked="@(i === this.selectedIndex ? "true" : "false")"
+                         aria-label="@this.text.swatch(this.wheelColors[i]!)" @onclick="() => this.choose(i, true)" @onkeydown="(e) => this.radioKey(e, i)" />
+            }
+            @if (this.selectedIndex >= 0 && this.selectedIndex < this.wheelColors.length) {
+                <circle class="tz-color-picker__mark" cx="@this.wheel.hexagons[this.selectedIndex]!.cx" cy="@this.wheel.hexagons[this.selectedIndex]!.cy" r="6" aria-hidden="true" />
+            }
+        </svg>
+    } else {
+        <div class="tz-color-picker__swatches" role="radiogroup" aria-label="@(this.ariaLabel ?? t("colorPicker.label"))" style="@(`--tz-color-picker-columns: ${this.columns}`)">
+            @for (let i = 0; i < this.swatches.length; i++) {
+                <span class="@(i === this.selectedIndex ? "tz-color-picker__swatch tz-color-picker__swatch--selected" : "tz-color-picker__swatch")" role="radio"
+                      style="@(`background: ${this.swatches[i]}`)" data-index="@i" tabindex="@(i === this.tabStop ? 0 : -1)"
+                      aria-checked="@(i === this.selectedIndex ? "true" : "false")" aria-label="@this.text.swatch(this.swatches[i]!)"
+                      @onclick="() => this.choose(i, true)" @onkeydown="(e) => this.radioKey(e, i)"></span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The color, "#rrggbb" (`SelectedColor`). */
+    @Parameter() selectedColor?: string;
+    /** Raised with each change of the color, "#rrggbb" (`SelectedColorChanged`). */
+    @Parameter() selectedColorChanged?: EventCallback<string>;
+    /** Raised when a color is chosen on purpose: a click, Enter or Space, the end of a drag. */
+    @Parameter() onPick?: EventCallback<string>;
+    /** swatch (default; `SwatchPalette`), wheel (`ColorWheel`) or hsv (`HsvSquare`). */
+    @Parameter() view: "swatch" | "wheel" | "hsv" = "swatch";
+    /** The colors of the swatches or the wheel's hexagons (hex; `Palette`). */
+    @Parameter() palette?: string[];
+    /** The swatches a row (a column, vertical). */
+    @Parameter() columns: number = 10;
+    /** The swatches in rows (horizontal, default) or in columns. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** Marks the palette's nearest color when the color isn't in it (`FindClosestColor`). */
+    @Parameter() findClosestColor: boolean = true;
+    /** The picker's width (CSS; `Width`). */
+    @Parameter() width?: string;
+    /** The picker's height (CSS; `Height`). */
+    @Parameter() height?: string;
+    /** The palette's name for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** The swatches' and the sliders' texts (English by default). */
+    @Parameter() labels?: Partial<ColorPickerLabels>;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private root?: HTMLDivElement;
+    private hsv: Hsv = { h: 0, s: 0, v: 1 };
+    private known?: string;
+    private focusPending?: number;
+    private readonly wheel = wheelLayout(wheelRowSizes);
+
+    private get text(): ColorPickerLabels {
+        return { ...colorPickerLabelsFrom(this.t), ...this.labels };
+    }
+
+    /** The color in its full form, when it is one. */
+    private get current(): string | undefined {
+        return this.selectedColor === undefined ? undefined : normalizeHexColor(this.selectedColor);
+    }
+
+    private get swatches(): string[] {
+        return (this.palette ?? swatchPalette).map((color) => normalizeHexColor(color) ?? color);
+    }
+
+    private get wheelColors(): string[] {
+        return (this.palette ?? wheelPalette).slice(0, this.wheel.hexagons.length).map((color) => normalizeHexColor(color) ?? color);
+    }
+
+    private get colors(): string[] {
+        return this.view === "wheel" ? this.wheelColors : this.swatches;
+    }
+
+    /** The color's swatch, or the nearest one with findClosestColor; -1 for none. */
+    private get selectedIndex(): number {
+        const current = this.current;
+        if (current === undefined) return -1;
+        const colors = this.colors;
+        const exact = colors.indexOf(current);
+        if (exact >= 0 || !this.findClosestColor) return exact;
+        const closest = closestColor(colors, current);
+        return closest === undefined ? -1 : colors.indexOf(closest);
+    }
+
+    /** The radio group's tab stop: the marked swatch, else the first. */
+    private get tabStop(): number {
+        return Math.max(0, this.selectedIndex);
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        let cls = `tz-color-picker tz-color-picker--${this.view}`;
+        if (this.view === "swatch" && this.orientation === "vertical") cls += " tz-color-picker--vertical";
+        const size = [this.width && `width: ${this.width}`, this.height && `height: ${this.height}`].filter(Boolean).join("; ");
+        return withClass(cls, { ...(size === "" ? {} : { style: size }), ...this.additionalAttributes });
+    }
+
+    protected override onParametersSet(): void {
+        // A color from outside sets the square and the bar; the hue survives a gray (whose hue is none).
+        if (this.selectedColor === this.known) return;
+        this.known = this.selectedColor;
+        const hsv = this.current === undefined ? undefined : hexToHsv(this.current);
+        if (hsv !== undefined) this.hsv = hsv.s === 0 || hsv.v === 0 ? { ...hsv, h: this.hsv.h } : hsv;
+    }
+
+    protected override onAfterRender(): void {
+        if (this.focusPending === undefined || this.root === undefined) return;
+        this.root.querySelector<HTMLElement | SVGElement>(`[data-index="${this.focusPending}"]`)?.focus();
+        this.focusPending = undefined;
+    }
+
+    /** A swatch or a hexagon: the color is chosen (and picked on purpose with `pick`). */
+    private choose(index: number, pick: boolean): Promise<void> | undefined {
+        const color = this.colors[index];
+        if (color === undefined) return undefined;
+        const changed = color !== this.current ? this.change(color) : undefined;
+        const picked = pick ? this.onPick?.invokeAsync(color) : undefined;
+        return Promise.all([changed, picked]).then(() => undefined);
+    }
+
+    /** The color changes: the square and the bar follow (the square's own HSV, which keeps a gray's hue). */
+    private change(color: string, hsv: Hsv | undefined = hexToHsv(color)): Promise<void> | undefined {
+        this.known = color;
+        if (hsv !== undefined) this.hsv = hsv;
+        return this.selectedColorChanged?.invokeAsync(color);
+    }
+
+    private radioKey(e: KeyboardEvent, index: number): Promise<void> | undefined {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            return this.choose(index, true);
+        }
+        const rtl = getComputedStyle(e.target as Element).direction === "rtl";
+        let target: number | undefined;
+        if (this.view === "wheel") {
+            target = wheelKeyTarget(e, index, wheelRowSizes, rtl);
+        } else {
+            // Vertical: the swatches run down the columns, so the arrows turn.
+            const turned: Record<string, string> = { ArrowDown: "ArrowRight", ArrowUp: "ArrowLeft", ArrowRight: "ArrowDown", ArrowLeft: "ArrowUp" };
+            const key = this.orientation === "vertical" ? { key: turned[e.key] ?? e.key, ctrlKey: e.ctrlKey } : e;
+            target = swatchKeyTarget(key, index, this.colors.length, this.columns, rtl && this.orientation !== "vertical");
+        }
+        if (target === undefined) {
+            if (e.key.startsWith("Arrow")) e.preventDefault();
+            return undefined;
+        }
+        e.preventDefault();
+        // A radio group: the arrows move and choose.
+        this.focusPending = target;
+        return this.choose(target, false);
+    }
+
+    /** Sets the square's or the bar's color. */
+    private setHsv(hsv: Hsv, pick = false): void {
+        this.hsv = hsv;
+        const color = hsvToHex(hsv);
+        const changed = color !== this.current ? this.change(color, hsv) : undefined;
+        if (changed === undefined) this.stateHasChanged();
+        const picked = pick ? this.onPick?.invokeAsync(color) : undefined;
+        // From pointer and key handlers of the elements' own: errors go to the ErrorBoundary by hand.
+        Promise.all([changed, picked]).catch((error) => this.dispatchExceptionAsync(error));
+    }
+
+    private squareKey(e: KeyboardEvent): void {
+        const step = e.shiftKey ? 0.1 : 0.01;
+        const { h, s, v } = this.hsv;
+        const clamp = (value: number): number => Math.min(1, Math.max(0, value));
+        const rtl = getComputedStyle(e.target as Element).direction === "rtl";
+        const moves: Record<string, Hsv> = {
+            ArrowRight: { h, s: clamp(s + (rtl ? -step : step)), v },
+            ArrowLeft: { h, s: clamp(s - (rtl ? -step : step)), v },
+            ArrowUp: { h, s, v: clamp(v + step) },
+            ArrowDown: { h, s, v: clamp(v - step) },
+        };
+        if (e.key === "Enter") {
+            e.preventDefault();
+            this.setHsv(this.hsv, true);
+            return;
+        }
+        const next = moves[e.key];
+        if (next === undefined) return;
+        e.preventDefault();
+        this.setHsv(next);
+    }
+
+    private hueKey(e: KeyboardEvent): void {
+        const step = e.shiftKey || e.key === "PageUp" || e.key === "PageDown" ? 10 : 1;
+        const h = this.hsv.h;
+        const next: Record<string, number> = {
+            ArrowDown: h + step, ArrowRight: h + step, PageDown: h + step,
+            ArrowUp: h - step, ArrowLeft: h - step, PageUp: h - step,
+            Home: 0, End: 359,
+        };
+        if (e.key === "Enter") {
+            e.preventDefault();
+            this.setHsv(this.hsv, true);
+            return;
+        }
+        if (!(e.key in next)) return;
+        e.preventDefault();
+        this.setHsv({ ...this.hsv, h: Math.min(359, Math.max(0, next[e.key]!)) });
+    }
+
+    /** A drag on an element: the point's fractions across and down, on each move; the release picks. */
+    private drag(apply: (x: number, y: number, pick: boolean) => void): Attachment<HTMLElement> {
+        return (element) => {
+            const at = (e: PointerEvent, pick: boolean): void => {
+                const box = element.getBoundingClientRect();
+                const x = Math.min(1, Math.max(0, (e.clientX - box.left) / box.width));
+                const y = Math.min(1, Math.max(0, (e.clientY - box.top) / box.height));
+                apply(x, y, pick);
+            };
+            const down = (e: PointerEvent): void => {
+                if (e.button !== 0) return;
+                element.setPointerCapture(e.pointerId);
+                element.focus();
+                at(e, false);
+            };
+            const move = (e: PointerEvent): void => {
+                if (element.hasPointerCapture(e.pointerId)) at(e, false);
+            };
+            const up = (e: PointerEvent): void => {
+                if (!element.hasPointerCapture(e.pointerId)) return;
+                element.releasePointerCapture(e.pointerId);
+                at(e, true);
+            };
+            element.addEventListener("pointerdown", down);
+            element.addEventListener("pointermove", move);
+            element.addEventListener("pointerup", up);
+            return () => {
+                element.removeEventListener("pointerdown", down);
+                element.removeEventListener("pointermove", move);
+                element.removeEventListener("pointerup", up);
+            };
+        };
+    }
+
+    private readonly squareDrag = this.drag((x, y, pick) => {
+        const rtl = this.root !== undefined && getComputedStyle(this.root).direction === "rtl";
+        this.setHsv({ h: this.hsv.h, s: rtl ? 1 - x : x, v: 1 - y }, pick);
+    });
+
+    private readonly hueDrag = this.drag((_x, y, pick) => this.setHsv({ ...this.hsv, h: Math.min(359, y * 360) }, pick));
+}

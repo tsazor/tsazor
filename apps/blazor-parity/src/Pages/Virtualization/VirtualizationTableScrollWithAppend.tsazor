@@ -1,0 +1,81 @@
+@page "/virtualization/table-scroll-with-append"
+@import type { ScrollItem } from "./models"
+
+<p>
+    This tests rapid user scrolling while an async table virtualizer receives appended items.
+</p>
+
+<button id="table-scroll-append" @onclick="appendItem">Append item</button>
+<button id="table-scroll-prepend" @onclick="prependItem">Prepend item</button>
+<button id="table-scroll-use-start" @onclick="useStartAnchor">Use Start anchor</button>
+
+<div id="table-scroll-container" style="height: 300px; overflow-y: auto;">
+    <table>
+        <tbody>
+            <Virtualize @ref="virtualize"
+                        ItemsProvider="getItems"
+                        ItemComparer="itemComparer"
+                        ItemSize="40"
+                        OverscanCount="15"
+                        AnchorMode="anchorMode"
+                        SpacerElement="tr">
+                <ItemContent>
+                    <tr class="table-scroll-item" style="height: 40px;">
+                        <td data-index="@context.index">Item @context.index</td>
+                    </tr>
+                </ItemContent>
+                <Placeholder>
+                    <tr class="table-scroll-placeholder" style="height: 40px;">
+                        <td>Loading @context.index</td>
+                    </tr>
+                </Placeholder>
+            </Virtualize>
+        </tbody>
+    </table>
+</div>
+
+<p id="table-scroll-total-items">Total items: @items.length</p>
+<p id="table-scroll-status">@status</p>
+<p id="table-scroll-completed-updates">Completed updates: @completedUpdates</p>
+<p id="table-scroll-anchor-mode">@VirtualizeAnchorMode[anchorMode]</p>
+
+@code {
+    private readonly items: ScrollItem[] = range(0, 500).map((index) => ({ index }));
+    private readonly itemComparer = (left: ScrollItem, right: ScrollItem): boolean => left.index === right.index;
+    private anchorMode = VirtualizeAnchorMode.End;
+    private completedUpdates = 0;
+    private nextPrependIndex = -1;
+    private virtualize?: Virtualize<ScrollItem>;
+    private status = "Ready";
+
+    private async getItems(request: VirtualizeItemsProviderRequest): Promise<VirtualizeItemsProviderResult<ScrollItem>> {
+        await delay(500, request.signal);
+
+        const result = this.items
+            .slice(request.startIndex, request.startIndex + request.count)
+            .map((item) => ({ index: item.index }));
+
+        return { items: result, totalItemCount: this.items.length };
+    }
+
+    private async appendItem(): Promise<void> {
+        const index = this.items.length;
+        this.items.push({ index });
+        await this.virtualize?.refreshDataAsync();
+        this.completedUpdates++;
+        this.status = `Appended item ${index}`;
+    }
+
+    private async prependItem(): Promise<void> {
+        const index = this.nextPrependIndex--;
+        this.items.splice(0, 0, { index });
+        await this.virtualize?.refreshDataAsync();
+        this.completedUpdates++;
+        this.status = `Prepended item ${index}`;
+    }
+
+    private useStartAnchor(): void {
+        this.anchorMode = VirtualizeAnchorMode.Start;
+        this.status = "Using Start anchor";
+    }
+}

@@ -1,0 +1,274 @@
+@* Client/Pages/Communication/Chat.razor(.cs): a conversation with one contact and the contacts beside it — in a
+   Drawer on a narrow window (MudHidden by breakpoint becomes the app's two classes). Messages go to the API and then
+   through the hub, which hands them to both sides; the sender's side asks the hub to notify the receiver. Who is
+   online comes from the hub too: ConnectUser, DisconnectUser, and the answers to this page's PingRequest. *@
+@page "/chat/{cId}"
+@page "/chat"
+@authorize({ policy: "Permissions.Communication.Chat" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { CultureService } from "@tsazor/runtime"
+@import { Toaster } from "@tsazor/fluent"
+@import type { ChatHistory, ChatHistoryResponse, ChatUserResponse } from "../../Application/Chat"
+@import { StorageConstants } from "../../Application/Constants"
+@import { getFirstName, getLastName, getUserId } from "../../Extensions/ClaimsPrincipalExtensions"
+@import { formatGeneral } from "../../Extensions/Dates"
+@import { LocalStorage } from "../../Infrastructure/LocalStorage"
+@inject ChatManager chatManager
+@inject UserManager userManager
+@inject AuthenticationStateProvider stateProvider
+@inject NavigationManager navigation
+@inject LocalStorage localStorage
+@inject CultureService culture
+@inject Toaster toaster
+
+<div class="bh-chat">
+    <Card class="bh-chat__conversation">
+        <div class="bh-chat__bar">
+            @if (!cFullName) {
+                <Icon value="@Icons.Person" size="24" />
+                <Typography variant="h5" as="h1">@L("chat")</Typography>
+            } else {
+                <Icon value="@Icons.Chat" size="24" />
+                <Typography variant="h5" as="h1">@cFullName</Typography>
+            }
+            <span class="bh-chat__spacer"></span>
+            <span class="bh-narrow-only">
+                <Button appearance="transparent" iconStart="@Icons.People" ariaLabel="@L("contacts")" onClick="@(() => openDrawer())" />
+            </span>
+        </div>
+        <div class="bh-chat__messages" id="chatContainer" tabindex="0" role="log" aria-label="@(cFullName || L("chat"))" @ref="chatContainer">
+            @foreach (const message of messages) {
+                <div class="bh-chat__message">
+                    @if (!message.fromUserImageURL) {
+                        <Avatar initials="@message.fromUserFullName.toUpperCase().charAt(0)" color="pink" size="50" />
+                    } else {
+                        <Avatar image="@message.fromUserImageURL" size="50" />
+                    }
+                    <div>
+                        <p class="bh-chat__from">@message.fromUserFullName</p>
+                        <p class="bh-chat__date">@formatDate(message.createdDate)</p>
+                        <p class="bh-chat__text">@message.message</p>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="bh-chat__compose">
+            @* @onkeypress came before the change that Enter commits, so Enter sent nothing (U12): keyup comes after it. *@
+            <div class="bh-chat__input">
+                <TextInput placeholder="@L("Enter your message...")" ariaLabel="@L("Enter your message...")" @onkeyup="onKeyPressInChat" @bind-Value="currentMessage" />
+            </div>
+            <Button intent="secondary" iconStart="@Icons.Send" onClick="@submitAsync">@L("Send")</Button>
+        </div>
+    </Card>
+    <Card class="bh-chat__contacts bh-wide-chat-only">
+        <div class="bh-chat__bar">
+            <Typography variant="h5" as="h2"># @L("contacts")</Typography>
+        </div>
+        <div class="bh-chat__contact-list">
+            <ListGroup flush>
+                @foreach (const user of userList) {
+                    <ListGroupItem onClick="@(() => loadUserChat(user.id))">
+                        <span class="bh-chat__contact">
+                            @if (!user.profilePictureDataUrl) {
+                                <Avatar initials="@user.userName.toUpperCase().charAt(0)" color="@(user.id === cId ? "pink" : "anchor")" size="50">
+                                    <Indicator intent="@getUserStatusBadgeColor(user.isOnline)" class="bh-presence" aria-hidden="true" />
+                                </Avatar>
+                            } else {
+                                <Avatar image="@user.profilePictureDataUrl" size="50">
+                                    <Indicator intent="@getUserStatusBadgeColor(user.isOnline)" class="bh-presence" aria-hidden="true" />
+                                </Avatar>
+                            }
+                            <span>
+                                <span class="bh-chat__contact-name">@user.firstName @user.lastName</span>
+                                <span class="bh-chat__contact-email">@user.emailAddress</span>
+                            </span>
+                        </span>
+                    </ListGroupItem>
+                }
+            </ListGroup>
+        </div>
+    </Card>
+</div>
+<Drawer isOpen="@open" placement="end" ariaLabel="@L("contacts")" onClosed="@(() => open = false)">
+    <ListGroup flush>
+        @foreach (const user of userList) {
+            <ListGroupItem onClick="@(() => loadUserChat(user.id))">
+                <span class="bh-chat__contact">
+                    @if (!user.profilePictureDataUrl) {
+                        <Avatar initials="@user.userName.toUpperCase().charAt(0)" color="@(user.id === cId ? "pink" : "anchor")" size="50">
+                            <Indicator intent="@getUserStatusBadgeColor(user.isOnline)" class="bh-presence" aria-hidden="true" />
+                        </Avatar>
+                    } else {
+                        <Avatar image="@user.profilePictureDataUrl" size="50">
+                            <Indicator intent="@getUserStatusBadgeColor(user.isOnline)" class="bh-presence" aria-hidden="true" />
+                        </Avatar>
+                    }
+                    <span>
+                        <span class="bh-chat__contact-name">@user.firstName @user.lastName</span>
+                        <span class="bh-chat__contact-email">@user.emailAddress</span>
+                    </span>
+                </span>
+            </ListGroupItem>
+        }
+    </ListGroup>
+</Drawer>
+<Alert intent="success" class="bh-chat__guide">@L("Want to understand how Chat is implemented in BlazorHero ? Refer this") <Link href="https://codewithmukesh.com/blog/realtime-chat-application-with-blazor">@L("detailed guide for more.")</Link></Alert>
+
+@code {
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+    /** The contact's id, from the address. */
+    @Parameter() cId?: string;
+
+    private readonly L = localizerFor("Chat");
+    private currentMessage = "";
+    private currentUserId = "";
+    private currentUserImageURL: string | undefined;
+    private cFullName = "";
+    private cUserName = "";
+    private cImageURL: string | null = null;
+    private messages: ChatHistoryResponse[] = [];
+    private userList: ChatUserResponse[] = [];
+    private open = false;
+    private chatContainer?: HTMLDivElement;
+
+    /** OnAfterRenderAsync's ScrollToBottom: after every render, the newest message in view. */
+    protected override onAfterRender(): void {
+        this.scrollToBottom();
+    }
+
+    private listening?: HubConnection;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.getUsersAsync();
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.currentUserId = getUserId(user);
+        this.currentUserImageURL = this.localStorage.getItem<string>(StorageConstants.Local.UserImageURL);
+        if (this.cId) await this.loadUserChat(this.cId);
+    }
+
+    /** The hub, when it comes (B31; after onInitialized, as in Blazor): its messages, then who is online. */
+    protected override async onParametersSet(): Promise<void> {
+        const hub = this.hubConnection;
+        if (hub === undefined || hub === this.listening) return;
+        this.listening = hub;
+        this.listen(hub);
+        await hub.send(ApplicationConstants.SignalR.PingRequest, this.currentUserId);
+    }
+
+    /** The hub's messages for this page, for as long as it is open (the original never removes them, U11). */
+    private listen(hub: HubConnection): void {
+        const signalR = ApplicationConstants.SignalR;
+        const handlers: Record<string, (...args: any[]) => unknown> = {
+            [signalR.PingResponse]: (userId: string) => {
+                const connectedUser = this.userList.find((candidate) => candidate.id === userId);
+                if (connectedUser !== undefined && !connectedUser.isOnline) {
+                    connectedUser.isOnline = true;
+                    this.stateHasChanged();
+                }
+            },
+            [signalR.ConnectUser]: (userId: string) => {
+                const connectedUser = this.userList.find((candidate) => candidate.id === userId);
+                if (connectedUser !== undefined && !connectedUser.isOnline) {
+                    connectedUser.isOnline = true;
+                    this.toaster.show({ message: `${connectedUser.userName} ${this.L("Logged In.")}`, intent: "info" });
+                    this.stateHasChanged();
+                }
+            },
+            [signalR.DisconnectUser]: (userId: string) => {
+                const disconnectedUser = this.userList.find((candidate) => candidate.id === userId);
+                if (disconnectedUser !== undefined && disconnectedUser.isOnline) {
+                    disconnectedUser.isOnline = false;
+                    this.toaster.show({ message: `${disconnectedUser.userName} ${this.L("Logged Out.")}`, intent: "info" });
+                    this.stateHasChanged();
+                }
+            },
+            [signalR.ReceiveMessage]: async (chatHistory: ChatHistory, userName: string) => {
+                const sent = this.cId === chatHistory.toUserId && this.currentUserId === chatHistory.fromUserId;
+                const received = this.cId === chatHistory.fromUserId && this.currentUserId === chatHistory.toUserId;
+                if (!sent && !received) return;
+                const createdDate = String(chatHistory.createdDate);
+                if (sent) {
+                    this.messages.push({ message: chatHistory.message, fromUserFullName: userName, createdDate, fromUserImageURL: this.currentUserImageURL ?? null });
+                    await hub.send(signalR.SendChatNotification, this.L("New Message From {0}", { 0: userName }), this.cId, this.currentUserId);
+                } else {
+                    this.messages.push({ message: chatHistory.message, fromUserFullName: userName, createdDate, fromUserImageURL: this.cImageURL });
+                }
+                this.stateHasChanged();
+            },
+        };
+        for (const [name, handler] of Object.entries(handlers)) hub.on(name, handler);
+        this.disposeSignal.addEventListener("abort", () => {
+            for (const [name, handler] of Object.entries(handlers)) hub.off(name, handler);
+        });
+    }
+
+    private async submitAsync(): Promise<void> {
+        if (!this.currentMessage || !this.cId) return;
+        // Save the message, then hand it to the hub.
+        const chatHistory: ChatHistory = { message: this.currentMessage, toUserId: this.cId, createdDate: new Date() };
+        const response = await this.chatManager.saveMessageAsync(chatHistory);
+        if (response.succeeded) {
+            const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+            this.currentUserId = getUserId(user);
+            chatHistory.fromUserId = this.currentUserId;
+            const userName = `${getFirstName(user)} ${getLastName(user)}`;
+            await this.hubConnection?.send(ApplicationConstants.SignalR.SendMessage, chatHistory, userName);
+            this.currentMessage = "";
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async onKeyPressInChat(e: KeyboardEvent): Promise<void> {
+        if (e.key === "Enter") await this.submitAsync();
+    }
+
+    private async loadUserChat(userId: string): Promise<void> {
+        this.open = false;
+        const response = await this.userManager.getAsync(userId);
+        if (response.succeeded && response.data !== null) {
+            const contact = response.data;
+            this.cId = contact.id;
+            this.cFullName = `${contact.firstName} ${contact.lastName}`;
+            this.cUserName = contact.userName;
+            this.cImageURL = contact.profilePictureDataUrl;
+            this.navigation.navigateTo(`chat/${this.cId}`);
+            this.messages = [];
+            const historyResponse = await this.chatManager.getChatHistoryAsync(this.cId);
+            if (historyResponse.succeeded) {
+                this.messages = historyResponse.data;
+            } else {
+                for (const message of historyResponse.messages) this.toaster.show({ message, intent: "danger" });
+            }
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async getUsersAsync(): Promise<void> {
+        const response = await this.chatManager.getChatUsersAsync();
+        if (response.succeeded) {
+            this.userList = response.data;
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private openDrawer(): void {
+        this.open = true;
+    }
+
+    private getUserStatusBadgeColor(isOnline: boolean): Intent {
+        return isOnline ? "success" : "danger";
+    }
+
+    /** CreatedDate.ToString("G", CultureInfo.CurrentCulture). */
+    private formatDate(createdDate: string): string {
+        return formatGeneral(createdDate, this.culture.current);
+    }
+
+    private scrollToBottom(): void {
+        const container = this.chatContainer;
+        if (container !== undefined) container.scrollTop = container.scrollHeight;
+    }
+}

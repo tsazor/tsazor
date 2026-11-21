@@ -1,10 +1,47 @@
 {
   "name": "@tsazor/lsp",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/lsp"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/lsp#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Language server for Tsazor (.tsazor): live compiler diagnostics, hover and go-to-definition.",
-  "main": "./dist/server.js",
-  "types": "./dist/server.d.ts",
+  "bin": {
+    "tsazor-lsp": "./dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ts-mapping": {
+      "types": "./dist/ts-mapping.d.ts",
+      "default": "./dist/ts-mapping.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"
@@ -12,12 +49,15 @@
   "dependencies": {
     "@tsazor/compiler": "workspace:*",
     "@tsazor/workspace": "workspace:*",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
-    "vscode-languageserver-textdocument": "^1.0.12",
-    "vitest": "^3.2.4",
-    "vscode-languageserver": "^9.0.1"
+    "vitest": "^3.2.4"
+  },
+  "tsazor": {
+    "internal": true
   }
 }

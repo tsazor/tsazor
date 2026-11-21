@@ -1,6 +1,4 @@
-@inherits PizzaComponentBase
-
-@foreach (var pizza in this.order.pizzas) {
+@foreach (const pizza of this.order.pizzas) {
     <p>
         <strong>
             @(pizza.size)"
@@ -10,7 +8,7 @@
     </p>
 
     <ul>
-        @foreach (var pt in pizza.toppings) {
+        @foreach (const pt of pizza.toppings) {
             <li>+ @pt.topping.name</li>
         }
     </ul>

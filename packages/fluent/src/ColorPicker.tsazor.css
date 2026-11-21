@@ -1,0 +1,123 @@
+/* ColorPicker — swatches in a grid, the color wheel's hexagons, or a saturation square beside a hue bar. */
+
+.fui-color-picker {
+  --fui-color-picker-swatch: 22px;
+  display: inline-flex;
+  gap: var(--fui-spacing-s);
+  max-inline-size: 100%;
+}
+
+.fui-color-picker__swatches {
+  display: grid;
+  grid-template-columns: repeat(var(--fui-color-picker-columns), var(--fui-color-picker-swatch));
+  gap: 2px;
+}
+
+.fui-color-picker--vertical .fui-color-picker__swatches {
+  grid-auto-flow: column;
+  grid-template-columns: none;
+  grid-template-rows: repeat(var(--fui-color-picker-columns), var(--fui-color-picker-swatch));
+}
+
+.fui-color-picker__swatch {
+  inline-size: var(--fui-color-picker-swatch);
+  block-size: var(--fui-color-picker-swatch);
+  border-radius: var(--fui-radius-sm);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+  cursor: pointer;
+}
+
+.fui-color-picker__swatch--selected {
+  box-shadow: inset 0 0 0 2px #fff;
+  outline: 2px solid var(--fui-foreground-1);
+  outline-offset: 0;
+}
+
+.fui-color-picker__swatch:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+}
+
+.fui-color-picker__wheel {
+  inline-size: 280px;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.fui-color-picker__hexagon {
+  cursor: pointer;
+  stroke-width: 1;
+  outline: none;
+}
+
+.fui-color-picker__hexagon:focus-visible {
+  stroke: var(--fui-control-focus-stroke);
+  stroke-width: 3;
+}
+
+.fui-color-picker__mark {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.8));
+}
+
+.fui-color-picker__square {
+  position: relative;
+  inline-size: 200px;
+  block-size: 160px;
+  border-radius: var(--fui-radius-md);
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent),
+    var(--fui-color-picker-hue);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.fui-color-picker__square:dir(rtl) {
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to left, #fff, transparent),
+    var(--fui-color-picker-hue);
+}
+
+.fui-color-picker__indicator {
+  position: absolute;
+  inline-size: 14px;
+  block-size: 14px;
+  margin-block-start: -7px;
+  margin-inline-start: -7px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6);
+  pointer-events: none;
+}
+
+.fui-color-picker__hue {
+  position: relative;
+  inline-size: 16px;
+  block-size: 160px;
+  border-radius: var(--fui-radius-md);
+  background: linear-gradient(to bottom, #f00, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00);
+  touch-action: none;
+  cursor: ns-resize;
+}
+
+.fui-color-picker__hue-indicator {
+  position: absolute;
+  inset-inline: -2px;
+  block-size: 6px;
+  margin-top: -3px;
+  border: 2px solid #fff;
+  border-radius: var(--fui-radius-sm);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6);
+  pointer-events: none;
+}
+
+.fui-color-picker__square:focus-visible,
+.fui-color-picker__hue:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+}

@@ -1,0 +1,168 @@
+# Component libraries
+
+Tsazor has no built-in component library and no "official" one. A library is an npm package of
+`.tsazor` components, and an app uses it with `@using <package>`. `@tsazor/bootstrap` and
+`@tsazor/fluent` are two such libraries. They are built on [`@tsazor/ui`](../packages/ui), the
+toolkit for any library author, which provides behaviors, the DataGrid model and the shared
+vocabulary. Its root entry is covered by the stability promise. `@tsazor/ui/kit` holds the
+helpers of the skins' components (calendar and color math, keyboard maps, label builders,
+form-field state): use them if they fit, but they may change in any release, so a library that
+imports them depends on `@tsazor/ui` at an exact version. This page describes what a library declares so that tools can work with it. The
+packages above serve as the reference implementation.
+
+## What a library's `package.json` declares
+
+```json
+{
+  "name": "my-components",
+  "keywords": ["tsazor", "tsazor-components"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./styles.css": "./dist/styles.css",
+    "./tsazor-components.json": "./dist/tsazor-components.json"
+  },
+  "tsazor": {
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": ["my-components/styles.css"],
+      "services": "addMyComponents",
+      "layout": ["ToastRegion"]
+    }
+  },
+  "peerDependencies": { "@tsazor/runtime": "^0.1.0" }
+}
+```
+
+- **`tsazor.components`:** the component manifest, which holds every component's parameters
+  ([architecture.md](architecture.md), "Manifests"). Editors and `tsazor check` read it instead
+  of the sources. The library build writes it (see "Building a library").
+- **`tsazor.setup`:** what an app needs besides `@using`. `npm create tsazor --ui <package>` reads
+  it and writes the setup into the new app:
+  - **`styles`:** module specifiers that the app's `Program.ts` imports, either your own CSS
+    (through an export) or a peer's (`bootstrap/dist/css/bootstrap.min.css`). With styles, the
+    starter leaves its template's body font out of `app.css`, so your styles set the document's
+    typeface: a zero-weight `:where(body) { font-family: … }`, which any rule of the app's own
+    still beats (`@tsazor/fluent` ships one; Bootstrap's reboot sets `body` itself).
+  - **`services`:** the name of an exported function `(services: ServiceCollection) => void`. It
+    registers what your components inject; the app calls it in `createTsazorApp({ services })`. It
+    is the counterpart of Blazor's `builder.Services.AddMudServices()`.
+  - **`layout`:** components without parameters that the app's `MainLayout` renders once, such as
+    a toast region or a popover host.
+  
+  Every field is optional. A library without `setup` still works: the app gets the dependency and
+  `@using`, and the rest is up to your README.
+- **`peerDependencies`:** what the app has to install alongside your library, for example the CSS
+  framework your styles come from. `npm create tsazor` adds these to the app; `@tsazor/*` peers
+  are there already.
+- **The keyword `tsazor-components`:** `npm create tsazor` lists the packages the registry finds
+  under this keyword when it asks for a library.
+
+## Building a library
+
+`tsazor build-lib` (from `@tsazor/cli`, a dev dependency) builds the package as an app is built:
+the sources are type-checked first (`tsazor check`, so the package needs a strict
+`tsconfig.json`), and an error stops the build; then they compile as the Vite plugin compiles an
+app:
+
+```json
+"scripts": { "build": "tsazor build-lib --stylesheet my-components.css" }
+```
+
+- every `.tsazor` below `src/` (but `_Imports.tsazor`) becomes `dist/<Name>.js` at the same path
+  (`src/forms/Field.tsazor` is `dist/forms/Field.js`, a folder per component as MudBlazor's), exported from
+  `dist/index.js`, with a declaration `<Name>.d.ts` beside it from its parameters. Each folder's `_Imports.tsazor`
+  applies as in an app (`@using ./buttons` in `src/_Imports.tsazor` lets every component use the buttons). A tag finds
+  a component by its name, so two components of one name in different folders are a build error;
+- every `.ts` helper below `src/` becomes `dist/<name>.js` at the same path (`src/utilities/x.ts` is
+  `dist/utilities/x.js`), with the declaration TypeScript derives from the file alone (a function needs its
+  return type written for that);
+- the declarations import what the sources import, as built: a base class of the library's own
+  (`@inherits MudComponentBase`) from its module in `dist`, a parameter's type from the helper or component that
+  declares it — an app's TypeScript reads them without `skipLibCheck`;
+- `dist/tsazor-components.json` is the manifest;
+- Tsazor's field decorators (`@Parameter()` and the like) are applied after each class, as in an
+  app; `dist/_decorators.js` holds esbuild's helpers for the decorators that stay, once for all
+  the components (an app's Vite plugin points it at the app's own copy, [bundle-size.md](bundle-size.md));
+- the `@code (src/X.tsazor:line)` comments name the source from the package;
+- with `--stylesheet`, `src/styles/*.css` and each component's `<Name>.tsazor.css` are joined
+  into `dist/<file>` in that order.
+
+The build checks what it hands on: an index statement whose relative specifier names a file the build didn't write
+(`./css-builder.js` for `./utilities/css-builder.js`) is an error, and a name the `exports` option exports itself is
+not exported a second time (a duplicate export is a module that doesn't load). Without `"tsazor": { "components" }`
+in package.json it warns: an app would read none of the components' parameters. One build at a time writes an
+output — a second one, started while the first runs (an agent's beside a person's), is refused
+(`dist/.tsazor-build.lock`; a lock whose process is gone is taken over).
+
+A library that needs more writes a build script around `buildLibrary`, which takes the same
+defaults:
+
+```js
+// build.mjs — "build": "node build.mjs"
+import { buildLibrary } from "@tsazor/cli";
+
+const result = await buildLibrary({
+  internal: ["GridRow"],                         // compiled for the others, not exported
+  aliases: { Modal: "Dialog" },                  // more names for a component
+  exports: ['export { addMyComponents } from "./services.js"'],
+  reexportTypes: ["@tsazor/ui"],                 // the types the parameters name, from the index
+  typeExports: ['export type { ToastOptions } from "@tsazor/ui"'],
+  stylesheet: { file: "my-components.css" },
+});
+if (result.errors.length > 0) process.exit(1);
+```
+
+`@tsazor/bootstrap`, `@tsazor/fluent`, `@tsazor/charts` and `@tsazor/markdown` build this way
+(their `build.mjs`).
+
+## The manifest across versions
+
+A library is built with one Tsazor and used in an app with another: a library built with
+Tsazor 1.4 ends up in an app on 1.1. The manifest's format follows these rules:
+
+- **Its version is `tsazorComponentManifest: 1` for all of 1.x.** A 1.x release adds optional
+  fields only. It never removes a field, renames one or changes its meaning.
+- **A reader ignores the fields it doesn't know.** An app on 1.1 reads a 1.4 manifest as far as
+  1.1 knows the format. What the newer fields add (a hint, a doc link) is missing there, but
+  every component resolves.
+- **A newer format version is reported, not silent.** A 2.x library in a 1.x app is the warning
+  TZS036 in `tsazor check` and in the Vite plugin. The components are still read as far as this
+  version knows them. A manifest that can't be read (not JSON, no `components`) is the error
+  TZS036 at the manifest. It names the cause, where otherwise the package's tags would only be
+  unresolved (TZS005) or untyped.
+
+A test reads a manifest written by Tsazor 1.0 (`packages/workspace/test/fixtures/manifest-1.0`)
+in every later 1.x release.
+
+## In an app, by hand
+
+Without the starter, the same setup takes three steps:
+
+```
+@* _Imports.tsazor *@
+@using my-components
+```
+
+```ts
+// Program.ts
+import "my-components/styles.css";
+import { addMyComponents } from "my-components";
+
+createTsazorApp({ root: App, routes, services: addMyComponents });
+```
+
+```
+@* Layout/MainLayout.tsazor *@
+<ToastRegion />
+```
+
+A library installed from a folder beside the app (`"my-components": "file:../my-components"`) lies outside the
+app's root, and Vite's dev server serves files outside it only when allowed:
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [tsazor()],
+  server: { fs: { allow: [".."] } }, // the app and the library beside it
+});
+```

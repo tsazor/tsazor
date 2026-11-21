@@ -1,0 +1,240 @@
+@** A carousel (Bootstrap's `.carousel` without its JavaScript; MudBlazor's MudCarousel; the WAI-ARIA carousel pattern):
+    slides shown one at a time — CarouselItem children, or `itemsSource` through `itemTemplate` — with previous and next
+    buttons (`showArrows`), a button per slide (`showBullets`) and a swipe (`enableSwipeGesture`). `@bind-selectedIndex`
+    says which. With `autoCycle` the slides turn every `autoCycleTime` ms, but not while the pointer is over the
+    carousel or the focus is in it; a button stops and starts them (WCAG 2.2.2), and with reduced motion asked for they
+    start stopped.
+    Each slide is a group named "2 of 5"; a slide a person turns to is announced, one that turns by itself isn't — the
+    same parameters as the Fluent skin's Carousel. *@
+@typeparam TData
+@import { type CarouselLabels } from "@tsazor/ui"
+@import { carouselRotates, carouselStep, carouselSwipe } from "@tsazor/ui/kit"
+@import type { Attachment } from "@tsazor/runtime"
+@import { withClass } from "./attributes"
+@import { PauseFill, PlayFill } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+@import { carouselLabelsFrom } from "@tsazor/ui/kit"
+
+<section aria-roledescription="@t("carousel.roleDescription")" @attributes="@this.rootAttributes" @onpointerenter="this.enter" @onpointerleave="this.leave" @onfocusin="this.focusIn" @onfocusout="this.focusOut" @attach="this.swipe">
+    @if (this.autoCycle) {
+        <button type="button" class="btn btn-sm btn-light tz-carousel__rotation" aria-label="@(this.paused ? this.text.play : this.text.pause)" @onclick="this.togglePause">
+            <Icon value="@(this.paused ? PlayFill : PauseFill)" />
+        </button>
+    }
+    <div class="carousel-inner" aria-live="@(this.rotating ? "off" : "polite")">
+        @if (this.itemsSource !== undefined) {
+            @for (let i = 0; i < this.itemsSource.length; i++) {
+                <div class="@(i === this.index ? "carousel-item active" : "carousel-item")" role="group" aria-roledescription="@t("carousel.slideRoleDescription")" aria-label="@this.text.slide(i, this.count)" hidden="@(i !== this.index)">
+                    @if (this.itemTemplate !== undefined) {
+                        @this.itemTemplate(this.itemsSource[i]!)
+                    }
+                </div>
+            }
+        } else {
+            @childContent
+        }
+    </div>
+    @if (this.showBullets && this.count > 1) {
+        <div class="carousel-indicators">
+            @for (let i = 0; i < this.count; i++) {
+                <button type="button" class="@(i === this.index ? "active" : null)" aria-label="@this.text.bullet(i)" aria-current="@(i === this.index ? "true" : null)" @onclick="() => this.moveTo(i)"></button>
+            }
+        </div>
+    }
+    @if (this.showArrows && this.count > 1) {
+        <button type="button" class="carousel-control-prev" @onclick="this.previous"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">@this.text.previous</span></button>
+        <button type="button" class="carousel-control-next" @onclick="this.next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">@this.text.next</span></button>
+    }
+</section>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The slide shown, from 0 (`SelectedIndex`). */
+    @Parameter() selectedIndex: number = 0;
+    /** Raised when the slide changes (`SelectedIndexChanged`). */
+    @Parameter() selectedIndexChanged?: EventCallback<number>;
+    /** The slides' data, each drawn by `itemTemplate` (`ItemsSource`); without it, CarouselItem children. */
+    @Parameter() itemsSource?: TData[];
+    /** A slide of `itemsSource` (`ItemTemplate`). */
+    @Parameter() itemTemplate?: (item: TData) => RenderFragment;
+    /** The slides turn by themselves (`AutoCycle`). */
+    @Parameter() autoCycle: boolean = true;
+    /** The milliseconds between two turns (`AutoCycleTime`, 5 seconds). */
+    @Parameter() autoCycleTime: number = 5000;
+    /** Previous and next buttons (`ShowArrows`). */
+    @Parameter() showArrows: boolean = true;
+    /** A button per slide (`ShowBullets`). */
+    @Parameter() showBullets: boolean = true;
+    /** A swipe turns the slide (`EnableSwipeGesture`). */
+    @Parameter() enableSwipeGesture: boolean = true;
+    /** The carousel's name for screen readers ("Today's bread"). */
+    @Parameter() ariaLabel?: string;
+    /** The buttons' and slides' texts (English by default). */
+    @Parameter() labels?: Partial<CarouselLabels>;
+    /** CarouselItem children. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; `carousel-dark` for dark controls on light slides). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    readonly isCascadingValueSupplier = true;
+    /** The slide shown changes: the items must render again. */
+    readonly isFixed = false;
+    /** The carousel cascades itself by name so CarouselItem finds it. */
+    readonly cascadeName = "BootstrapCarousel";
+    get cascadeValue(): unknown {
+        return this;
+    }
+
+    private items: object[] = [];
+    private index = 0;
+    private paused = false;
+    private hovered = false;
+    private focused = false;
+    private timer?: ReturnType<typeof setTimeout>;
+
+    private get text(): CarouselLabels {
+        return { ...carouselLabelsFrom(this.t), ...this.labels };
+    }
+
+    private get count(): number {
+        return this.itemsSource?.length ?? this.items.length;
+    }
+
+    /** Whether the slides turn by themselves now. */
+    private get rotating(): boolean {
+        return carouselRotates({ autoCycle: this.autoCycle, count: this.count, paused: this.paused, hovered: this.hovered, focused: this.focused });
+    }
+
+    protected override onInitialized(): void {
+        // Reduced motion starts the slides stopped: the button then says start, and a press turns them (the person
+        // asked) — stopping them for good left a stop button that did nothing.
+        this.paused = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        return withClass("carousel slide tz-carousel", { "aria-label": this.ariaLabel ?? this.t("carousel.label"), ...this.additionalAttributes });
+    }
+
+    protected override onParametersSet(): void {
+        this.index = this.selectedIndex;
+    }
+
+    protected override onAfterRender(): void {
+        // One timer, restarted after each render: a turn, a pause or the pointer leaving starts the wait anew.
+        clearTimeout(this.timer);
+        this.timer = this.rotating ? setTimeout(() => void this.turn(1).catch((error) => this.dispatchExceptionAsync(error)), this.autoCycleTime) : undefined;
+    }
+
+    dispose(): void {
+        clearTimeout(this.timer);
+        this.hoverEnd?.abort();
+    }
+
+    /** @internal CarouselItem joins; its place is its index. */
+    registerItem(item: object): number {
+        if (!this.items.includes(item)) this.items.push(item);
+        this.stateHasChanged();
+        return this.items.indexOf(item);
+    }
+
+    /** @internal CarouselItem leaves. */
+    unregisterItem(item: object): void {
+        this.items = this.items.filter((candidate) => candidate !== item);
+        this.stateHasChanged();
+    }
+
+    /** @internal CarouselItem asks for its index and whether it is shown. */
+    itemState(item: object): { index: number; count: number; shown: boolean } {
+        const index = this.items.indexOf(item);
+        return { index, count: this.items.length, shown: index === this.index };
+    }
+
+    /** @internal CarouselItem's name ("2 of 5"). */
+    slideLabel(index: number): string {
+        return this.text.slide(index, this.count);
+    }
+
+    /** Shows slide `index` (MudBlazor's `MoveTo`). */
+    async moveTo(index: number): Promise<void> {
+        if (index < 0 || index >= this.count || index === this.index) return;
+        this.index = index;
+        this.stateHasChanged();
+        await this.selectedIndexChanged?.invokeAsync(index);
+    }
+
+    /** The next slide, wrapping around (MudBlazor's `Next`). */
+    next(): Promise<void> {
+        return this.turn(1);
+    }
+
+    /** The previous slide, wrapping around (MudBlazor's `Previous`). */
+    previous(): Promise<void> {
+        return this.turn(-1);
+    }
+
+    private async turn(step: number): Promise<void> {
+        const target = carouselStep(this.index, step, this.count);
+        if (target !== undefined) await this.moveTo(target);
+    }
+
+    private togglePause(): void {
+        this.paused = !this.paused;
+    }
+
+    /** Ends the hover on a pointerover outside the carousel, while it lasts. */
+    private hoverEnd?: AbortController;
+
+    /**
+     * WebKit misses the carousel's pointerleave when the element under the pointer is replaced — the stop and start
+     * button's icon is, on a click — and the slides then never turned again; a pointerover outside it ends the hover too.
+     */
+    private enter(e: PointerEvent): void {
+        this.hovered = true;
+        const section = e.currentTarget as Element | null;
+        if (section === null || this.hoverEnd !== undefined) return;
+        this.hoverEnd = new AbortController();
+        const outside = (over: PointerEvent): void => {
+            if (over.target instanceof Node && section.contains(over.target)) return;
+            this.leave();
+            this.stateHasChanged();
+        };
+        document.addEventListener("pointerover", outside, { signal: this.hoverEnd.signal });
+    }
+
+    private leave(): void {
+        this.hovered = false;
+        this.hoverEnd?.abort();
+        this.hoverEnd = undefined;
+    }
+
+    private focusIn(): void {
+        this.focused = true;
+    }
+
+    private focusOut(e: FocusEvent): void {
+        const section = e.currentTarget as Element | null;
+        if (section !== null && section.contains(e.relatedTarget as Node | null)) return;
+        this.focused = false;
+    }
+
+    /** A swipe turns the slide (a pointer that moves sideways far enough between down and up). */
+    private readonly swipe: Attachment<HTMLElement> = (element) => {
+        let start: { x: number; y: number } | undefined;
+        const down = (e: PointerEvent): void => {
+            start = { x: e.clientX, y: e.clientY };
+        };
+        const up = (e: PointerEvent): void => {
+            if (start === undefined || !this.enableSwipeGesture) return;
+            const way = carouselSwipe(e.clientX - start.x, e.clientY - start.y, getComputedStyle(element).direction === "rtl");
+            start = undefined;
+            if (way !== undefined) void this.turn(way === "next" ? 1 : -1).catch((error) => this.dispatchExceptionAsync(error));
+        };
+        element.addEventListener("pointerdown", down);
+        element.addEventListener("pointerup", up);
+        return () => {
+            element.removeEventListener("pointerdown", down);
+            element.removeEventListener("pointerup", up);
+        };
+    };
+}

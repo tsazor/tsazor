@@ -1,0 +1,67 @@
+@** A label, a help text and the validation message around a control of your own (a custom picker, a
+    third-party widget) — the parts the skin's inputs bring themselves. Give the control the `id` you
+    pass here; link it to the help and the message with `aria-describedby="<id>-help <id>-message"`.
+    `for` names the model field whose first message is shown after a submit attempt, as the skin's
+    inputs do. *@
+@import { EditContext } from "@tsazor/runtime"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
+
+<div class="@wrapperClass">
+    @if (label) {
+        <label class="fui-input__label" for="@id">@label</label>
+    }
+    @childContent
+    @if (help) {
+        <span class="fui-input__help" id="@helpId">@help</span>
+    }
+    @if (message) {
+        <span class="fui-input__message" role="alert" id="@messageId">@message</span>
+    }
+</div>
+
+@code {
+    /** The label, pointing at the control with this `id`. */
+    @Parameter() label?: string;
+    /** The control's id (the label's `for`; the help and message ids derive from it). */
+    @Parameter() id: string = "";
+    /** A hint below the control. */
+    @Parameter() help?: string;
+    /** The model field whose validation message is shown (after a submit attempt). */
+    @Parameter() for?: string;
+    /** The control. */
+    @Parameter() childContent?: RenderFragment;
+
+    /** The enclosing form's EditContext. */
+    @CascadingParameter({ type: EditContext }) editContext?: EditContext;
+
+    private subscribed?: EditContext;
+    private unsubscribe?: () => void;
+
+    protected override onParametersSet(): void {
+        if (this.editContext === this.subscribed) return;
+        this.unsubscribe?.();
+        this.subscribed = this.editContext;
+        this.unsubscribe = this.editContext?.onValidationStateChanged.subscribe(() => this.stateHasChanged());
+    }
+
+    private get wrapperClass(): string {
+        return this.message ? "fui-input-wrapper fui-input-wrapper--invalid" : "fui-input-wrapper";
+    }
+
+    private get helpId(): string {
+        return `${this.id}-help`;
+    }
+
+    private get messageId(): string {
+        return `${this.id}-message`;
+    }
+
+    private get message(): string {
+        if (!this.editContext || !this.for || !hasSubmitAttempt(this.editContext)) return "";
+        return this.editContext.getValidationMessages(this.for)[0] ?? "";
+    }
+
+    dispose(): void {
+        this.unsubscribe?.();
+    }
+}

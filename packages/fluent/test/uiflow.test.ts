@@ -4,15 +4,9 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { render, renderTree } from "@tsazor/testing";
-import { ComponentBase, NavigationManager, type RenderTreeBuilder } from "@tsazor/runtime";
+import { ComponentBase, NavigationManager, NavLinkMatch, type RenderTreeBuilder } from "@tsazor/runtime";
 import { SidebarNav, Table } from "../dist/index.js";
 
-/** Waits out the microtask render queue plus the settle timer. */
-async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer"]): Promise<void> {
-  await renderer.waitUntilIdle();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
-}
 
 interface OrderRow {
   id: number;
@@ -69,7 +63,7 @@ async function renderTable(items: OrderRow[]): Promise<ReturnType<typeof renderT
     b.addAttribute(5, "striped", true);
     b.closeComponent();
   });
-  await settle(result.renderer);
+  await result.settle();
   return result;
 }
 
@@ -82,7 +76,8 @@ class NavHost extends ComponentBase {
       2,
       "links",
       [
-        { href: "/", label: "Overview" },
+        // Root link matches exactly (Blazor: a Prefix link to the base is active everywhere).
+        { href: "/", label: "Overview", match: NavLinkMatch.All },
         { href: "/orders", label: "Orders" },
         { href: "/settings", label: "Settings" },
       ],
@@ -116,6 +111,30 @@ describe("Table", () => {
     expect(container.querySelector("tbody")!.textContent).toContain("No entries");
     expect(container.querySelector("tbody")).toBeTruthy();
   });
+
+  it("takes its rows as child content, dark, bordered and scrolling — the Bootstrap skin's shape (D6)", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Table);
+      b.addAttribute(1, "bordered", true);
+      b.addAttribute(2, "dark", true);
+      b.addAttribute(3, "responsive", true);
+      b.addAttribute(4, "childContent", (inner: RenderTreeBuilder) => {
+        inner.openElement(0, "tbody");
+        inner.openElement(1, "tr");
+        inner.openElement(2, "td");
+        inner.addContent(3, "cell");
+        inner.closeElement();
+        inner.closeElement();
+        inner.closeElement();
+      });
+      b.closeComponent();
+    });
+    const table = container.querySelector(".fui-table-wrap--scroll > table")!;
+    expect(table.className).toBe("fui-table fui-table--bordered fui-table--dark");
+    expect(table.getAttribute("data-fluent-theme")).toBe("dark");
+    expect(table.querySelector("thead")).toBeNull();
+    expect(table.textContent).toBe("cell");
+  });
 });
 
 /** Compact-variant nav host (NavLink needs the NavigationManager service). */
@@ -138,7 +157,7 @@ describe("SidebarNav", () => {
     const result = await render(NavHost, {
       services: (services) => services.registerValue(NavigationManager as never, navigation),
     });
-    await settle(result.renderer);
+    await result.settle();
 
     const links = [...result.container.querySelectorAll(".fui-nav__link")];
     expect(links.map(a => a.textContent)).toEqual(["Overview", "Orders", "Settings"]);
@@ -155,7 +174,7 @@ describe("SidebarNav", () => {
     const result = await render(CompactNavHost, {
       services: (services) => services.registerValue(NavigationManager as never, navigation),
     });
-    await settle(result.renderer);
+    await result.settle();
     const nav = result.container.querySelector("nav")!;
     expect(nav.getAttribute("aria-label")).toBe("Rail");
     expect(nav.className).toBe("fui-nav fui-nav--compact");

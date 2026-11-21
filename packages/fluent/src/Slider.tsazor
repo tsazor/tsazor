@@ -1,0 +1,207 @@
+@** A Fluent UI 2 slider (Fluent UI Blazor's FluentSlider, MudBlazor's MudSlider; InputBase — bind it with @bind) on a
+    native input type="range", so the arrow keys, Page Up and Down, Home and End work as in any slider. `min`, `max`
+    and `step` (0, 100, 1); `orientation` vertical stands it up, `size` small makes it thin. The value follows the
+    drag once it pauses for immediateDelay ms (Fluent UI Blazor's `ImmediateDelay`), or only on release with
+    `immediate` false. `tickMarks` draws a mark per step, with `tickMarkLabels` under them (a screen reader hears the
+    label of the tick the value sits on); `valueLabel` shows the value, through `valueFormat` ("40 %"), which screen
+    readers read too (aria-valuetext). Inside a FluentForm it shows the field's first validation message once a submit
+    was attempted. *@
+@import { uniqueId, type Orientation } from "@tsazor/ui"
+@import { hasSubmitAttempt, ImmediateInput, sliderFraction, sliderTicks } from "@tsazor/ui/kit"
+@import { withAttributes } from "./attributes"
+
+@inherits InputBase<number>
+
+<div class="@this.wrapperClass" style="@this.wrapperStyle">
+    @if (this.label) {
+        <label class="fui-input__label" for="@this.elementId">@this.label</label>
+    }
+    <div class="fui-slider__control">
+        <div class="fui-slider__rail">
+            <input @ref="element" id="@this.elementId" type="range" @attributes="@this.inputAttributes" value="@this.shownValue" @onmousedown:preventDefault="@this.readOnly" @ontouchstart:preventDefault="@this.readOnly" @onkeydown="this.keepValue" @oninput="this.handleInput" @onchange="this.handleChange" />
+            @if (this.tickMarks) {
+                <div class="fui-slider__ticks" aria-hidden="true">
+                    @foreach (const tick of this.ticks) {
+                        <span class="fui-slider__tick" style="@(`--fui-slider-tick: ${tick.at}`)">
+                            @if (tick.label !== undefined) {
+                                <span class="fui-slider__tick-label">@tick.label</span>
+                            }
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+        @if (this.valueLabel) {
+            <output class="fui-slider__value" for="@this.elementId" aria-hidden="true">@this.valueText</output>
+        }
+    </div>
+    @if (this.help) {
+        <span class="fui-input__help" id="@this.helpId">@this.help</span>
+    }
+    @if (this.message) {
+        <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
+    }
+</div>
+
+@code {
+    /** Optional field label. */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** The lowest value; 0 by default. */
+    @Parameter() min: number = 0;
+    /** The highest value; 100 by default. */
+    @Parameter() max: number = 100;
+    /** The step between values; 1 by default. */
+    @Parameter() step: number = 1;
+    /** horizontal (default) | vertical. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** small (a thin rail, a smaller thumb) | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** true disables the native input. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the slider says aria-readonly, a drag or a key moves nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** The value follows the drag (MudBlazor's `Immediate`, true by default); false updates it on release. */
+    @Parameter() immediate: boolean = true;
+    /** The pause in ms before an immediate update (`ImmediateDelay`, 60 as in Fluent UI Blazor). */
+    @Parameter() immediateDelay: number = 60;
+    /** A mark per step (MudBlazor's `TickMarks`). */
+    @Parameter() tickMarks: boolean = false;
+    /** The marks' labels, from the first mark on (`TickMarkLabels`). */
+    @Parameter() tickMarkLabels?: string[];
+    /** Shows the value beside the slider (`ValueLabel`). */
+    @Parameter() valueLabel: boolean = false;
+    /** The value as text, for the value label and screen readers (aria-valuetext): `(v) => \`${v} %\``. */
+    @Parameter() valueFormat?: (value: number) => string;
+    /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
+    @Parameter() id?: string;
+    /** Overrides the input's accessible name. */
+    @Parameter() ariaLabel?: string;
+
+    private generatedId?: string;
+    private immediateInput?: ImmediateInput;
+    /** The thumb's value while it moves, ahead of an immediate update that waits for a pause. */
+    private moving?: number;
+
+    private get elementId(): string {
+        return this.id ?? (this.generatedId ??= uniqueId("fui-slider"));
+    }
+
+    private get labelFor(): string {
+        return this.elementId;
+    }
+
+    protected override onParametersSet(): void {
+        if (this.immediateInput?.pending !== true) this.moving = undefined;
+    }
+
+    /** The value the thumb shows: the moving one, else the bound one, else min. */
+    private get shownValue(): number {
+        const value = this.moving ?? this.currentValue;
+        return typeof value === "number" && !Number.isNaN(value) ? value : this.min;
+    }
+
+    private get valueText(): string {
+        return this.valueFormat ? this.valueFormat(this.shownValue) : String(this.shownValue);
+    }
+
+    /**
+     * What a screen reader says for the value (aria-valuetext): the formatted value, else the label of the tick the
+     * value sits on ("Medium", not "2" — the tick labels themselves are hidden from it), else nothing (the number).
+     */
+    private get spokenValue(): string | undefined {
+        if (this.valueFormat) return this.valueText;
+        if (!this.tickMarks || this.tickMarkLabels === undefined) return undefined;
+        const index = sliderTicks(this.min, this.max, this.step).findIndex((tick) => Math.abs(tick - this.shownValue) < 1e-9);
+        return index === -1 ? undefined : this.tickMarkLabels[index];
+    }
+
+    /** The marks: where each sits on the rail, and its label. */
+    private get ticks(): { at: number; label?: string }[] {
+        return sliderTicks(this.min, this.max, this.step).map((tick, index) => ({
+            at: sliderFraction(tick, this.min, this.max),
+            label: this.tickMarkLabels?.[index],
+        }));
+    }
+
+    private get wrapperClass(): string {
+        let cls = `fui-input-wrapper fui-slider fui-slider--${this.orientation}`;
+        if (this.size === "small") cls += " fui-slider--small";
+        if (this.disabled) cls += " fui-slider--disabled";
+        if (this.tickMarkLabels !== undefined && this.tickMarks) cls += " fui-slider--labelled-ticks";
+        if (this.fieldClass.includes("invalid")) cls += " fui-input-wrapper--invalid";
+        return cls;
+    }
+
+    /** Where the thumb sits, for the filled part of the rail. */
+    private get wrapperStyle(): string {
+        return `--fui-slider-at: ${sliderFraction(this.shownValue, this.min, this.max)}`;
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: "fui-slider__input",
+            min: this.min,
+            max: this.max,
+            step: this.step,
+            disabled: this.disabled ? true : undefined,
+            "aria-readonly": this.readOnly ? "true" : undefined,
+            "aria-orientation": this.orientation === "vertical" ? "vertical" : undefined,
+            "aria-valuetext": this.spokenValue,
+            "aria-label": this.ariaLabel,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
+            "aria-describedby": this.describedBy,
+        }, this.additionalAttributes);
+    }
+
+    private get helpId(): string {
+        return `${this.elementId}-help`;
+    }
+
+    /** The help text and (once shown) the message describe the field. */
+    private get describedBy(): string | undefined {
+        const ids = [this.help ? this.helpId : null, this.message ? this.messageId : null].filter((id): id is string => id !== null);
+        return ids.length > 0 ? ids.join(" ") : undefined;
+    }
+
+    private get messageId(): string {
+        return `${this.elementId}-message`;
+    }
+
+    /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
+    private get message(): string {
+        if (!hasSubmitAttempt(this.editContext)) return "";
+        if (!this.editContext || !this.valueExpression) return "";
+        return this.editContext.getValidationMessages(this.valueExpression)[0] ?? "";
+    }
+
+    private handleInput(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLInputElement).value = String(this.shownValue);
+            return;
+        }
+        this.moving = Number((e.target as HTMLInputElement).value);
+        if (!this.immediate) return;
+        this.immediateInput ??= new ImmediateInput(this.disposeSignal);
+        this.immediateInput.input(e, this.immediateDelay, (value) => {
+            this.currentValue = Number(value);
+        });
+    }
+
+    private handleChange(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLInputElement).value = String(this.shownValue);
+            return;
+        }
+        this.immediateInput?.cancel();
+        this.moving = undefined;
+        this.currentValue = Number((e.target as HTMLInputElement).value);
+    }
+
+    /** readOnly: a key that would change the value does nothing; Tab, Escape and the browser's shortcuts still work. */
+    private keepValue(e: KeyboardEvent): void {
+        if (!this.readOnly || e.key === "Tab" || e.key === "Escape" || ((e.ctrlKey || e.metaKey) && !e.key.startsWith("Arrow"))) return;
+        e.preventDefault();
+    }
+}

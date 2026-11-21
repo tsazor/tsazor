@@ -1,0 +1,86 @@
+@* pages/roles/detail.tsx: one role — its profile (name, description), its permission grants from the catalog, and the
+   danger zone. The built-in roles (Admin, Basic) are read-only: a notice, no rename, no delete. *@
+@page "/roles/{id}"
+@authorize({ policy: "Permissions.Roles.View" })
+@import { ArrowLeft, Lock, Shield } from "lucide"
+@import { getRoleWithPermissions } from "@/api/roles"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { Query } from "@/lib/query"
+@import DangerZone from "./DangerZone.tsazor"
+@import PermissionEditor from "./PermissionEditor.tsazor"
+@import ProfileSection from "./ProfileSection.tsazor"
+@inject NavigationManager navigation
+
+<div class="space-y-6">
+    <EntityPageHeader icon="@Shield" title="@(role?.name ?? "Role")" total="@(role ? (role.permissions?.length ?? 0) : null)" unit="grant"
+                      description="@(role?.description ?? "Inspect and edit this role's profile and permission grants.")">
+        @if (isSystem) {
+            <Badge variant="outline" class="font-mono text-[10px] uppercase tracking-[0.14em]">
+                <Icon icon="@Lock" class="mr-1 h-3 w-3" /> System
+            </Badge>
+        }
+        <Button variant="ghost" size="sm" onClick="@(() => navigation.navigateTo("/roles"))" class="h-9 gap-1.5 rounded-lg px-3 text-[13px]">
+            <Icon icon="@ArrowLeft" class="size-3.5" /> Registry
+        </Button>
+    </EntityPageHeader>
+
+    @if (query.result.isError) {
+        <ErrorBand message="@(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load role.")" />
+    }
+
+    @if (query.result.isLoading) {
+        <LoadingRow label="Loading role" />
+    }
+
+    @if (isSystem && role) {
+        <div role="status" aria-live="polite" class="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)] px-4 py-3">
+            <span aria-hidden="true" class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[var(--color-muted)] text-[var(--color-muted-foreground)]">
+                <Icon icon="@Lock" class="h-3.5 w-3.5" />
+            </span>
+            <div class="min-w-0 text-sm leading-relaxed">
+                <p class="font-medium text-[var(--color-foreground)]">Built-in role — read only</p>
+                <p class="mt-0.5 text-[12.5px] text-[var(--color-muted-foreground)]">
+                    <span class="font-mono font-medium">@role.name</span> ships with the framework. Its name, description, and permissions are managed centrally. Create a custom role if you need a different set of grants.
+                </p>
+            </div>
+        </div>
+    }
+
+    @if (role) {
+        <ProfileSection role="@role" disabled="@isSystem" />
+        <PermissionEditor role="@role" disabled="false" />
+        @if (!isSystem) {
+            <DangerZone role="@role" onDeleted="@onDeleted" />
+        }
+    }
+</div>
+
+@code {
+    @Parameter() id: string = "";
+
+    private static readonly systemRoleNames = new Set(["Admin", "Basic"]);
+
+    private readonly query = new Query(() => ({
+        queryKey: ["roles", this.id],
+        queryFn: () => getRoleWithPermissions(this.id),
+        enabled: Boolean(this.id),
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.query);
+    }
+
+    private get role() {
+        return this.query.result.data;
+    }
+
+    private get isSystem(): boolean {
+        return this.role ? RoleDetail.systemRoleNames.has(this.role.name) : false;
+    }
+
+    private onDeleted(): void {
+        void queryClient.invalidateQueries({ queryKey: ["roles"] });
+        this.navigation.navigateTo("/roles");
+    }
+}

@@ -1,0 +1,33 @@
+@page "/virtualization/max-item-count"
+@import type { MyThing } from "./models"
+<p>
+    MaxItemCount is a safeguard against the client reporting a giant viewport and causing the server to perform a
+    correspondingly giant data load and then tracking a lot of render state.
+</p>
+
+<p>
+    If MaxItemCount is exceeded (which it never should be for a well-behaved client), we don't offer any guarantees
+    that the behavior will be nice for the end user. We just guarantee to limit the .NET-side workload. As such this
+    E2E test deliberately does a bad thing of setting MaxItemCount to a low value for test purposes. Applications
+    should not do this.
+</p>
+
+<div id="virtualize-scroll-area" style="height: 600px; overflow-y: scroll; outline: 1px solid red; background: #eee;">
+    <Virtualize ItemsProvider="getItems" ItemSize="30" MaxItemCount="10" OverscanCount="3">
+        <div class="my-item" @key="context" style="height: 30px; outline: 1px solid #ccc">
+            Id: @context.id; Name: @context.name
+        </div>
+    </Virtualize>
+</div>
+
+@code {
+    private async getItems(request: VirtualizeItemsProviderRequest): Promise<VirtualizeItemsProviderResult<MyThing>> {
+        const numThings = 100000;
+
+        await delay(100);
+        return {
+            items: range(request.startIndex, request.count).map((i) => ({ id: i, name: `Thing ${i}` })),
+            totalItemCount: numThings,
+        };
+    }
+}

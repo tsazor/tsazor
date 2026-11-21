@@ -3,13 +3,16 @@ import {
   ComponentBase,
   EventCallback,
   RenderTreeBuilder,
-  Renderer,
   Parameter,
   CascadingParameter,
   defineComponent,
   isCascadingValueSupplier,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 import type { RenderFragment } from "../src/index";
+import { componentInternals } from "../src/components/component-internals";
 
 class Counter extends ComponentBase {
   count = 0;
@@ -148,6 +151,29 @@ describe("Renderer", () => {
     expect(spanAfter).toBe(spanBefore); // DOM node preserved by the diff
   });
 
+  it("waitUntilIdle with a timeout rejects naming the work still pending (a handler the test never lets finish)", async () => {
+    let finish!: () => void;
+    class Search extends ComponentBase {
+      protected override async onInitialized(): Promise<void> {
+        await Promise.resolve();
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "input");
+        b.addEventHandler(1, "oninput", EventCallback.bind(this, () => new Promise<void>((resolve) => (finish = resolve))));
+        b.closeElement();
+      }
+    }
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(Search, container);
+    await renderer.waitUntilIdle({ timeout: 1000 });
+    container.querySelector("input")!.dispatchEvent(new Event("input"));
+    await expect(renderer.waitUntilIdle({ timeout: 20 })).rejects.toThrow("waitUntilIdle: not idle after 20 ms. Still pending: Search: input handler.");
+    // Without a timeout it waits, as before; the work done, it is idle.
+    finish();
+    await renderer.waitUntilIdle();
+  });
+
   it("invokes unbound method references with the receiver as 'this'", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();
@@ -161,7 +187,9 @@ describe("Renderer", () => {
     expect(container.querySelector("span")?.textContent).toBe("1");
   });
 
-  it("unwraps a re-wrapped (already-bound) callback on invocation", async () => {
+  it("passes an already-bound callback through bind (Blazor's EventCallbackFactory.Create(receiver, callback))", async () => {
+    const other = new PreboundCounter();
+    expect(EventCallback.bind(other, other.handleClick)).toBe(other.handleClick);
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(PreboundCounter, container);
@@ -172,6 +200,38 @@ describe("Renderer", () => {
     await renderer.waitUntilIdle();
 
     expect(container.querySelector("span")?.textContent).toBe("1");
+  });
+
+  it("forwards an unset optional callback as unset: the child sees none, an element gets no handler", async () => {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    let seen: unknown = "not set";
+
+    class Child extends ComponentBase {
+      @Parameter() onCancel?: EventCallback;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        seen = this.onCancel;
+        b.openElement(0, "button");
+        b.addEventHandler(1, "onclick", EventCallback.bind(this, this.onCancel));
+        b.closeElement();
+      }
+    }
+    class Middle extends ComponentBase {
+      @Parameter() onCancel?: EventCallback;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Child));
+        b.addAttribute(1, "onCancel", EventCallback.bind(this, this.onCancel));
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(Middle, container);
+    await renderer.waitUntilIdle();
+
+    expect(seen).toBeUndefined();
+    // No handler on the button: a click is a plain click.
+    container.querySelector("button")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await renderer.waitUntilIdle();
+    expect(container.querySelector("button")!.outerHTML).toBe("<button></button>");
   });
 
   it("sets parameters case-insensitively on child components", async () => {
@@ -212,12 +272,12 @@ describe("Renderer", () => {
 
     const component = state.component as unknown as { label: string | null };
     component.label = "Icon only";
-    component["stateHasChangedInternal"]();
+    componentInternals.requestRender(component);
     await renderer.waitUntilIdle();
     expect(button.getAttribute("aria-label")).toBe("Icon only");
 
     component.label = null;
-    component["stateHasChangedInternal"]();
+    componentInternals.requestRender(component);
     await renderer.waitUntilIdle();
     expect(button.hasAttribute("aria-label")).toBe(false);
   });
@@ -241,7 +301,7 @@ describe("Renderer", () => {
     // Simulate a parent update: change a field and re-render.
     const component = state.component as unknown as { message: string };
     component.message = "second";
-    component["stateHasChangedInternal"]();
+    componentInternals.requestRender(component);
     await renderer.waitUntilIdle();
 
     expect(container.querySelector("h1")?.textContent).toBe("second");
@@ -289,8 +349,8 @@ describe("Renderer", () => {
     await renderer.waitUntilIdle();
     expect(container.querySelector("div")?.textContent).toBe("light");
 
-    (rootState.component as unknown as { themeValue: string; stateHasChangedInternal(): void }).themeValue = "solar";
-    (rootState.component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    (rootState.component as unknown as { themeValue: string }).themeValue = "solar";
+    componentInternals.requestRender(rootState.component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
 
     expect(container.querySelector("div")?.textContent).toBe("solar");
@@ -319,8 +379,8 @@ describe("Renderer", () => {
     const second = container.querySelectorAll("li")[1]!;
     expect(container.querySelectorAll("li")).toHaveLength(3);
 
-    (state.component as unknown as { items: string[]; stateHasChangedInternal(): void }).items = ["a", "c"];
-    (state.component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    (state.component as unknown as { items: string[] }).items = ["a", "c"];
+    componentInternals.requestRender(state.component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
 
     const remaining = [...container.querySelectorAll("li")];
@@ -348,6 +408,48 @@ describe("Renderer", () => {
     await renderer.waitUntilIdle();
 
     expect(captured).toBe(container.querySelector("section"));
+  });
+
+  it("fires component reference captures with the child's instance", async () => {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    let captured: ComponentBase | null = null;
+    let otherCaptured: ComponentBase | null = null;
+
+    class Child extends ComponentBase {
+      @Parameter() message = "";
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "p");
+        b.addContent(1, this.message);
+        b.closeElement();
+      }
+    }
+    class WithComponentRef extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Child));
+        b.addAttribute(1, "message", "hi");
+        b.addComponentReferenceCapture(2, (c) => {
+          captured = c;
+        });
+        b.closeComponent();
+        b.openComponent(3, defineComponent(Child));
+        b.addComponentReferenceCapture(4, (c) => {
+          otherCaptured = c;
+        });
+        b.addContent(5, "ignored content");
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(WithComponentRef, container);
+    await renderer.waitUntilIdle();
+
+    expect(container.querySelectorAll("p")).toHaveLength(2);
+    // Each capture receives its own child instance, not the parent.
+    expect(captured).not.toBeNull();
+    expect(captured).not.toBe(otherCaptured);
+    expect((captured as Child).message).toBe("hi");
+    expect(captured instanceof Child).toBe(true);
+    expect(otherCaptured instanceof Child).toBe(true);
   });
 
   it("applies preventDefault and stopPropagation flags", async () => {

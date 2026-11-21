@@ -1,0 +1,20 @@
+@import { CultureService, StringLocalizer } from "@tsazor/runtime"
+@inject StringLocalizer L
+@inject CultureService culture
+<nav class="languages">
+    <button @onclick="@(() => switchTo("en-US"))">English</button>
+    <button @onclick="@(() => switchTo("de-DE"))">Deutsch</button>
+</nav>
+<h1>@L.get("Title")</h1>
+<p class="greeting">@L.get("Greeting", { name: "Marta" })</p>
+<p class="loaf">@L.get("Sourdough"): <span class="price">@culture.current.formatNumber(price, { style: "currency", currency: "EUR" })</span></p>
+<p class="baked">@L.get("Baked", { date: culture.current.formatDate(bakedOn, { dateStyle: "long" }) })</p>
+
+@code {
+    price = 3.4;
+    bakedOn = new Date(2026, 9, 5, 12); // noon: the same date in nearly every time zone
+
+    switchTo(name: string) {
+        this.culture.setExplicit(name);
+    }
+}

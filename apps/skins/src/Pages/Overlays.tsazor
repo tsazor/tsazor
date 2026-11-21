@@ -1,0 +1,130 @@
+@page "/overlays"
+@import { Toaster } from "@tsazor/bootstrap"
+@inject Toaster toaster
+
+<Typography Variant="h1">Overlays</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">Dialog and drawer</Typography>
+    <div class="demo-row">
+        <Button Intent="danger" OnClick="@(() => this.dialogOpen = true)">Delete order</Button>
+        <Button OnClick="@(() => this.drawerOpen = true)">Filters</Button>
+        <span class="overlay-result" role="status">@result</span>
+    </div>
+    <Dialog IsOpen="@dialogOpen" Title="Delete order 101?" OnClosed="@(() => this.dialogOpen = false)">
+        <ChildContent>The order and its lines are removed. This cannot be undone.</ChildContent>
+        <Footer>
+            <Button Appearance="subtle" OnClick="@(() => this.dialogOpen = false)">Cancel</Button>
+            <Button Intent="danger" OnClick="@confirmDelete">Delete</Button>
+        </Footer>
+    </Dialog>
+    <Drawer IsOpen="@drawerOpen" Title="Filters" Placement="end" OnClosed="@(() => this.drawerOpen = false)">
+        <Switch Label="Only open orders" @bind-Value="onlyOpen" />
+        <Button Intent="primary" OnClick="@applyFilters">Apply</Button>
+    </Drawer>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Toasts</Typography>
+    <div class="demo-row">
+        <Button OnClick="@(() => this.toaster.show({ title: "Saved", message: "The order list is up to date.", intent: "success" }))">Success toast</Button>
+        <Button OnClick="@(() => this.toaster.show({ message: "Upload failed.", intent: "danger" }))">Error toast</Button>
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Keyboard shortcuts</Typography>
+    <TextInput Label="Search orders" aria-keyshortcuts="Control+K" @ref="this.search" @bind-Value="query" />
+    <Typography Variant="caption">Ctrl+K (Cmd+K on a Mac) goes to the search; ? shows the shortcuts.</Typography>
+    <Hotkey Keys="Mod+K" OnHotkeyPressed="@goToSearch" />
+    <Hotkey Keys="?" HideChildContentOnRepress="@true">
+        <Card class="shortcut-help">
+            <CardBody>Ctrl+K: search. ?: these shortcuts.</CardBody>
+        </Card>
+    </Hotkey>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Busy state</Typography>
+    <Card class="busy-card">
+        <CardBody>
+            <TextInput Label="Note on order 101" @bind-Value="note" />
+            <div class="demo-row">
+                <Button Intent="primary" OnClick="@save">Save note</Button>
+                <span class="busy-result" role="status">@saved</span>
+            </div>
+        </CardBody>
+        <Overlay Visible="@saving" CloseMode="manual">
+            <Spinner AriaLabel="Saving…" />
+        </Overlay>
+    </Card>
+    <div class="demo-row">
+        <Button OnClick="@publish">Publish the menu</Button>
+        <span class="publish-result" role="status">@published</span>
+    </div>
+    <Overlay Visible="@publishing" FullScreen="true" CloseMode="manual" AriaLabel="Publishing the menu">
+        <Card>
+            <CardBody>
+                <div class="publish-panel">
+                    <Spinner Label="Publishing the menu…" />
+                    <Button OnClick="@cancelPublish">Cancel</Button>
+                </div>
+            </CardBody>
+        </Card>
+    </Overlay>
+</section>
+
+@code {
+    private dialogOpen = false;
+    private drawerOpen = false;
+    private onlyOpen = false;
+    private result = "";
+    private query = "";
+    private search?: { element?: HTMLElement };
+
+    /** Ctrl+K: the search field takes the focus (Blazor's `search.Element.Value.FocusAsync()`). */
+    private goToSearch(): void {
+        this.search?.element?.focus();
+    }
+    private note = "Deliver before noon.";
+    private saving = false;
+    private saved = "";
+    private publishing = false;
+    private published = "";
+    private publishRun = 0;
+
+    /** The card is busy while the note saves (a server would take a moment). */
+    private async save(): Promise<void> {
+        this.saving = true;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        this.saving = false;
+        this.saved = `Saved: ${this.note}`;
+    }
+
+    /** The whole page waits while the menu is published, unless the user cancels. */
+    private async publish(): Promise<void> {
+        const run = ++this.publishRun;
+        this.publishing = true;
+        this.published = "";
+        await new Promise((resolve) => setTimeout(resolve, 8000));
+        if (run !== this.publishRun) return;
+        this.publishing = false;
+        this.published = "The menu is published.";
+    }
+
+    private cancelPublish(): void {
+        this.publishRun++;
+        this.publishing = false;
+        this.published = "Publishing cancelled.";
+    }
+
+    private confirmDelete(): void {
+        this.dialogOpen = false;
+        this.result = "Order 101 deleted.";
+    }
+
+    private applyFilters(): void {
+        this.drawerOpen = false;
+        this.result = this.onlyOpen ? "Showing open orders." : "Showing all orders.";
+    }
+}

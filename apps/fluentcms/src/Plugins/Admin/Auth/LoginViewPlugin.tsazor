@@ -1,0 +1,29 @@
+@inherits BasePlugin
+@import { CookieAuthenticationStateProvider } from "@tsazor/dotnet"
+@import { UserLoginRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@inject CookieAuthenticationStateProvider Auth
+
+<PluginForm model="@this.model" title="Welcome back" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model.username" label="Username" placeholder="Enter your username" required />
+    <TextInput @bind-Value="this.model.password" label="Password" placeholder="Enter your password" required type="password" />
+    <div class="login-options">
+        <Checkbox @bind-Value="this.model.rememberMe" label="Remember Me" />
+        <a href="/auth/forgot-password">Forgot Password?</a>
+    </div>
+    <Button intent="primary" type="submit">Sign in to your account</Button>
+    <p class="login-signup">Don't have an account? <a href="/auth/register">Sign up</a></p>
+</PluginForm>
+
+@code {
+    private model = new UserLoginRequest();
+
+    private async submit(): Promise<void> {
+        // The BFF keeps the JWT in the session cookie; the app only learns that it worked.
+        ensureOk(await this.api.accountAuthenticate(this.model));
+        // FluentCMS (Blazor Server) reloads here: a circuit keeps the user it started with. The app asks the BFF
+        // again instead, and the navigation loads the page with the user (ViewState).
+        this.Auth.refresh();
+        this.navigation.navigateTo("/");
+    }
+}

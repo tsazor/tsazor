@@ -1,0 +1,27 @@
+@inherits BaseContentPlugin
+@import { ensureOk } from "../../../api/api-result"
+@import { BaseContentPlugin, type ContentField } from "./BaseContentPlugin"
+@import { contentData, fieldValueOf } from "./field-values"
+
+<PluginForm model="@this.model" title="Create New Content" onSubmit="@this.submit">
+    <ContentFields contentFields="@this.contentFields" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private contentFields: ContentField[] = [];
+    /** The form's model: the values live on the fields (FluentCMS submits a dictionary built from them). */
+    private model?: object;
+
+    protected override async onInitialized(): Promise<void> {
+        await super.onInitialized();
+        this.contentFields = this.formFields.map((field) => ({ field, value: fieldValueOf(field) }));
+        this.model = this.contentFields;
+    }
+
+    private async submit(): Promise<void> {
+        const data = contentData(this.contentFields.map((entry) => entry.value));
+        ensureOk(await this.api.contentCreate(this.contentTypeSlug ?? "", data, { siteId: this.viewState.site.id }));
+        this.navigateBack();
+    }
+}

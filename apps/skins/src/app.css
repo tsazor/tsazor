@@ -1,0 +1,307 @@
+/* Layout only: everything the components show comes from the skin's stylesheet. */
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.skin-switch {
+  max-width: 960px;
+  margin: 0.75rem auto 0;
+  padding: 0 1rem;
+  text-align: end;
+}
+
+.demo {
+  margin-bottom: 2rem;
+}
+
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* A bar as a sticky header draws it: blurred behind, slid in, clipping (Actions page). */
+.clipping-bar {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+  padding: 0 0.75rem;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  transform: translateY(0);
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 0.5rem;
+}
+
+[data-skin="fluent"] body {
+  font-family: var(--fui-font-family);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+}
+
+/* The Icons page: the set as a virtualized grid of rows. */
+.icons-import {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.icons-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.icons-filters > * {
+  flex: 1 1 12rem;
+}
+
+.icons-grid {
+  height: 28rem;
+  overflow-y: auto;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+}
+
+.icons-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.icons-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  height: 88px;
+  padding: 0.75rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.icons-cell:hover,
+.icons-cell:focus-visible {
+  background: rgba(127, 127, 127, 0.15);
+}
+
+.icons-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The Content page: an editor beside its preview (stacked on a phone). */
+.markdown-editor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.markdown-preview,
+.markdown-untrusted {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+}
+
+/* The Content page: the chip rows stand apart. */
+.tag-set,
+.chip-row {
+  margin-top: 0.5rem;
+}
+
+.timelines {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+}
+
+/* The Structure page: a splitter needs a height. */
+.demo-splitter {
+  height: 12rem;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+}
+
+.pane-body {
+  padding: 0.75rem;
+}
+
+.slider-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem 3rem;
+}
+
+.slider-demo__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1 1 18rem;
+  max-width: 28rem;
+}
+
+.date-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem 3rem;
+}
+
+.date-demo__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1 1 16rem;
+  max-width: 22rem;
+}
+
+.sortable-demo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1.5rem;
+  max-width: 36rem;
+  margin-bottom: 0.5rem;
+}
+
+.sortable-title {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.tree-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem 2.5rem;
+}
+
+/* Color picker: the square and the wheel side by side. */
+.color-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-block: 0.75rem;
+}
+
+/* Carousel: a slide is a band of text. */
+.bread-carousel {
+  max-width: 32rem;
+}
+
+.bread-slide {
+  display: grid;
+  place-items: center;
+  min-height: 8rem;
+  padding: 1.5rem 3.5rem 2.5rem;
+  text-align: center;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+/* Busy state: the overlay covers the card. */
+.busy-card {
+  position: relative;
+  max-width: 28rem;
+  margin-bottom: 0.75rem;
+}
+
+.publish-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* @tsazor/charts: two charts a row on a wide page. */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.5rem;
+  max-width: 64rem;
+}
+
+.spark-table td,
+.spark-table th {
+  padding: 0.25rem 0.75rem;
+  text-align: start;
+}
+
+/* Charts: the colors come from the skin's tokens (Fluent's first, else Bootstrap's). */
+.chart-box {
+  --chart-color: var(--fui-brand-background, var(--bs-primary));
+  --chart-grid: var(--fui-stroke-2, var(--bs-border-color));
+  position: relative;
+  height: 16rem;
+  max-width: 40rem;
+  margin-top: 0.75rem;
+  color: var(--fui-foreground-2, var(--bs-secondary-color));
+}
+
+.chart-data {
+  margin-top: 0.5rem;
+}
+
+.chart-table th,
+.chart-table td {
+  padding: 0.125rem 0.75rem;
+  text-align: start;
+}
+
+.treemap {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  height: auto;
+}
+
+.treemap__tile--breads rect {
+  fill: var(--fui-brand-background, var(--bs-primary));
+}
+
+.treemap__tile--pastries rect {
+  fill: var(--fui-color-green-filled, var(--bs-success));
+}
+
+.treemap__tile--drinks rect {
+  fill: var(--fui-color-amber-filled, var(--bs-warning));
+}
+
+.treemap text {
+  fill: #fff;
+  font-size: 0.8rem;
+}
+
+/* Fluent's amber takes white text, Bootstrap's yellow black. */
+.treemap__tile--drinks text {
+  fill: var(--fui-foreground-on-brand, #000);
+}
+
+/* An order's details in its grid's detail row: label and value side by side. */
+.order-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.order-details dd {
+  margin: 0;
+}

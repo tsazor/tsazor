@@ -1,0 +1,37 @@
+@** An empty state, copied in (`npx @tsazor/bootstrap add EmptyState`) and then the app's: the
+    mark (your icon), the title, one line of text and the action out of it. *@
+@import type { IconValue } from "@tsazor/ui"
+
+<section class="tz-empty-state" @attributes="otherAttributes">
+    @if (icon !== undefined) {
+        <div class="tz-empty-state-mark">
+            <Icon value="@icon" size="32" />
+        </div>
+    }
+    <Typography Variant="h3">@title</Typography>
+    @if (description) {
+        <Typography class="tz-empty-state-text" As="p">@description</Typography>
+    }
+    @if (actionContent !== undefined) {
+        <div class="tz-empty-state-action">@actionContent</div>
+    }
+</section>
+
+@code {
+    /** The state's icon (your icon set's value). */
+    @Parameter() icon: IconValue | undefined;
+    /** What is empty: the title. */
+    @Parameter() title: string = "";
+    /** One line on what would be here (or how to get there). */
+    @Parameter() description?: string;
+    /** The action out of the state (a Button in a link's shape, say). */
+    @Parameter() actionContent?: RenderFragment;
+    /** Further attributes for the section (class adds to its classes). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

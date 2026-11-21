@@ -1,0 +1,55 @@
+@** Renders Bootstrap's `.spinner-border` or `.spinner-grow` loading indicator in a `role="status"`
+    live region, with optional visible `label` text next to it; it announces its text, the label or else
+    `ariaLabel` as hidden text ("Loading…" by default; null for none) —
+    the same parameters as the Fluent skin's Spinner; `intent` and `kind` are Bootstrap extras. *@
+@import type { Intent } from "@tsazor/ui"
+@import { textColor } from "./vocabulary"
+@import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+<span role="status" @attributes="@withClass("d-inline-flex align-items-center gap-2", additionalAttributes)">
+    <span class="@spinnerClass" style="@spinnerStyle" aria-hidden="true"></span>
+    @if (hiddenText) {
+        <span class="visually-hidden">@hiddenText</span>
+    }
+    @if (label) {
+        <span>@label</span>
+    }
+    @childContent
+</span>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The color role: primary (default), secondary, success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "primary";
+    /** A rotating border (default) or a growing dot. */
+    @Parameter() kind: "border" | "grow" = "border";
+    /** small, medium (default) or large. */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** Visible text next to the spinner ("Loading orders…"). */
+    @Parameter() label?: string;
+    /** Content of its own after the label (a cancel link). */
+    @Parameter() childContent?: RenderFragment;
+    /** The busy state for screen readers, as hidden text in the status region ("Loading…" by default,
+        unless a visible label says it; null for none). */
+    @Parameter() ariaLabel?: string | null;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get spinnerClass(): string {
+        const base = this.kind === "grow" ? "spinner-grow" : "spinner-border";
+        const size = this.size === "small" ? ` ${base}-sm` : "";
+        return `${base} text-${textColor(this.intent)}${size}`;
+    }
+
+    /** A live region announces its text, not an aria-label: the default goes when a visible label speaks. */
+    private get hiddenText(): string | null {
+        if (this.ariaLabel === undefined) return this.label ? null : this.t("loading");
+        return this.ariaLabel;
+    }
+
+    /** Bootstrap has no large spinner: 3rem across. */
+    private get spinnerStyle(): string | null {
+        return this.size === "large" ? "width: 3rem; height: 3rem" : null;
+    }
+}

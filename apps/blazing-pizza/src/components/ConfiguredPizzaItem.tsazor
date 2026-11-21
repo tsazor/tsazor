@@ -1,10 +1,8 @@
-@inherits PizzaComponentBase
-
 <div class="cart-item">
     <a @onclick="removeItem" class="delete-item">x</a>
     <div class="title">@(this.pizza.size)" @this.pizza.special.name</div>
     <ul>
-        @foreach (var pt in this.pizza.toppings) {
+        @foreach (const pt of this.pizza.toppings) {
             <li>+ @pt.topping.name</li>
         }
     </ul>

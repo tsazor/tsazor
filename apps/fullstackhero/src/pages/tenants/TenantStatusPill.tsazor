@@ -1,0 +1,9 @@
+@* pages/tenants/list.tsx's StatusPill: a tenant's Active / Inactive pill. *@
+
+<span class="@cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[10.5px] font-medium", active ? "bg-[oklch(from_var(--color-success)_l_c_h_/_0.12)] text-[var(--color-success)]" : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]")">
+    @(active ? "Active" : "Inactive")
+</span>
+
+@code {
+    @Parameter() active: boolean = false;
+}

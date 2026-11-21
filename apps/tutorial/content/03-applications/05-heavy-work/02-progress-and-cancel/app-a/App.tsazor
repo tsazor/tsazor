@@ -1,0 +1,30 @@
+@import { OrdersWorker } from "./orders-client"
+@inject OrdersWorker worker
+
+<p class="clock">The page is alive: @ticks</p>
+
+<button class="import" @onclick="runImport">Import today's orders</button>
+<button class="cancel" @onclick="cancel">Cancel</button>
+<progress class="progress" max="1" value="@done" aria-label="Import progress"></progress>
+<p class="result">@status</p>
+
+@code {
+    @State() accessor ticks = 0;
+    @State() accessor done = 0;
+    status = "No import yet.";
+
+    override onInitialized() {
+        const timer = setInterval(() => this.ticks++, 100);
+        this.disposeSignal.addEventListener("abort", () => clearInterval(timer));
+    }
+
+    async runImport() {
+        this.status = "Importing…";
+        const result = await this.worker.importOrders(400_000);
+        this.status = `Imported ${result.orders} orders, ${result.loaves} loaves.`;
+    }
+
+    cancel() {
+        // Nothing to cancel yet.
+    }
+}

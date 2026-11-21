@@ -1,0 +1,73 @@
+/* Menu — Fluent 2 menu popover: a toggle button and a list of menu items. */
+
+.fui-menu-button {
+  display: inline-block;
+}
+
+.fui-menu-button__toggle::after {
+  content: "";
+  margin-inline-start: var(--fui-spacing-xs, 4px);
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  border-bottom: 0;
+}
+
+.fui-menu {
+  min-width: 160px;
+  margin: 0;
+  padding: var(--fui-spacing-xs, 4px);
+  list-style: none;
+  background: var(--fui-background-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  z-index: var(--fui-z-dialog);
+}
+
+.fui-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+  width: 100%;
+  padding: var(--fui-spacing-xs, 4px) var(--fui-spacing-s);
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  background: transparent;
+  color: var(--fui-foreground-1);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* Icon slots: the icon keeps its size; iconEnd sits at the far end. */
+.fui-menu__icon {
+  flex: none;
+}
+
+.fui-menu__icon--end {
+  margin-inline-start: auto;
+}
+
+.fui-menu__item:hover,
+.fui-menu__item:focus-visible {
+  background: var(--fui-control-fill-hover);
+  outline: none;
+}
+
+.fui-menu__item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--fui-control-focus-stroke);
+}
+
+.fui-menu__item[aria-disabled="true"] {
+  color: var(--fui-foreground-disabled);
+  background: transparent;
+  cursor: not-allowed;
+}
+
+/* A link entry (href) looks like the others. */
+a.fui-menu__item {
+  text-decoration: none;
+  color: inherit;
+}

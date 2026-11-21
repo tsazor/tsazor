@@ -1,0 +1,16 @@
+@* components/file/image-input.tsx's ModeChip: a pill toggle between the upload and the URL mode. React's `icon:
+   ReactNode` is always a lucide icon at the chip's size, so here it is the icon itself. *@
+@import type { IconNode } from "lucide"
+
+<button type="button" @onclick="() => onClick?.invokeAsync()"
+        class="@cn("inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-colors duration-[var(--duration-fast)]", active ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]" : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]")">
+    <Icon icon="@icon" class="h-3.5 w-3.5" />
+    @childContent
+</button>
+
+@code {
+    @Parameter() active: boolean = false;
+    @Parameter() onClick?: EventCallback;
+    @Parameter() icon!: IconNode;
+    @Parameter() childContent?: RenderFragment;
+}

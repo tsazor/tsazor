@@ -1,0 +1,108 @@
+@* components/tenants/adjust-validity-dialog.tsx: an operator override that sets a tenant's ValidUpto directly with NO
+   invoice — a comp or correction, distinct from Renew (which issues a term invoice). Backdating is permitted
+   server-side. Root-operator only. A `type="date"` input yields a `YYYY-MM-DD` string; the zod schema checks it is
+   one, prefilled with the tenant's current validity each time the dialog opens. *@
+@import { CalendarCog } from "lucide"
+@import { z } from "zod"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { adjustTenantValidity } from "@/api/tenants"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { inputClass } from "@/components/ui/variants"
+@import { describe, formatDate } from "./format"
+
+<Dialog open="@open" openChanged="@this.requestOpen">
+    <DialogContent size="md">
+        <DialogHeader>
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)] text-[var(--color-primary)] ring-1 ring-inset ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]">
+                    <Icon icon="@CalendarCog" class="h-[18px] w-[18px]" />
+                </span>
+                <DialogTitle class="text-[16px]">Adjust validity</DialogTitle>
+            </div>
+            <DialogDescription class="mt-1">
+                Set this tenant's expiry date directly — an operator override with <strong class="text-[var(--color-foreground)]">no invoice</strong>. Use for comps or corrections; renewals that should bill belong in Renew. Currently valid until @(formatDate(validUpto)).
+            </DialogDescription>
+        </DialogHeader>
+
+        <EditForm id="av-form" Model="@model" OnValidSubmit="@submit">
+            <StandardSchemaValidator Schema="@schema" />
+            <FocusOnInvalidSubmit />
+            <DialogBody class="space-y-4">
+                <Field id="av-validUpto" label="Valid until" required hint="Backdating is allowed. No invoice is issued for an adjustment." for="validUpto">
+                    <InputText id="av-validUpto" type="date" class="@inputClass" @bind-Value="model.validUpto" />
+                </Field>
+            </DialogBody>
+
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick="@close" disabled="@submitting">Cancel</Button>
+                <Button type="submit" disabled="@submitting">@(submitting ? "Saving…" : "Adjust validity")</Button>
+            </DialogFooter>
+        </EditForm>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    @Parameter() tenantId: string = "";
+    @Parameter() validUpto?: string;
+
+    // A `type="date"` input yields a `YYYY-MM-DD` string. zod validates the shape
+    // and that it parses to a real calendar date.
+    private readonly schema = z.object({
+        validUpto: z
+            .string()
+            .min(1, "Pick a date.")
+            .refine((v) => !Number.isNaN(new Date(v).getTime()), "Enter a valid date."),
+    });
+
+    private model = { validUpto: "" };
+    private submitting = false;
+    private wasOpen = false;
+    private prefilledFrom?: string;
+
+    /** Prefill with the tenant's current validity each time the dialog opens (and when that validity changes). */
+    protected override onParametersSet(): void {
+        if (this.open && (!this.wasOpen || this.validUpto !== this.prefilledFrom)) {
+            this.model = { validUpto: AdjustValidityDialog.toDateInputValue(this.validUpto) };
+            this.prefilledFrom = this.validUpto;
+        }
+        this.wasOpen = this.open;
+    }
+
+    /** `YYYY-MM-DD` (the native date input value) for an ISO/date string, for prefill. */
+    private static toDateInputValue(value?: string | null): string {
+        if (!value) return "";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "";
+        return d.toISOString().slice(0, 10);
+    }
+
+    private requestOpen(open: boolean): Promise<void> | undefined {
+        if (!open) return this.close();
+        return this.openChanged?.invokeAsync(true);
+    }
+
+    private close(): Promise<void> | undefined {
+        this.model = { validUpto: "" };
+        return this.openChanged?.invokeAsync(false);
+    }
+
+    private async submit(): Promise<void> {
+        // Pass the date on — never read form state after the await.
+        const value = this.schema.parse(this.model).validUpto;
+        this.submitting = true;
+        try {
+            const result = await adjustTenantValidity(this.tenantId, new Date(value).toISOString());
+            toast.success("Validity adjusted", { description: `Valid until ${formatDate(result.validUpto)}. No invoice was issued.` });
+            void queryClient.invalidateQueries({ queryKey: ["tenant", this.tenantId] });
+            void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            await this.close();
+        } catch (err) {
+            toast.error("Adjust failed", { description: describe(err, "Could not adjust validity.") });
+        } finally {
+            this.submitting = false;
+        }
+    }
+}

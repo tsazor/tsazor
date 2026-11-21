@@ -1,0 +1,7 @@
+<button @onclick="sayHello">Click to say hello</button>
+
+@code {
+    sayHello() {
+        // TODO tell the parent
+    }
+}

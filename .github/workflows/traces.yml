@@ -1,0 +1,24 @@
+name: Traces
+
+# Nothing of the private work in the public repository: no working note, no path on a maintainer's machine, no
+# link to a file that isn't there (scripts/traces.mjs, docs/design-release.md "Kept public"). On every push and
+# pull request — it needs Node and git only, so it takes seconds. Only in tsazor/tsazor: the private working
+# repository holds the notes on purpose.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  traces:
+    name: No traces of the private work
+    if: github.repository == 'tsazor/tsazor'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/traces.mjs

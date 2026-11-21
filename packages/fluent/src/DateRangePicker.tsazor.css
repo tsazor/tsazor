@@ -1,0 +1,22 @@
+/* DateRangePicker — Fluent 2: the start and the end side by side with a dash between, the calendar button after them;
+   the calendar opens below on the DatePicker's surface (.fui-date-picker__popup). */
+
+.fui-date-range-picker__field {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+}
+
+.fui-date-range-picker__field > .fui-input {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.fui-date-range-picker__dash {
+  color: var(--fui-foreground-3);
+}
+
+.fui-date-range-picker__field > .fui-date-picker__button {
+  position: static;
+  flex: none;
+}

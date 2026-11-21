@@ -1,0 +1,59 @@
+@inherits BasePlugin
+@import type { UserDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { dateTime } from "../../../format"
+
+<PluginBody title="Users List">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create User")" label="Add User" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.users" ariaLabel="Users" responsive>
+            <PropertyColumn property="(user) => user.username" title="UserName" />
+            <PropertyColumn property="(user) => user.firstName" title="First Name" />
+            <PropertyColumn property="(user) => user.lastName" title="Last Name" />
+            <PropertyColumn property="(user) => user.email" title="Email" />
+            <TemplateColumn title="Email Confirmed" Context="user"><YesNo value="@user.emailConfirmed" /></TemplateColumn>
+            <PropertyColumn property="(user) => user.phoneNumber" title="Phone" />
+            <TemplateColumn title="Phone Confirmed" Context="user"><YesNo value="@user.phoneConfirmed" /></TemplateColumn>
+            <TemplateColumn title="Enable" Context="user"><YesNo value="@user.enabled" /></TemplateColumn>
+            <TemplateColumn title="Level" Context="user">
+                <Indicator intent="success" visible="@user.isSuperAdmin">SuperAdmin</Indicator>
+            </TemplateColumn>
+            <PropertyColumn property="(user) => user.createdAt" format="dateTime" title="Create Date" />
+            <PropertyColumn property="(user) => user.loginAt" format="dateTime" title="Last Login Date" />
+            <PropertyColumn property="(user) => user.loginCount" title="Login Count" />
+            <TemplateColumn title="Locked" Context="user"><YesNo value="@user.locked" good="false" /></TemplateColumn>
+            <TemplateColumn title="Actions" Context="user">
+                <ActionButtons>
+                    <ActionButtonDelete visible="@(!user.isSuperAdmin)" @onclick="() => this.selected = user" aria-label="@(`Delete ${user.username}`)" />
+                    <ActionButtonEdit href="@this.getUrl("Update User", { id: user.id })" />
+                </ActionButtons>
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete <b>"@this.selected?.username"</b> user?
+</Confirm>
+
+@code {
+    private users: UserDetailResponse[] = [];
+    private selected?: UserDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        this.users = ensureOk(await this.api.userGetAll()) ?? [];
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.userDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

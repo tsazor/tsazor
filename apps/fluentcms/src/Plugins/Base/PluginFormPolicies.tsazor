@@ -1,0 +1,25 @@
+@* An API token's policies (FluentCMS's PluginFormPolicies): per area, the actions the token may take. *@
+@import type { Policy } from "../../api/models"
+
+@if (policies.length > 0) {
+    <div class="plugin-form-policies">
+        @if (label) {
+            <h3 class="plugin-form-policies-title">@label</h3>
+        }
+        @for (let i = 0; i < value.length; i++) {
+            <CheckboxGroup @key="value[i]!.area" @bind-Value="value[i]!.actions" label="@(value[i]!.area ?? "")" options="@this.options(policies[i])" inline />
+        }
+    </div>
+}
+
+@code {
+    /** Every area with every action a token can be given (ApiToken/GetPolicies). */
+    @Parameter() policies: Policy[] = [];
+    /** The token's policies, one per area of `policies` in the same order; edited in place. */
+    @Parameter() value: Policy[] = [];
+    @Parameter() label?: string;
+
+    private options(policy: Policy | undefined): { value: string; label: string }[] {
+        return (policy?.actions ?? []).map((action) => ({ value: action, label: action }));
+    }
+}

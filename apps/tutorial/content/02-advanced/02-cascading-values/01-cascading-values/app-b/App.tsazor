@@ -1,0 +1,16 @@
+<label>
+    <input type="checkbox" @bind="dark" />
+    Dark mode
+</label>
+
+<CascadingValue Value="@theme">
+    <Toolbar />
+</CascadingValue>
+
+@code {
+    dark = false;
+
+    get theme(): string {
+        return this.dark ? "dark" : "light";
+    }
+}

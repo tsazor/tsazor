@@ -1,0 +1,19 @@
+@** Renders the dialogs the `DialogService` (from @tsazor/ui) has open — MudBlazor's MudDialogProvider, Fluent UI
+    Blazor's FluentDialogProvider. Place it once, in the layout; any component then injects `DialogService` and calls
+    `show(Component, { title, parameters })`. Each dialog gets its `DialogReference` as a cascading value: its
+    `Dialog` (isOpen unset) takes the title and closing rules from it, and its code closes it with `close(data)` or
+    `cancel()`. *@
+@import { DialogService } from "@tsazor/ui"
+@inject DialogService dialogs
+
+@foreach (const dialog of dialogs.dialogs) {
+    <CascadingValue Value="@dialog" @key="dialog.id">
+        <DynamicComponent Type="@dialog.component" Parameters="@dialog.options.parameters" />
+    </CascadingValue>
+}
+
+@code {
+    protected override onInitialized(): void {
+        this.observe(this.dialogs);
+    }
+}

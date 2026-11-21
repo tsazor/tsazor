@@ -1,0 +1,22 @@
+/* Tooltip — Fluent 2 tooltip: an inverted label next to the element it describes. */
+
+.fui-tooltip-anchor {
+  display: inline-block;
+}
+
+.fui-tooltip {
+  z-index: var(--fui-z-toast);
+  pointer-events: auto;
+}
+
+.fui-tooltip__content {
+  max-width: 240px;
+  padding: var(--fui-spacing-xs, 4px) var(--fui-spacing-s);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-foreground-1);
+  color: var(--fui-background-1);
+  box-shadow: var(--fui-shadow-8);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-caption-lg, 12px);
+  line-height: 1.4;
+}

@@ -1,0 +1,172 @@
+@* Client/Pages/Identity/RolePermissions.razor(.cs): a role's permissions, a tab per group ("All Permissions" first)
+   with its badge "selected/all", each a DataGrid of the group's permissions searched and sorted in the browser. A
+   box selects a permission; a row's edit (MudTable's RowEditingTemplate) takes a comment for a selected one. MudTable
+   starts the edit on a row click and ends it with its "Apply" button; the DataGrid's edit starts from the row's Edit
+   button — reachable by the keyboard too (B50). The claims are shared by "All Permissions" and their group's tab,
+   so a box ticked in one shows in the other, as in the original. Saved, the role's users get new tokens (the hub's
+   RegenerateTokens) and the others in the role are signed out (OnChangeRolePermissions). *@
+@page "/identity/role-permissions/{id}"
+@authorize({ policy: "Permissions.RoleClaims.View" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { DataGrid, GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import type { PermissionResponse, RoleClaimResponse } from "../../Application/Identity"
+@import { getUserId } from "../../Extensions/ClaimsPrincipalExtensions"
+@inject RoleManager roleManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<HeroTitle title="@L("Manage Permission")" description="@description" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Manage Permission")" />
+} else {
+    <Tabs ariaLabel="@L("Manage Permission")">
+        @foreach (const [group, roleClaims] of groupedRoleClaims) {
+            <Tab title="@group" badge="@(`${selectedCount(roleClaims)}/${roleClaims.length}`)" badgeIntent="@groupBadgeIntent(selectedCount(roleClaims), roleClaims.length)">
+                <div class="bh-table-toolbar">
+                    <div class="bh-table-toolbar__actions">
+                        @if (canEditRolePermissions) {
+                            <Button intent="primary" onClick="@saveAsync">@L("Update Role Permissions")</Button>
+                        }
+                    </div>
+                    @if (canSearchRolePermissions) {
+                        <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search For Permissions")" placeholder="@L("Search For Permissions")" @bind-Value="searchString" immediate>
+                            <ContentAfter><Icon value="@Icons.Search" /></ContentAfter>
+                        </TextInput>
+                    }
+                </div>
+                <DataGrid @ref="grids[group]" items="@filtered(roleClaims)" pagination="@paginationOf(group)" editing="row" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@group">
+                    <PropertyColumn property="(claim) => claim.type" title="@L("Type")" sortable />
+                    <TemplateColumn title="@L("Permission Name")" sortBy="@byValue" Context="claim">
+                        <Highlighter text="@claim.value" highlightedText="@searchString" />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Description")" sortBy="@byDescription">
+                        <ChildContent Context="claim">
+                            <Highlighter text="@(claim.description ?? "")" highlightedText="@searchString" />
+                        </ChildContent>
+                        <EditContent Context="claim">
+                            <TextInput @bind-Value="claim.description" disabled="@(!claim.selected)" ariaLabel='@(`${L("Description")}: ${claim.value}`)'
+                                       help="@L(claim.selected ? "Here you can leave a comment for this permission for the current role" : "Will be saved only when selected Permission")" />
+                        </EditContent>
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Status")" sortBy="@bySelected" Context="claim">
+                        <Checkbox @bind-Value="claim.selected" disabled="@(!canEditRolePermissions)" ariaLabel='@(`${L("Status")}: ${claim.value}`)' />
+                    </TemplateColumn>
+                    @if (canEditRolePermissions) {
+                        <TemplateColumn title="" align="end" Context="claim">
+                            @if (grids[group]?.isEditing(claim) === true) {
+                                <Tooltip text="@L("Apply")">
+                                    <Button appearance="transparent" size="small" iconStart="@Icons.Checkmark" ariaLabel='@(`${L("Apply")}: ${claim.value}`)' onClick="@(() => grids[group]?.endEditAsync("commit"))" />
+                                </Tooltip>
+                            } else {
+                                <Button appearance="transparent" size="small" iconStart="@Icons.Edit" ariaLabel='@(`Edit: ${claim.value}`)' onClick="@(() => grids[group]?.editRowAsync(claim))" />
+                            }
+                        </TemplateColumn>
+                    }
+                </DataGrid>
+                <div class="bh-table-footer">
+                    <div class="bh-table-footer__switches">
+                        <Switch label="@L("Dense")" @bind-Value="dense" />
+                        <Switch label="@L("Striped")" @bind-Value="striped" />
+                        <Switch label="@L("Bordered")" @bind-Value="bordered" />
+                    </div>
+                    <TablePager state="@paginationOf(group)" />
+                </div>
+            </Tab>
+        }
+    </Tabs>
+}
+
+@code {
+    @Parameter() id = "";
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+
+    private readonly L = localizerFor("RolePermissions");
+    private model?: PermissionResponse;
+    /** The tabs: "All Permissions" with every claim, then a group's claims in the order the API lists them. */
+    private readonly groupedRoleClaims = new Map<string, RoleClaimResponse[]>();
+    /** Each tab's grid (only the open tab's renders) and pager. */
+    private readonly grids: Record<string, DataGrid<RoleClaimResponse> | undefined> = {};
+    private readonly paginations = new Map<string, PaginationState>();
+    private description = "";
+    private searchString = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private currentUserId = "";
+    private canEditRolePermissions = false;
+    private canSearchRolePermissions = false;
+    private loaded = false;
+
+    private readonly byValue = GridSort.byAscending((claim: RoleClaimResponse) => claim.value);
+    private readonly byDescription = GridSort.byAscending((claim: RoleClaimResponse) => claim.description ?? "");
+    private readonly bySelected = GridSort.byAscending((claim: RoleClaimResponse) => claim.selected);
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.currentUserId = getUserId(user);
+        this.canEditRolePermissions = await this.authorization.isAuthorized(user, { policy: Permissions.RoleClaims.Edit });
+        this.canSearchRolePermissions = await this.authorization.isAuthorized(user, { policy: Permissions.RoleClaims.Search });
+
+        await this.getRolePermissionsAsync();
+        this.loaded = true;
+    }
+
+    private async getRolePermissionsAsync(): Promise<void> {
+        const result = await this.roleManager.getPermissionsAsync(this.id);
+        if (!result.succeeded) {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+            this.navigation.navigateTo("/identity/roles");
+            return;
+        }
+        this.model = result.data;
+        this.groupedRoleClaims.set(this.L("All Permissions"), this.model.roleClaims);
+        for (const claim of this.model.roleClaims) {
+            const group = this.groupedRoleClaims.get(claim.group);
+            if (group === undefined) this.groupedRoleClaims.set(claim.group, [claim]);
+            else group.push(claim);
+        }
+        this.description = this.L("Manage {0} {1}'s Permissions", { 0: this.model.roleId, 1: this.model.roleName });
+    }
+
+    /** The original maps the response to a PermissionRequest (AutoMapper): the same fields. */
+    private async saveAsync(): Promise<void> {
+        if (this.model === undefined) return;
+        const request = { roleId: this.model.roleId, roleClaims: this.model.roleClaims };
+        const result = await this.roleManager.updatePermissionsAsync(request);
+        if (result.succeeded) {
+            this.toaster.show({ message: result.messages[0]!, intent: "success" });
+            await this.hubConnection?.send(ApplicationConstants.SignalR.SendRegenerateTokens);
+            await this.hubConnection?.send(ApplicationConstants.SignalR.OnChangeRolePermissions, this.currentUserId, request.roleId);
+            this.navigation.navigateTo("/identity/roles");
+        } else {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    /** MudTable's Filter: the permission's name or its comment contains the search, in any case. */
+    private filtered(roleClaims: RoleClaimResponse[]): RoleClaimResponse[] {
+        if (this.searchString.trim() === "") return roleClaims;
+        const search = this.searchString.toLowerCase();
+        return roleClaims.filter((claim) => claim.value.toLowerCase().includes(search) || claim.description?.toLowerCase().includes(search) === true);
+    }
+
+    private paginationOf(group: string): PaginationState {
+        let pagination = this.paginations.get(group);
+        if (pagination === undefined) this.paginations.set(group, (pagination = new PaginationState()));
+        return pagination;
+    }
+
+    private selectedCount(roleClaims: RoleClaimResponse[]): number {
+        return roleClaims.filter((claim) => claim.selected).length;
+    }
+
+    /** GetGroupBadgeColor: none selected Error, all Success, some Info. */
+    private groupBadgeIntent(selected: number, all: number): Intent {
+        if (selected === 0) return "danger";
+        if (selected === all) return "success";
+        return "info";
+    }
+}

@@ -1,0 +1,88 @@
+@* components/ui/dropdown-menu.tsx's DropdownMenuContent: the menu panel under its trigger, in the browser's top layer
+   (Radix's Portal; lib/top-layer.ts), placed by @tsazor/ui's anchoredPosition (Radix's align, sideOffset; flipped
+   when there is no room). Arrow keys, Home, End and typeahead move between the items (rovingFocus); Escape, Tab or a
+   press outside close it (dismissible). Radix's CSS variables are set, so the original's classes work unchanged:
+   --radix-dropdown-menu-trigger-width (the Selects' width), -content-available-height, -content-transform-origin. *@
+@import { anchoredPosition, createLayer, dismissible, focusElement, rovingFocus } from "@tsazor/ui"
+@import type { Placement } from "@tsazor/ui"
+@import { cn } from "@/lib/cn"
+@import { topLayer } from "@/lib/top-layer"
+@import DropdownMenu from "./DropdownMenu.tsazor"
+
+@if (menu?.isOpen) {
+    <div popover="manual" role="menu" aria-orientation="vertical" id="@menu.contentId" aria-labelledby="@menu.triggerId" tabindex="-1"
+         data-slot="dropdown-menu-content" data-state="open" data-align="@align" @attributes="@this.attributes"
+         @attach="topLayer()" @attach:vars="vars" @attach:position="position" @attach:keys="keys" @attach:dismiss="dismiss" @attach:focus="focusOnOpen"
+         @onkeydown="this.keydown">@childContent</div>
+}
+
+@code {
+    @Parameter() align: "start" | "center" | "end" = "center";
+    @Parameter() sideOffset: number = 6;
+    @CascadingParameter({ type: DropdownMenu }) menu?: DropdownMenu;
+    @Parameter() childContent?: RenderFragment;
+    /** `class` (merged), `style`, … on the panel. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly layer = createLayer();
+    private readonly position = anchoredPosition({ anchor: () => this.menu?.trigger, placement: () => this.placement, offset: this.sideOffset });
+    private readonly keys = rovingFocus({ items: "[role=menuitem]:not([data-disabled])", orientation: "vertical", loop: false, typeahead: true });
+    private readonly dismiss = dismissible({
+        layer: this.layer,
+        onDismiss: (reason) => this.dismissed(reason),
+        // The trigger toggles: a press on it is its own.
+        ignore: () => [this.menu?.trigger],
+    });
+
+    private get placement(): Placement {
+        return this.align === "start" ? "bottom-start" : this.align === "end" ? "bottom-end" : "bottom";
+    }
+
+    /** Radix's CSS variables, from the trigger and the room below it. */
+    private readonly vars = (element: HTMLElement): void => {
+        const trigger = this.menu?.trigger?.getBoundingClientRect();
+        if (!trigger) return;
+        element.style.setProperty("--radix-dropdown-menu-trigger-width", `${trigger.width}px`);
+        element.style.setProperty("--radix-dropdown-menu-trigger-height", `${trigger.height}px`);
+        element.style.setProperty("--radix-dropdown-menu-content-available-height", `${Math.max(window.innerHeight - trigger.bottom - this.sideOffset - 8, 120)}px`);
+        element.style.setProperty("--radix-dropdown-menu-content-transform-origin", this.align === "end" ? "top right" : this.align === "start" ? "top left" : "top center");
+    };
+
+    /** Radix: by pointer the menu takes the focus, from the keyboard its first (or last) item. */
+    private readonly focusOnOpen = (element: HTMLElement): void => {
+        const items = [...element.querySelectorAll<HTMLElement>("[role=menuitem]:not([data-disabled])")];
+        const target = this.menu?.focusOnOpen === "first" ? items[0] : this.menu?.focusOnOpen === "last" ? items.at(-1) : undefined;
+        focusElement(target ?? element);
+    };
+
+    private get attributes(): Record<string, unknown> {
+        return {
+            ...this.additionalAttributes,
+            class: cn(
+                // The popover's own box undone.
+                "m-0 inset-auto",
+                "z-50 min-w-[12rem] max-h-[var(--radix-dropdown-menu-content-available-height)]",
+                "overflow-x-hidden overflow-y-auto",
+                "rounded-lg border border-[var(--color-border)] bg-[var(--color-popover)] p-1",
+                "text-[var(--color-popover-foreground)] shadow-md",
+                "origin-[var(--radix-dropdown-menu-content-transform-origin)]",
+                "data-[state=open]:animate-fsh-dialog-in",
+                this.additionalAttributes?.class as string | undefined,
+            ),
+        };
+    }
+
+    private dismissed(reason: "escape" | "outside"): void {
+        const closing = reason === "escape" ? this.menu?.close() : this.menu?.setOpen(false);
+        closing?.catch((error) => this.dispatchExceptionAsync(error));
+    }
+
+    private keydown(event: KeyboardEvent): Promise<void> | undefined {
+        // Radix: Tab leaves the menu, which closes; the focus goes on from the trigger.
+        if (event.key === "Tab") {
+            event.preventDefault();
+            return this.menu?.close();
+        }
+        return undefined;
+    }
+}

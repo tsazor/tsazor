@@ -1,0 +1,40 @@
+@* components/ui/dropdown-menu.tsx: Radix's DropdownMenu.Root — the open state its trigger and content share, as a
+   cascading value. Open on its own, or bound (`@bind-open`, Radix's open/onOpenChange). *@
+@import { uniqueId } from "@tsazor/ui"
+
+<CascadingValue Value="@this">@childContent</CascadingValue>
+
+@code {
+    @Parameter() open?: boolean;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    /** Radix's modal: outside presses close the menu either way; the page is not made inert. */
+    @Parameter() modal: boolean = true;
+    @Parameter() childContent?: RenderFragment;
+
+    readonly triggerId = uniqueId("menu-trigger");
+    readonly contentId = uniqueId("menu-content");
+    /** The trigger's button: the content's anchor, and where the focus returns. */
+    trigger?: HTMLElement;
+    /** Opened from the keyboard: the first (or last) item takes the focus, as in Radix; by pointer the menu does. */
+    focusOnOpen: "menu" | "first" | "last" = "menu";
+
+    private openState = false;
+
+    get isOpen(): boolean {
+        return this.open ?? this.openState;
+    }
+
+    async setOpen(open: boolean, focus: "menu" | "first" | "last" = "menu"): Promise<void> {
+        if (open === this.isOpen) return;
+        this.focusOnOpen = focus;
+        this.openState = open;
+        this.stateHasChanged();
+        await this.openChanged?.invokeAsync(open);
+    }
+
+    /** Closes and gives the focus back to the trigger (an item picked, Escape). */
+    async close(): Promise<void> {
+        await this.setOpen(false);
+        this.trigger?.focus();
+    }
+}

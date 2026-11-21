@@ -1,19 +1,14 @@
+@import MainLayout from "./MainLayout.tsazor"
 @inject ThemeState Theme
 
-<Router Found="@found" NotFound="@notFound" />
-
-@code {
-    private found = (routeData: RouteData): RenderFragment => (b: RenderTreeBuilder) => {
-        b.openComponent(0, RouteView);
-        b.addAttribute(1, "RouteData", routeData);
-        b.addAttribute(2, "DefaultLayout", MainLayout);
-        b.closeComponent();
-    };
-
-    private notFound = (b: RenderTreeBuilder) => {
-        b.openElement(0, "p");
-        b.addAttribute(1, "class", "not-found");
-        b.addContent(2, "Page not found.");
-        b.closeElement();
-    };
-}
+<Router>
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@MainLayout" />
+    </Found>
+    <Navigating>
+        <p class="navigating" role="status">Loading…</p>
+    </Navigating>
+    <NotFound>
+        <p class="not-found">Page not found.</p>
+    </NotFound>
+</Router>

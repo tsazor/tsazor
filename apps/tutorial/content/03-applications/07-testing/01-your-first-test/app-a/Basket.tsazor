@@ -1,0 +1,10 @@
+<p class="basket">Loaves: <output>@loaves</output></p>
+<button @onclick="add">Add a loaf</button>
+
+@code {
+    loaves = 0;
+
+    add() {
+        this.loaves++;
+    }
+}

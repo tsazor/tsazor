@@ -1,55 +1,63 @@
+@** A Fluent UI 2 message bar (role="alert") with a status icon; `intent` info (default) | success |
+    danger | warning | neutral (primary reads as info, secondary as neutral). With dismissible it shows a Close button that hides the alert and then
+    raises onDismissed. *@
+@import type { IconValue, Intent } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { statusColor } from "./vocabulary"
+@import { CheckmarkCircle20Filled, Dismiss20Regular, DismissCircle20Filled, Info20Filled, Warning20Filled } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+
 @if (this.visible) {
-<div class="@this.alertClass" role="alert">
+<div role="alert" @attributes="@this.alertAttributes">
     <span class="fui-alert__icon" aria-hidden="true">
-        <Icon name="@this.iconName" size="16" />
+        <Icon value="@this.statusIcon" />
     </span>
     <div class="fui-alert__body">@childContent</div>
     @if (this.dismissible) {
-    <button type="button" class="fui-alert__dismiss" aria-label="Close" @onclick="this.dismiss">
-        <Icon name="close" size="12" />
+    <button type="button" class="fui-alert__dismiss" aria-label="@t("close")" @onclick="this.dismiss">
+        <Icon value="@Dismiss20Regular" size="16" />
     </button>
     }
 </div>
 }
 
 @code {
-    /** Severity: success | danger | warning | info (default) | neutral. Legacy Bootstrap names are mapped. */
-    @Parameter() variant: string = "info";
+    private readonly t = libraryTexts();
+
+    /** The status: info (default), success, danger, warning or neutral. */
+    @Parameter() intent: Intent = "info";
     /** Shows a dismiss button. */
     @Parameter() dismissible: boolean = false;
+    /** `@attributes` pass-through onto the alert div (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired after the Close button has hidden the alert; receives the click MouseEvent. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
+    /** The alert message. */
     @Parameter() childContent?: RenderFragment;
 
     private visible = true;
 
-    /* Ported API (packages/components/src/Alert.tsazor): primary/secondary/…
-     * map onto the Fluent severities; no Bootstrap classes carry through. */
-    private get severity(): string {
-        const map: Record<string, string> = {
-            "primary": "info", "info": "info",
-            "success": "success",
-            "danger": "danger", "error": "danger",
-            "warning": "warning", "caution": "warning",
-            "neutral": "neutral", "secondary": "neutral",
-        };
-        return map[this.variant] ?? "info";
-    }
-
     private get alertClass(): string {
-        return `fui-alert fui-alert--${this.severity}`;
+        return `fui-alert fui-alert--${statusColor(this.intent)}`;
     }
 
-    private get iconName(): string {
-        const icons: Record<string, string> = {
-            "success": "check", "danger": "close",
-            "warning": "remove", "info": "remove", "neutral": "remove",
-        };
-        return icons[this.severity] ?? "remove";
+    /** Fluent classes + role + `@attributes` pass-through. */
+    private get alertAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.alertClass }, this.additionalAttributes);
+    }
+
+    /** Fluent UI Blazor's MessageBar icons: filled, in the intent's color. */
+    private get statusIcon(): IconValue {
+        const color = statusColor(this.intent);
+        return color === "success" ? CheckmarkCircle20Filled
+            : color === "danger" ? DismissCircle20Filled
+            : color === "warning" ? Warning20Filled
+            : Info20Filled;
     }
 
     private async dismiss(e: MouseEvent): Promise<void> {
         this.visible = false;
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
         await this.onDismissed?.invokeAsync(e);
     }
 }

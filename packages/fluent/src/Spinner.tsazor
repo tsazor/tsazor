@@ -1,10 +1,23 @@
-<span class="@spinnerClass" role="status" aria-label="@ariaLabel">@childContent</span>
+@** A Fluent UI 2 loading spinner in a role="status" live region; size small | medium | large.
+    The region announces its text: the visible label, otherwise ariaLabel as hidden text
+    ("Loading…" by default; null for none). Optional child content renders next to it. *@
+@import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+
+<span role="status" @attributes="@this.spinnerAttributes">@if (this.hiddenText) {<span class="fui-visually-hidden">@this.hiddenText</span>}@if (label) {<span class="fui-spinner__label">@label</span>}@childContent</span>
 
 @code {
-    /** small | medium | large (24/32/40 px on the control grid). */
-    @Parameter() size: string = "medium";
-    /** Accessible label announcing the busy state (defaults to "Loading…"). */
-    @Parameter() ariaLabel: string | null = "Loading…";
+    private readonly t = libraryTexts();
+
+    /** small | medium (default) | large (24/32/40 px on the control grid). */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** Visible text next to the spinner ("Loading orders…"). */
+    @Parameter() label?: string;
+    /** The busy state for screen readers, as hidden text in the status region ("Loading…" by default,
+        unless a visible label says it; null for none). */
+    @Parameter() ariaLabel?: string | null;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Optional slot next to the spinner (e.g. a text line). */
     @Parameter() childContent?: RenderFragment;
 
@@ -13,5 +26,15 @@
         if (this.size === "small") return `${base} fui-spinner--small`;
         if (this.size === "large") return `${base} fui-spinner--large`;
         return base;
+    }
+
+    private get spinnerAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.spinnerClass }, this.additionalAttributes);
+    }
+
+    /** A live region announces its text, not an aria-label: the default goes when a visible label speaks. */
+    private get hiddenText(): string | null {
+        if (this.ariaLabel === undefined) return this.label ? null : this.t("loading");
+        return this.ariaLabel;
     }
 }

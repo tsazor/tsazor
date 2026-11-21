@@ -1,0 +1,108 @@
+@* Client/Pages/Misc/AddEditDocumentModal.razor(.cs): a document's fields, its type picked from all types (MudAutocomplete
+   T="int" — an Autocomplete of type ids, shown by their names), and for a new one its file, read whole into the
+   request (the original's UploadFiles); an existing one offers its download. *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { InputFile, InputFileChangeEventArgs, ValidationMessage } from "@tsazor/runtime"
+@import { UploadType } from "../../Application/Catalog"
+@import { AddEditDocumentCommand, type GetAllDocumentTypesResponse } from "../../Application/Misc"
+@import { addEditDocumentValidators } from "../../Application/Validators/Misc"
+@import { extensionOf, toBase64 } from "../../Extensions/Files"
+@inject DocumentManager documentManager
+@inject DocumentTypeManager documentTypeManager
+@inject Toaster toaster
+
+<FluentForm model="@addEditDocumentModel" validators="@validators" onValidSubmit="@saveAsync" novalidate>
+    <Dialog title="@(isNew ? L("Add Document") : L("Update Document"))">
+        <ChildContent>
+            <div class="bh-form-grid">
+                @if (!isNew) {
+                    <NumberInput label="@L("Id")" @bind-Value="addEditDocumentModel.id" disabled />
+                }
+                <TextInput label="@L("Title")" @bind-Value="addEditDocumentModel.title" />
+                <TextInput label="@L("Description")" @bind-Value="addEditDocumentModel.description" />
+                <Autocomplete TOption="number" label="@L("Document Type")" multiple="false" items="@documentTypeIds" optionText="@documentTypeName"
+                              @bind-selectedOption="addEditDocumentModel.documentTypeId" />
+                <Checkbox label="@L("Is Public?")" @bind-Value="addEditDocumentModel.isPublic" />
+                <div class="bh-product-image">
+                    @if (fileName) {
+                        <Alert intent="info">@fileName</Alert>
+                    }
+                    @if (!isNew && addEditDocumentModel.url) {
+                        <Alert intent="info">@addEditDocumentModel.url</Alert>
+                    }
+                    <InputFile @ref="fileInput" hidden OnChange="@uploadFiles" />
+                    <div class="bh-product-image__actions">
+                        @if (isNew) {
+                            <Button appearance="transparent" size="small" iconStart="@Icons.CloudArrowUp" onClick="@chooseFile">@L("Upload")</Button>
+                        } else if (addEditDocumentModel.url) {
+                            <Button appearance="transparent" intent="secondary" size="small" iconStart="@Icons.CloudArrowDown" href="@addEditDocumentModel.url" target="_blank" rel="noopener">@L("Download")</Button>
+                        }
+                    </div>
+                    <ValidationMessage For="url" />
+                </div>
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            @if (isNew) {
+                <Button type="submit" intent="success">@L("Save")</Button>
+            } else {
+                <Button type="submit" intent="secondary">@L("Update")</Button>
+            }
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() addEditDocumentModel = new AddEditDocumentCommand();
+
+    private readonly L = localizerFor("AddEditDocumentModal");
+    private readonly validators = addEditDocumentValidators(localizerFor("AddEditDocumentCommandValidator"));
+    private documentTypes: GetAllDocumentTypesResponse[] = [];
+    private fileInput?: InputFile;
+    private fileName = "";
+
+    private get isNew(): boolean {
+        return this.addEditDocumentModel.id === 0;
+    }
+
+    private get documentTypeIds(): number[] {
+        return this.documentTypes.map((documentType) => documentType.id);
+    }
+
+    /** ToStringFunc: a type id's name. */
+    private readonly documentTypeName = (id: number): string => this.documentTypes.find((documentType) => documentType.id === id)?.name ?? "";
+
+    protected override async onInitialized(): Promise<void> {
+        const data = await this.documentTypeManager.getAllAsync();
+        if (data.succeeded) this.documentTypes = data.data;
+    }
+
+    private chooseFile(): void {
+        (this.fileInput?.element as HTMLInputElement | undefined)?.click();
+    }
+
+    /** UploadFiles: the whole file into the request, and into URL as a data URL (as the original does). */
+    private async uploadFiles(e: InputFileChangeEventArgs): Promise<void> {
+        if (e.fileCount === 0) return;
+        this.fileName = e.file.name;
+        const data = await toBase64(e.file);
+        this.addEditDocumentModel.url = `data:application/octet-stream;base64,${data}`;
+        this.addEditDocumentModel.uploadRequest = { data, uploadType: UploadType.Document, extension: extensionOf(e.file.name), fileName: null };
+    }
+
+    private async saveAsync(): Promise<void> {
+        const response = await this.documentManager.saveAsync(this.addEditDocumentModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close(response.data);
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

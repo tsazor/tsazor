@@ -11,20 +11,13 @@ import {
 import { ComponentBase, EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
 import { Button, Dialog } from "../dist/index.js";
 
-/** The renderer type returned by renderTree. */
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
-
-/** Waits out the microtask render queue plus the settle timer. */
-async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
-}
 
 /** A stateful host that owns the dialog's isOpen flag (parent-driven close). */
 class DialogHost extends ComponentBase {
   open = true;
   closes = 0;
+  /** What each onClosed carried (F21: nothing — Escape and the backdrop have no event to give). */
+  closeArguments: unknown[] = [];
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     b.openComponent(0, Dialog);
@@ -34,8 +27,9 @@ class DialogHost extends ComponentBase {
     b.addAttribute(
       4,
       "onClosed",
-      EventCallback.bind(this, () => {
+      EventCallback.bind(this, (argument: unknown) => {
         this.closes++;
+        this.closeArguments.push(argument);
         this.open = false;
         this.stateHasChanged();
       }),
@@ -60,7 +54,7 @@ class DialogHost extends ComponentBase {
 /** Renders the DialogHost root. */
 async function renderHost(): Promise<RenderResult<DialogHost>> {
   const result = await render(DialogHost);
-  await settle(result.renderer);
+  await result.settle();
   return result;
 }
 
@@ -85,7 +79,7 @@ async function renderDialog(): Promise<RenderResult> {
     b.addAttribute(4, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Ship it?"));
     b.closeComponent();
   });
-  await settle(result.renderer);
+  await result.settle();
   return result;
 }
 
@@ -116,6 +110,23 @@ describe("Dialog", () => {
     result.dispose();
   });
 
+  it("takes Bootstrap's sizes: medium is the plain dialog, the others add their class", async () => {
+    const classes: string[] = [];
+    for (const size of ["small", "medium", "large", "xlarge"]) {
+      const result = await renderTree((b) => {
+        b.openComponent(0, Dialog);
+        b.addAttribute(1, "isOpen", true);
+        b.addAttribute(2, "size", size);
+        b.addAttribute(3, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "x"));
+        b.closeComponent();
+      });
+      await result.settle();
+      classes.push(result.container.querySelector("[role=dialog]")!.className);
+      result.dispose();
+    }
+    expect(classes).toEqual(["fui-dialog fui-dialog--small", "fui-dialog", "fui-dialog fui-dialog--large", "fui-dialog fui-dialog--xlarge"]);
+  });
+
   it("closes via Escape and restores body scroll + previously focused element", async () => {
     const sentinel = document.createElement("button");
     document.body.appendChild(sentinel);
@@ -125,7 +136,7 @@ describe("Dialog", () => {
     expect(result.instance.closes).toBe(0);
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    await settle(result.renderer);
+    await result.settle();
 
     expect(result.instance.closes).toBe(1);
     expect(result.container.querySelector(".fui-dialog-overlay")).toBeNull();
@@ -157,17 +168,26 @@ describe("Dialog", () => {
     result.dispose();
   });
 
-  it("closes on backdrop click (target=currentTarget) but not inside the dialog", async () => {
+  it("closes on a press on the backdrop but not inside the dialog", async () => {
     const result = await renderHost();
 
-    result.container.querySelector(".fui-dialog")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await settle(result.renderer);
+    result.container.querySelector(".fui-dialog__body")!.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    await result.settle();
     expect(result.instance.closes).toBe(0);
 
-    result.container.querySelector(".fui-dialog-overlay")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await settle(result.renderer);
+    result.container.querySelector(".fui-dialog-overlay")!.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    await result.settle();
     expect(result.instance.closes).toBe(1);
     expect(result.container.querySelector(".fui-dialog-overlay")).toBeNull();
+    result.dispose();
+  });
+
+  it("raises onClosed without an event, from the close button as from Escape and the backdrop", async () => {
+    const result = await renderHost();
+    result.container.querySelector<HTMLButtonElement>(".fui-dialog__close")!.click();
+    await result.settle();
+    expect(result.instance.closes).toBe(1);
+    expect(result.instance.closeArguments).toEqual([undefined]);
     result.dispose();
   });
 
@@ -183,19 +203,23 @@ describe("Dialog", () => {
       b.addAttribute(2, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "nested"));
       b.closeComponent();
     });
-    await settle(nested.renderer);
+    await nested.settle();
     expect(document.body.style.overflow).toBe("hidden");
 
-    // Closing the host dialog leaves the nested one holding the lock.
+    // Escape belongs to the top dialog (the nested one) only: the host stays open.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    await settle(result.renderer);
+    await result.settle();
+    expect(result.instance.closes).toBe(0);
+
+    // Removing the nested dialog leaves the host holding the lock.
+    nested.dispose();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    // Now Escape closes the host, and the original overflow comes back.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await result.settle();
     expect(result.instance.closes).toBe(1);
     expect(result.container.querySelector(".fui-dialog-overlay")).toBeNull();
-    expect(document.body.style.overflow).toBe("hidden");
-
-    // Disposing the nested tree drops the depth to 0 and restores the
-    // original body overflow ("" in happy-dom terms reads as the saved value).
-    nested.dispose();
     expect(document.body.style.overflow).toBe("auto");
     result.dispose();
   });

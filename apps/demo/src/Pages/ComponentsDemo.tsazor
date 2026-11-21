@@ -1,20 +1,24 @@
 @page "/components"
+@import type { Intent } from "@tsazor/bootstrap"
+@import { GridSort, PaginationState, Toaster } from "@tsazor/bootstrap"
+@import type { GridOrder } from "./grid-order"
+@inject Toaster toaster
 
-<h1>Komponenten-POC (Bootstrap 5)</h1>
-<p class="text-muted">Alle Komponenten stammen aus dem @@components-Paket — jede davon ist eine echte .tsazor-Datei, kompiliert mit dem Tsazor-Compiler.</p>
+<h1>Components POC (Bootstrap 5)</h1>
+<p class="text-muted">All components come from the @@tsazor/bootstrap package — each one is a real .tsazor file, compiled with the Tsazor compiler.</p>
 
 <div class="row g-3">
     <div class="col-lg-6">
         <Card>
             <CardHeader>Buttons, Badge &amp; Spinner</CardHeader>
             <CardBody>
-                <CardTitle>Zähler über EventCallbacks</CardTitle>
+                <CardTitle>Counter via EventCallbacks</CardTitle>
                 <p class="d-flex gap-2 align-items-center">
-                    <Button Variant="primary" OnClick="@poke">Zählen</Button>
-                    <Button Variant="success" Outline="@true" Size="sm" OnClick="@poke">Outline sm</Button>
-                    <Button Variant="danger" Disabled="@true">Disabled</Button>
-                    <Badge Variant="danger" Pill="@true">@clicks</Badge>
-                    <Spinner Variant="primary" Size="sm" />
+                    <Button Intent="primary" OnClick="@poke">Count</Button>
+                    <Button Intent="success" Appearance="outline" Size="small" OnClick="@poke">Outline sm</Button>
+                    <Button Intent="danger" Disabled="@true">Disabled</Button>
+                    <Badge Intent="danger" Pill="@true">@clicks</Badge>
+                    <Spinner Intent="primary" Size="small" />
                 </p>
             </CardBody>
         </Card>
@@ -22,10 +26,10 @@
         <Card>
             <CardHeader>Progress</CardHeader>
             <CardBody>
-                <Progress Value="@progress" Variant="success" Striped="@true" Animated="@true" />
+                <Progress Value="@progress" Intent="success" Striped="@true" Animated="@true" AriaLabel="Demo progress" />
                 <p class="d-flex gap-2 mt-2">
-                    <Button Variant="secondary" Size="sm" OnClick="@moreProgress">+10 %</Button>
-                    <Button Variant="secondary" Size="sm" OnClick="@resetProgress">Reset</Button>
+                    <Button Intent="secondary" Size="small" OnClick="@moreProgress">+10 %</Button>
+                    <Button Intent="secondary" Size="small" OnClick="@resetProgress">Reset</Button>
                     <span class="text-muted">@progress %</span>
                 </p>
             </CardBody>
@@ -35,11 +39,11 @@
             <CardHeader>Alert (dismissible)</CardHeader>
             <CardBody>
                 @if (alertVisible) {
-                    <Alert Variant="warning" Dismissible="@true" OnDismissed="@alertGone">
-                        Warnhinweis — über das × schließt sich die Alert selbst.
+                    <Alert Intent="warning" Dismissible="@true" OnDismissed="@alertGone">
+                        Warning — the × closes the alert by itself.
                     </Alert>
                 } else {
-                    <Button Variant="outline-secondary" Size="sm" OnClick="@restoreAlert">Alert wieder zeigen</Button>
+                    <Button Intent="secondary" Appearance="outline" Size="small" OnClick="@restoreAlert">Show alert again</Button>
                 }
             </CardBody>
         </Card>
@@ -49,9 +53,14 @@
         <Card>
             <CardHeader>Modal</CardHeader>
             <CardBody>
-                <Button Variant="primary" OnClick="@openModal">Modal öffnen</Button>
-                <Modal IsOpen="@modalOpen" Title="Bestätigen" Footer="@modalFooter">
-                    Inhalt des Modals — der Tsazor-Renderer patcht das DOM ohne VDOM.
+                <Button Intent="primary" OnClick="@openModal">Open modal</Button>
+                <Modal IsOpen="@modalOpen" Title="Confirm" OnClosed="@closeModal">
+                    <ChildContent>
+                        Modal content — the Tsazor renderer patches the DOM without a VDOM.
+                    </ChildContent>
+                    <Footer>
+                        <button type="button" class="btn btn-secondary" @onclick="closeModal">Close</button>
+                    </Footer>
                 </Modal>
             </CardBody>
         </Card>
@@ -60,14 +69,14 @@
             <CardHeader>Tabs &amp; Accordion</CardHeader>
             <CardBody>
                 <Tabs>
-                    <Tab Title="Erster">Inhalt Tab 1.</Tab>
-                    <Tab Title="Zweiter">Inhalt Tab 2.</Tab>
-                    <Tab Title="Dritter">Inhalt Tab 3.</Tab>
+                    <Tab Title="First">Content of tab 1.</Tab>
+                    <Tab Title="Second">Content of tab 2.</Tab>
+                    <Tab Title="Third">Content of tab 3.</Tab>
                 </Tabs>
                 <div class="mt-3">
                     <Accordion>
-                        <AccordionItem Title="Was ist Tsazor?">Ein Blazor-Spiegel für TypeScript.</AccordionItem>
-                        <AccordionItem Title="Wie funktioniert das?">RenderTree-Frames wie Blazor, aber rein browserseitig.</AccordionItem>
+                        <AccordionItem Title="What is Tsazor?">A mirror of Blazor for TypeScript.</AccordionItem>
+                        <AccordionItem Title="How does it work?">RenderTree frames like Blazor, but purely in the browser.</AccordionItem>
                     </Accordion>
                 </div>
             </CardBody>
@@ -78,14 +87,14 @@
             <CardBody>
                 <p>
                     <Dropdown Label="@chosenAction">
-                        <DropdownItem OnSelect="@(() => choose('Öffnen'))">Öffnen</DropdownItem>
-                        <DropdownItem OnSelect="@(() => choose('Speichern'))">Speichern</DropdownItem>
-                        <DropdownItem OnSelect="@(() => choose('Löschen'))">Löschen</DropdownItem>
+                        <DropdownItem OnSelect="@(() => choose('Open'))">Open</DropdownItem>
+                        <DropdownItem OnSelect="@(() => choose('Save'))">Save</DropdownItem>
+                        <DropdownItem OnSelect="@(() => choose('Delete'))">Delete</DropdownItem>
                     </Dropdown>
                 </p>
-                <Button Variant="outline-secondary" Size="sm" OnClick="@toggleCollapse">Collapse umschalten</Button>
+                <Button Intent="secondary" Appearance="outline" Size="small" OnClick="@toggleCollapse">Toggle collapse</Button>
                 <Collapse IsOpen="@collapseOpen">
-                    <div class="border rounded p-2 mt-2">Versteckter Inhalt, nur sichtbar bei IsOpen.</div>
+                    <div class="border rounded p-2 mt-2">Hidden content, visible only when IsOpen.</div>
                 </Collapse>
             </CardBody>
         </Card>
@@ -94,24 +103,24 @@
 
 <div class="mt-3">
     <Card>
-        <CardHeader>Tabelle, Pagination &amp; Navigation</CardHeader>
+        <CardHeader>Table, pagination &amp; navigation</CardHeader>
         <CardBody>
             <Breadcrumb>
-                <BreadcrumbItem Href="/">Start</BreadcrumbItem>
-                <BreadcrumbItem Href="/components">Komponenten</BreadcrumbItem>
-                <BreadcrumbItem Active="@true">Beispiele</BreadcrumbItem>
+                <BreadcrumbItem Href="/">Home</BreadcrumbItem>
+                <BreadcrumbItem Href="/components">Components</BreadcrumbItem>
+                <BreadcrumbItem Active="@true">Examples</BreadcrumbItem>
             </Breadcrumb>
 
             <Table Striped="@true" Hover="@true" Responsive="@true">
                 <thead>
-                    <tr><th>#</th><th>Komponente</th><th>Variant</th></tr>
+                    <tr><th>#</th><th>Component</th><th>Intent</th></tr>
                 </thead>
                 <tbody>
                     @for (const item of tableRows) {
                         <tr>
                             <td>@item.n</td>
                             <td>@item.name</td>
-                            <td><Badge Variant="@item.variant">@item.variant</Badge></td>
+                            <td><Badge Intent="@item.variant">@item.variant</Badge></td>
                         </tr>
                     }
                 </tbody>
@@ -119,44 +128,161 @@
 
             <div class="mt-3">
                 <Pagination Page="@page" PageCount="@pageCount" OnPageChanged="@goToPage" />
-                <span class="text-muted ms-2">Seite @(page) von @(pageCount)</span>
+                <span class="text-muted ms-2">Page @(page) of @(pageCount)</span>
             </div>
 
             <div class="mt-3">
                 <ListGroup>
-                    <ListGroupItem Href="/" Active="@true">ListGroup-Eintrag (aktiv)</ListGroupItem>
-                    <ListGroupItem OnClick="@listClick">Klickbarer Eintrag (@listClicks)</ListGroupItem>
+                    <ListGroupItem Href="/" Active="@true">ListGroup item (active)</ListGroupItem>
+                    <ListGroupItem OnClick="@listClick">Clickable item (@listClicks)</ListGroupItem>
                 </ListGroup>
             </div>
         </CardBody>
     </Card>
 </div>
 
+<div class="mt-3">
+    <Card>
+        <CardHeader>Drawer, toast &amp; tooltip</CardHeader>
+        <CardBody>
+            <Button Intent="secondary" Appearance="outline" OnClick="@openDrawer">Filters</Button>
+            <Button Intent="success" OnClick="@saved">Save</Button>
+            <Tooltip Text="Print the order list">
+                <button type="button" class="btn btn-light print" aria-label="Print">🖨</button>
+            </Tooltip>
+            <Drawer IsOpen="@drawerOpen" Title="Filters" Placement="end" OnClosed="@closeDrawer">
+                <Checkbox Label="Only open orders" @bind-Value="onlyOpen" />
+                <Button Intent="primary" OnClick="@closeDrawer">Apply</Button>
+            </Drawer>
+        </CardBody>
+    </Card>
+</div>
+
+<div class="mt-3">
+    <Card>
+        <CardHeader>Form</CardHeader>
+        <CardBody>
+            <Form Model="@order" Validators="@orderRules" OnValidSubmit="@placeOrder">
+                <TextInput Label="Name" Help="As it should appear on the order." @bind-Value="order.name" />
+                <Select Label="Bread" @bind-Value="order.bread">
+                    <option value="">Choose…</option>
+                    <option value="sourdough">Sourdough</option>
+                    <option value="rye">Rye</option>
+                </Select>
+                <NumberInput Label="Loaves" Min="1" Max="10" @bind-Value="order.loaves" />
+                <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="order.slicing" />
+                <TextArea Label="Note" Rows="2" @bind-Value="order.note" />
+                <Checkbox Label="Send me a reminder" Switch="@true" @bind-Value="order.reminder" />
+                <Button Intent="primary" Type="submit">Reserve</Button>
+                <span class="ms-2 order-status">@orderStatus</span>
+            </Form>
+        </CardBody>
+    </Card>
+</div>
+
+<div class="mt-3">
+    <Card>
+        <CardHeader>Switch, Stack &amp; Divider</CardHeader>
+        <CardBody>
+            <Stack Direction="horizontal" Gap="m" Align="center" Wrap="@true">
+                <Switch Label="Deliver tomorrow" @bind-Value="deliverTomorrow" />
+                <Divider Orientation="vertical" />
+                <span class="delivery-state">@(deliverTomorrow ? "Delivery tomorrow" : "Pick-up")</span>
+            </Stack>
+            <Divider Appearance="subtle" />
+            <Stack Direction="vertical" Gap="s">
+                <span>Stacked one</span>
+                <span>Stacked two</span>
+            </Stack>
+        </CardBody>
+    </Card>
+</div>
+
+<div class="mt-3">
+    <Card>
+        <CardHeader>More components</CardHeader>
+        <CardBody>
+            <Typography Variant="h5" Weight="semibold">Today's bakery</Typography>
+            <Typography Variant="caption">Updated a minute ago</Typography>
+            <Stack Gap="m" Align="center" Wrap="@true">
+                <ButtonGroup AriaLabel="View">
+                    <Button Intent="@(view === "day" ? "primary" : "secondary")" OnClick="@(() => this.view = "day")">Day</Button>
+                    <Button Intent="@(view === "week" ? "primary" : "secondary")" OnClick="@(() => this.view = "week")">Week</Button>
+                </ButtonGroup>
+                <span class="view-choice">View: @view</span>
+                <Popover Label="Opening hours" Title="Opening hours">
+                    <p class="mb-0">Mon–Fri 6–18, Sat 7–13.</p>
+                </Popover>
+            </Stack>
+            <Grid MinChildWidth="220px" Gap="m">
+                <DateInput Label="Delivery date" Min="2026-01-01" @bind-Value="deliveryDate" />
+                <FileInput Label="Order list" Accept=".csv" Help="One order per line." />
+                <FormField Label="Crust" Id="crust" Help="How dark the crust should be.">
+                    <input id="crust" type="range" class="form-range" min="1" max="5" aria-describedby="crust-help" />
+                </FormField>
+            </Grid>
+            <p class="delivery-echo" role="status">Delivery: @(deliveryDate || "not set")</p>
+            <div class="d-flex gap-3 align-items-start" role="region" aria-busy="true" aria-label="Loading the customer">
+                <Skeleton Shape="circular" Width="48px" />
+                <div class="flex-grow-1"><Skeleton Lines="3" /></div>
+            </div>
+        </CardBody>
+    </Card>
+</div>
+
+<div class="mt-3">
+    <Card>
+        <CardHeader>DataGrid</CardHeader>
+        <CardBody>
+            <DataGrid Items="@orders" Pagination="@pagination" SelectionMode="multiple" @bind-SelectedItems="selectedOrders" AriaLabel="Orders" Striped="@true" Small="@true">
+                <PropertyColumn Property="(o) => o.id" Title="#" Sortable="@true" />
+                <PropertyColumn Property="(o) => o.customer" Sortable="@true" IsDefaultSortColumn="@true" />
+                <PropertyColumn Property="(o) => o.loaves" Align="end" Sortable="@true" />
+                <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Sortable="@true" />
+                <TemplateColumn Title="Status" Context="order" SortBy="@byStatus">
+                    <span class="@statusClass(order)">@order.status</span>
+                </TemplateColumn>
+            </DataGrid>
+            <Paginator State="@pagination" />
+            <p class="mt-2 mb-0 grid-selection">@selectedOrders.length selected</p>
+        </CardBody>
+    </Card>
+</div>
+
 @code {
+    private readonly orders: GridOrder[] = Array.from({ length: 23 }, (_, i) => ({
+        id: i + 1,
+        customer: ["Marta", "Jonas", "Lena", "Ali", "Noor", "Pavel"][i % 6]!,
+        loaves: (i % 5) + 1,
+        total: ((i % 5) + 1) * 3.4,
+        status: i % 3 === 0 ? "open" : "shipped",
+    }));
+    private readonly pagination = new PaginationState();
+    private selectedOrders: GridOrder[] = [];
+    private deliverTomorrow = false;
+    private view = "week";
+    private deliveryDate = "";
+    private readonly byStatus = GridSort.byAscending((o: GridOrder) => o.status).thenAscending((o) => o.id);
+
+    private statusClass(order: GridOrder): string {
+        return order.status === "open" ? "badge text-bg-warning" : "badge text-bg-success";
+    }
+
     private clicks = 0;
     private progress = 40;
     private modalOpen = false;
     private collapseOpen = false;
-    private chosenAction = "Aktion wählen…";
+    private chosenAction = "Choose an action…";
     private page = 2;
     private pageCount = 7;
     private listClicks = 0;
     private alertVisible = true;
 
-    private tableRows = [
+    private tableRows: { n: number; name: string; variant: Intent }[] = [
         { n: 1, name: "Button", variant: "primary" },
         { n: 2, name: "Alert", variant: "warning" },
         { n: 3, name: "Modal", variant: "secondary" },
     ];
-
-    private modalFooter: RenderFragment = (b) => {
-        b.openElement(0, "button");
-        b.addAttribute(1, "type", "button");
-        b.addAttribute(2, "class", "btn btn-secondary");
-        b.addAttribute(3, "onclick", EventCallback.bind(this, () => this.closeModal()));
-        b.addContent(4, "Schließen");
-        b.closeElement();
-    };
 
     private poke(): void {
         this.clicks++;
@@ -196,6 +322,33 @@
 
     private goToPage(next: number): void {
         this.page = next;
+    }
+
+    private order = { name: "", bread: "", loaves: 1, slicing: "whole", note: "", reminder: false };
+    private orderStatus = "";
+    private readonly slicing = [{ value: "whole", label: "Whole" }, { value: "sliced", label: "Sliced" }];
+    private readonly orderRules = {
+        name: (value: unknown) => (value ? null : "Enter a name."),
+        bread: (value: unknown) => (value ? null : "Choose a bread."),
+    };
+
+    private placeOrder(): void {
+        this.orderStatus = `Reserved: ${this.order.loaves} × ${this.order.bread} for ${this.order.name}.`;
+    }
+
+    private drawerOpen = false;
+    private onlyOpen = false;
+
+    private openDrawer(): void {
+        this.drawerOpen = true;
+    }
+
+    private closeDrawer(): void {
+        this.drawerOpen = false;
+    }
+
+    private saved(): void {
+        this.toaster.show({ title: "Saved", message: "The order list is up to date.", intent: "success" });
     }
 
     private listClick(): void {

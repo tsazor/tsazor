@@ -14,7 +14,11 @@
     <a class="home-card" href="/form">Form</a>
     <a class="home-card" href="/tabs">Tabs</a>
     <a class="home-card" href="/table">Table</a>
+    <a class="home-card" href="/datagrid">DataGrid</a>
     <a class="home-card" href="/dialog">Dialog</a>
+    <a class="home-card" href="/overlays">Menu, Drawer, Tooltip</a>
+    <a class="home-card" href="/structure">Accordion, List, Progress</a>
+    <a class="home-card" href="/more">More components</a>
     <a class="home-card" href="/feedback">Feedback</a>
     <a class="home-card" href="/theme">Theme</a>
     <a class="home-card home-card--accent" href="/dashboard">Dashboard →</a>

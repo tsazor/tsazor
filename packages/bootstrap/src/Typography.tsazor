@@ -1,0 +1,43 @@
+@** Text on Bootstrap's type scale — the same parameters as the Fluent skin's Typography: `variant` picks the style
+    and, by default, the element (h1 to h5, p for body, small for caption); `as` picks another element for the same
+    style (MudText's HtmlTag) — `<h1 class="h5">`, Bootstrap's heading classes; `weight` sets semibold or bold. *@
+@import { withClass } from "./attributes"
+@if (element === "h1") { <h1 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h1> }
+else if (element === "h2") { <h2 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h2> }
+else if (element === "h3") { <h3 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h3> }
+else if (element === "h4") { <h4 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h4> }
+else if (element === "h5") { <h5 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h5> }
+else if (element === "h6") { <h6 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h6> }
+else if (element === "small") { <small @attributes="@withClass(textClass, additionalAttributes)">@childContent</small> }
+else if (element === "span") { <span @attributes="@withClass(textClass, additionalAttributes)">@childContent</span> }
+else if (element === "div") { <div @attributes="@withClass(textClass, additionalAttributes)">@childContent</div> }
+else if (element === "label") { <label @attributes="@withClass(textClass, additionalAttributes)">@childContent</label> }
+else { <p @attributes="@withClass(textClass, additionalAttributes)">@childContent</p> }
+
+@code {
+    /** h1 | h2 | h3 | h4 | h5 | body (default) | caption — the style, and the element unless `as` says. */
+    @Parameter() variant: "h1" | "h2" | "h3" | "h4" | "h5" | "body" | "caption" = "body";
+    /** The element when it isn't the variant's: h1 to h6, p, span, div or label. */
+    @Parameter() as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "span" | "div" | "label";
+    /** Optional weight: semibold | bold. */
+    @Parameter() weight?: "semibold" | "bold";
+    /** The text. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get element(): string {
+        return this.as ?? (this.variant === "body" ? "p" : this.variant === "caption" ? "small" : this.variant);
+    }
+
+    private get textClass(): string | null {
+        const parts: string[] = [];
+        // Another element than the variant's carries the variant's look as a class: Bootstrap styles h1 to h5 by tag.
+        const heading = this.variant !== "body" && this.variant !== "caption";
+        if (heading && this.as !== undefined && this.as !== this.variant) parts.push(this.variant);
+        if (this.variant === "caption") parts.push("d-block", "text-body-secondary");
+        if (this.variant === "caption" && this.as !== undefined) parts.push("small");
+        if (this.weight) parts.push(this.weight === "bold" ? "fw-bold" : "fw-semibold");
+        return parts.length > 0 ? parts.join(" ") : null;
+    }
+}

@@ -1,0 +1,222 @@
+/* Slider — Fluent 2: a rail filled with the brand color up to the thumb, a brand dot in a ring of the background. The
+   native input type="range", styled: --fui-slider-at (0–1, from the component) is where the thumb sits. */
+
+.fui-slider {
+  --fui-slider-thumb: 20px;
+  --fui-slider-rail: 4px;
+  --fui-slider-fill: var(--fui-brand-background);
+  --fui-slider-empty: var(--fui-foreground-3);
+  --fui-slider-direction: to right;
+  /* The thumb's center: the rail runs from half a thumb to half a thumb before the end. */
+  --fui-slider-center: calc(var(--fui-slider-thumb) / 2 + (100% - var(--fui-slider-thumb)) * var(--fui-slider-at, 0));
+  font-family: var(--fui-font-family);
+}
+
+.fui-slider--small {
+  --fui-slider-thumb: 16px;
+  --fui-slider-rail: 2px;
+}
+
+.fui-slider--disabled {
+  --fui-slider-fill: var(--fui-foreground-disabled);
+  --fui-slider-empty: var(--fui-stroke-disabled);
+}
+
+.fui-slider__control {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-m);
+}
+
+.fui-slider__rail {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.fui-slider--labelled-ticks .fui-slider__rail {
+  padding-block-end: calc(var(--fui-line-height-caption) + 4px);
+}
+
+.fui-slider__input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  inline-size: 100%;
+  block-size: var(--fui-slider-thumb);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fui-slider__input:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+  border-radius: var(--fui-radius-circular);
+}
+
+.fui-slider__input:disabled {
+  cursor: not-allowed;
+}
+
+/* The rail, filled up to the thumb's center (each engine has its own pseudo-elements). */
+.fui-slider__input::-webkit-slider-runnable-track {
+  block-size: var(--fui-slider-rail);
+  border-radius: var(--fui-radius-circular);
+  background: linear-gradient(var(--fui-slider-direction), var(--fui-slider-fill) var(--fui-slider-center), var(--fui-slider-empty) var(--fui-slider-center));
+}
+
+.fui-slider__input::-moz-range-track {
+  block-size: var(--fui-slider-rail);
+  border-radius: var(--fui-radius-circular);
+  background: linear-gradient(var(--fui-slider-direction), var(--fui-slider-fill) var(--fui-slider-center), var(--fui-slider-empty) var(--fui-slider-center));
+}
+
+.fui-slider__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: var(--fui-slider-thumb);
+  block-size: var(--fui-slider-thumb);
+  margin-block-start: calc((var(--fui-slider-rail) - var(--fui-slider-thumb)) / 2);
+  border: calc(var(--fui-slider-thumb) / 5) solid var(--fui-background-1);
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-slider-fill);
+  box-shadow: 0 0 0 1px var(--fui-control-stroke);
+}
+
+.fui-slider__input::-moz-range-thumb {
+  box-sizing: border-box;
+  inline-size: var(--fui-slider-thumb);
+  block-size: var(--fui-slider-thumb);
+  border: calc(var(--fui-slider-thumb) / 5) solid var(--fui-background-1);
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-slider-fill);
+  box-shadow: 0 0 0 1px var(--fui-control-stroke);
+}
+
+.fui-slider:not(.fui-slider--disabled) .fui-slider__input:hover {
+  --fui-slider-fill: var(--fui-brand-background-hover);
+}
+
+.fui-slider:not(.fui-slider--disabled) .fui-slider__input:active {
+  --fui-slider-fill: var(--fui-brand-background-pressed);
+}
+
+.fui-slider__input:dir(rtl) {
+  --fui-slider-direction: to left;
+}
+
+/* The marks under the rail, one per step, at the thumb's center for their value. */
+.fui-slider__ticks {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(var(--fui-slider-thumb) / 2 + var(--fui-slider-rail));
+  pointer-events: none;
+}
+
+.fui-slider__tick {
+  position: absolute;
+  inset-inline-start: calc(var(--fui-slider-thumb) / 2 + (100% - var(--fui-slider-thumb)) * var(--fui-slider-tick));
+  inline-size: 1px;
+  block-size: 4px;
+  background: var(--fui-foreground-3);
+}
+
+.fui-slider__tick-label {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: 0;
+  translate: -50% 0;
+  font-size: var(--fui-font-size-caption);
+  line-height: var(--fui-line-height-caption);
+  color: var(--fui-foreground-2);
+  white-space: nowrap;
+}
+
+.fui-slider__tick-label:dir(rtl) {
+  translate: 50% 0;
+}
+
+/* The first and the last label end with the rail, not half beyond it. */
+.fui-slider__tick:first-child .fui-slider__tick-label {
+  translate: calc(var(--fui-slider-thumb) / -2) 0;
+}
+
+.fui-slider__tick:last-child .fui-slider__tick-label {
+  translate: calc(var(--fui-slider-thumb) / 2 - 100%) 0;
+}
+
+.fui-slider__tick:first-child .fui-slider__tick-label:dir(rtl) {
+  translate: calc(var(--fui-slider-thumb) / 2) 0;
+}
+
+.fui-slider__tick:last-child .fui-slider__tick-label:dir(rtl) {
+  translate: calc(100% - var(--fui-slider-thumb) / 2) 0;
+}
+
+.fui-slider__value {
+  min-inline-size: 3ch;
+  font-size: var(--fui-font-size-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--fui-foreground-1);
+  text-align: end;
+}
+
+.fui-slider--disabled .fui-slider__value {
+  color: var(--fui-foreground-disabled);
+}
+
+/* Vertical: the input stands up (min at the bottom), the marks beside it. */
+.fui-slider--vertical {
+  --fui-slider-direction: to top;
+  --fui-slider-length: 160px;
+}
+
+.fui-slider--vertical .fui-slider__control {
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+
+.fui-slider--vertical .fui-slider__rail {
+  flex: none;
+  block-size: var(--fui-slider-length);
+}
+
+.fui-slider--vertical.fui-slider--labelled-ticks .fui-slider__rail {
+  padding-block-end: 0;
+}
+
+/* (inline-size and block-size turn with the writing mode: the input is 100% long and a thumb wide.) */
+.fui-slider--vertical .fui-slider__input {
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+.fui-slider--vertical .fui-slider__input:dir(rtl) {
+  --fui-slider-direction: to top;
+}
+
+.fui-slider--vertical .fui-slider__ticks {
+  inset-inline: auto;
+  inset-inline-start: calc(var(--fui-slider-thumb) / 2 + var(--fui-slider-rail));
+  inset-block: 0;
+}
+
+.fui-slider--vertical .fui-slider__tick {
+  inset-inline-start: 0;
+  inset-block-end: calc(var(--fui-slider-thumb) / 2 + (100% - var(--fui-slider-thumb)) * var(--fui-slider-tick));
+  inline-size: 4px;
+  block-size: 1px;
+}
+
+.fui-slider--vertical .fui-slider__tick .fui-slider__tick-label,
+.fui-slider--vertical .fui-slider__tick .fui-slider__tick-label:dir(rtl) {
+  inset-block-start: auto;
+  inset-inline-start: 8px;
+  translate: 0 -50%;
+}
+
+.fui-slider--vertical .fui-slider__value {
+  text-align: start;
+}

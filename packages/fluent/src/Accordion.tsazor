@@ -1,0 +1,60 @@
+@** A Fluent UI 2 accordion: a stack of AccordionItem children, each with a header button that shows
+    or hides its panel. It cascades itself to the items; at most one item is open at a time (the
+    first one initially), and opening an item closes the others. *@
+@import type AccordionItem from "./AccordionItem.tsazor"
+@import { uniqueId } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.accordionAttributes">@childContent</div>
+
+@code {
+    /** The AccordionItem children. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    readonly isCascadingValueSupplier = true;
+    readonly isFixed = false;
+    readonly cascadeName = "FluentAccordion";
+    get cascadeValue(): unknown {
+        return this;
+    }
+
+    private items: AccordionItem[] = [];
+    private readonly idBase = uniqueId("fui-accordion");
+    /** -1 = nothing open. */
+    private openIndexInternal = 0;
+
+    get openIndex(): number {
+        return this.openIndexInternal;
+    }
+
+    private get accordionAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-accordion" }, this.additionalAttributes);
+    }
+
+    /** @internal The id of item `index`'s header button. */
+    headerId(index: number): string {
+        return `${this.idBase}-header-${index}`;
+    }
+
+    /** @internal The id of item `index`'s panel. */
+    panelId(index: number): string {
+        return `${this.idBase}-panel-${index}`;
+    }
+
+    /** @internal Called by AccordionItem during its initialization. */
+    registerItem(item: AccordionItem): void {
+        if (this.items.includes(item)) return;
+        item.setIndex(this.items.length);
+        this.items.push(item);
+        this.stateHasChanged();
+    }
+
+    /** @internal Toggles one item; opening one closes the others. */
+    toggle(index: number): void {
+        if (index < 0 || index >= this.items.length) return;
+        this.openIndexInternal = this.openIndexInternal === index ? -1 : index;
+        this.stateHasChanged();
+    }
+}

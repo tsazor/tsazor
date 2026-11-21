@@ -1,0 +1,338 @@
+/* DataGrid — the Table surface (Table.tsazor.css) plus sorting, selection and alignment. */
+
+/* A column's alignment, its header included (the Table's header rule aligns to the start). */
+.fui-datagrid__cell--center,
+.fui-table__head th.fui-datagrid__cell--center {
+  text-align: center;
+}
+
+.fui-datagrid__cell--end,
+.fui-table__head th.fui-datagrid__cell--end {
+  text-align: end;
+}
+
+/* The options panel drops below its header cell, so the header cell anchors it (sticky headers already position it). */
+.fui-datagrid th {
+  position: relative;
+}
+
+/* A column header: the title (or sort button) and the options button side by side (QuickGrid's .col-header-content). */
+.fui-datagrid__header {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-xs, 4px);
+  min-width: 0;
+}
+
+.fui-datagrid__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-gap-xs, 4px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fui-datagrid__sort:hover {
+  color: var(--fui-brand-background);
+}
+
+.fui-datagrid__sort:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+  border-radius: var(--fui-radius-sm);
+}
+
+.fui-datagrid__sort-indicator {
+  display: inline-flex;
+  color: var(--fui-foreground-3);
+}
+
+th[aria-sort] .fui-datagrid__sort-indicator {
+  color: var(--fui-brand-background);
+}
+
+/* The filter glyph that opens a column's options panel (QuickGrid's .col-options-button). */
+.fui-datagrid__options {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fui-foreground-3);
+  cursor: pointer;
+}
+
+.fui-datagrid__options:hover {
+  color: var(--fui-brand-background);
+}
+
+.fui-datagrid__options:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+  border-radius: var(--fui-radius-sm);
+}
+
+/* A column with an active filter: the options button keeps its filter mark. */
+.fui-datagrid__options--active {
+  color: var(--fui-brand-background);
+}
+
+/* The open column options, dropped below the header (QuickGrid's .col-options). */
+.fui-datagrid__options-panel {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  min-width: max-content;
+  padding: var(--fui-gap-md, 12px);
+  background: var(--fui-background-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+}
+
+.fui-datagrid__cell--end .fui-datagrid__options-panel {
+  left: unset;
+  right: 0;
+}
+
+/* The built-in filter: operator, value and its actions in a row (they stay narrow). */
+.fui-datagrid__filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fui-gap-sm, 8px);
+  align-items: center;
+}
+
+.fui-datagrid__filter-operator,
+.fui-datagrid__filter-value {
+  font: inherit;
+  padding: 3px 8px;
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-sm);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+}
+
+.fui-datagrid__filter-operator:focus-visible,
+.fui-datagrid__filter-value:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-datagrid__filter-operator {
+  min-width: 8rem;
+}
+
+.fui-datagrid__filter-value {
+  width: 10rem;
+}
+
+.fui-datagrid__filter-actions {
+  display: inline-flex;
+  gap: var(--fui-gap-xs, 4px);
+}
+
+.fui-datagrid__filter-action {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid var(--fui-stroke-2);
+  border-radius: var(--fui-radius-sm);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+}
+
+.fui-datagrid__filter-action:hover {
+  background: var(--fui-background-3);
+}
+
+.fui-datagrid__select {
+  width: 1%;
+}
+
+.fui-datagrid__check {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--fui-brand-background);
+  cursor: pointer;
+}
+
+/* A grid with onRowClick: the row says it can be clicked, and answers the pointer. */
+.fui-datagrid__row--clickable {
+  cursor: pointer;
+}
+
+.fui-datagrid__row--clickable:hover {
+  background: var(--fui-control-fill-input-hover);
+}
+
+.fui-datagrid__row--selected {
+  background: var(--fui-control-fill-selected);
+}
+
+.fui-table--bordered th,
+.fui-table--bordered td {
+  border: 1px solid var(--fui-stroke-1);
+}
+
+/* The footer's aggregates: separated from the rows, as strong as a header. */
+.fui-datagrid__foot td {
+  border-top: 1px solid var(--fui-stroke-2);
+  font-weight: 600;
+}
+
+/* The row in the grid's inline edit: it stands out from the rows around it. */
+.fui-datagrid__row--editing {
+  background: var(--fui-control-fill-subtle);
+}
+
+/* A row's details (detailContent): a full-width row below it, set off from the data rows; the DetailsColumn's
+   chevron turns down while they show (and mirrors right to left). */
+.fui-datagrid__detail > td {
+  padding: var(--fui-spacing-m) var(--fui-spacing-l);
+  background: var(--fui-background-2);
+}
+
+.fui-datagrid__details-column {
+  inline-size: 1%;
+  white-space: nowrap;
+}
+
+.fui-datagrid__details-toggle {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  background: transparent;
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+}
+
+.fui-datagrid__details-toggle:hover {
+  background: var(--fui-control-fill-hover);
+  color: var(--fui-foreground-1);
+}
+
+.fui-datagrid__details-toggle:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 0;
+}
+
+.fui-datagrid__details-toggle .fui-icon {
+  transition: transform 100ms ease;
+}
+
+[dir="rtl"] .fui-datagrid__details-toggle .fui-icon {
+  transform: scaleX(-1);
+}
+
+.fui-datagrid__details-toggle--open .fui-icon,
+[dir="rtl"] .fui-datagrid__details-toggle--open .fui-icon {
+  transform: rotate(90deg);
+}
+
+/* The group: a full-width header row of its own; the chevron turns with the open rows underneath. */
+.fui-datagrid__group-cell {
+  padding: 0;
+}
+
+.fui-datagrid__group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-gap-xs, 4px);
+  padding: var(--fui-gap-xs, 4px) 0;
+  border: none;
+  background: transparent;
+  color: var(--fui-foreground-1);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fui-datagrid__group-toggle .fui-datagrid__group-chevron {
+  display: inline-flex;
+  color: var(--fui-foreground-3);
+  transition: transform 100ms ease;
+}
+
+.fui-datagrid__group-toggle[aria-expanded="false"] .fui-datagrid__group-chevron {
+  transform: rotate(-90deg);
+}
+
+.fui-datagrid__group-value {
+  font-weight: 600;
+}
+
+.fui-datagrid__group-count {
+  color: var(--fui-foreground-3);
+}
+
+/* Widths: only a sized table can lay its cols out (the unsized one keeps the natural sizes). */
+.fui-datagrid--sized {
+  table-layout: fixed;
+}
+
+/* The reorder grip: a grabbable, focusable handle of a column — its tap target is 24 px (the 20px
+   icon needs it); flex:none keeps it (the header's row squeezes otherwise, as the axe's rule saw). */
+.fui-datagrid__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-inline-start: calc(var(--fui-gap-xs, 4px) * -1);
+  color: var(--fui-foreground-3);
+  cursor: grab;
+  border-radius: var(--fui-radius-sm);
+}
+
+.fui-datagrid__grip:active {
+  cursor: grabbing;
+  color: var(--fui-brand-background);
+}
+
+.fui-datagrid__grip:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+}
+
+/* The resize handle at the th's end; it catches the pointer, the keyboard moves 5 px (Shift: 20). */
+.fui-datagrid__resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.fui-datagrid__resize:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+/* The header a reorder drag's pointer is over (the drag marks it; the skin's CSS styles it). */
+.fui-datagrid th[data-tz-grid-target] {
+  box-shadow: inset 0 0 0 1px var(--fui-brand-background);
+}
+
+.fui-table-wrap--scroll {
+  overflow-x: auto;
+}
+
+.fui-table__head--sticky th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--fui-background-1);
+}

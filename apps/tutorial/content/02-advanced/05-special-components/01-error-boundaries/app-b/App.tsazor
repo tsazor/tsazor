@@ -1,0 +1,21 @@
+@import { ErrorBoundary } from "@tsazor/runtime"
+
+<h1>Dashboard</h1>
+
+<ErrorBoundary @ref="boundary">
+    <ChildContent>
+        <Weather />
+    </ChildContent>
+    <ErrorContent Context="error">
+        <section class="failed">
+            <p>The weather widget failed: @error.message</p>
+            <button @onclick="() => boundary?.recover()">Try again</button>
+        </section>
+    </ErrorContent>
+</ErrorBoundary>
+
+<Notes />
+
+@code {
+    boundary?: ErrorBoundary;
+}

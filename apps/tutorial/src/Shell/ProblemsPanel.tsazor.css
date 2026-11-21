@@ -1,0 +1,58 @@
+.problems {
+    max-height: 9rem;
+    overflow: auto;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.82rem;
+}
+
+.problems--crash {
+    padding: 0.6rem 0.9rem;
+    color: var(--danger);
+}
+
+.problems--crash pre {
+    margin: 0.4rem 0 0;
+    white-space: pre-wrap;
+    font-size: 0.75rem;
+}
+
+.problem {
+    display: flex;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.25rem 0.9rem;
+    border: none;
+    background: none;
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.problem:hover {
+    background: var(--bg-sunken);
+}
+
+.where {
+    font-family: var(--font-mono);
+    color: var(--fg-muted);
+    white-space: nowrap;
+}
+
+.code {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.problem--error .code {
+    color: var(--danger);
+}
+
+.problem--warning .code {
+    color: var(--warning);
+}

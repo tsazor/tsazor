@@ -1,0 +1,14 @@
+@if (!user.loggedIn) {
+    <button @onclick="toggle">Log in</button>
+} else {
+    <p>Welcome back, @user.name!</p>
+    <button @onclick="toggle">Log out</button>
+}
+
+@code {
+    user = { name: "Ada", loggedIn: false };
+
+    toggle() {
+        this.user.loggedIn = !this.user.loggedIn;
+    }
+}

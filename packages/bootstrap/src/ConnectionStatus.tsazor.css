@@ -1,0 +1,31 @@
+/* ConnectionStatus: the badge's dot pulses while the connection is being (re)opened; still when reduced motion is asked. */
+
+.tz-connection-status {
+  display: inline-flex;
+}
+
+.tz-connection-status__dot {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-inline-end: 0.4em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tz-connection-status--connecting .tz-connection-status__dot,
+.tz-connection-status--reconnecting .tz-connection-status__dot {
+  animation: tz-connection-status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes tz-connection-status-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tz-connection-status__dot {
+    animation: none !important;
+  }
+}

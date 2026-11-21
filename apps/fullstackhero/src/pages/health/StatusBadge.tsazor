@@ -1,0 +1,12 @@
+@* pages/health/page.tsx's StatusBadge: a probe's status as a badge. *@
+@import type { HealthStatus } from "@/api/health"
+
+<Badge variant="@variant">@status</Badge>
+
+@code {
+    @Parameter() status: HealthStatus = "";
+
+    private get variant(): "success" | "warning" | "danger" {
+        return this.status === "Healthy" ? "success" : this.status === "Degraded" ? "warning" : "danger";
+    }
+}

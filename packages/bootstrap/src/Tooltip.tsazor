@@ -1,0 +1,32 @@
+@** A Bootstrap tooltip around an element: put the element (a button, a link, an icon) inside.
+    The tooltip shows when the pointer rests on it or it takes focus, stays while the pointer moves
+    onto the tooltip, and closes on Escape; the element is described by it for screen readers. For
+    an element of your own, the attachment does the same: `<button @attach="tooltip('Save')">`. *@
+@import type { Placement } from "@tsazor/ui"
+@import type { Attachment } from "@tsazor/runtime"
+@import { tooltip } from "./tooltip-attachment"
+
+<span class="d-inline-block" @attach="anchor">@childContent</span>
+
+@code {
+    /** The tooltip's text. */
+    @Parameter() text: string = "";
+    /** Where it sits; it flips when there is no room. */
+    @Parameter() placement: Placement = "top";
+    /** The element the tooltip describes. */
+    @Parameter() childContent?: RenderFragment;
+
+    private anchorFor = "";
+    private anchorAttachment?: Attachment<HTMLElement>;
+
+    /** Attaches to the first element inside (the one that takes focus); stable while text and placement stay. */
+    private get anchor(): Attachment<HTMLElement> {
+        const key = `${this.placement}|${this.text}`;
+        if (!this.anchorAttachment || key !== this.anchorFor) {
+            const attachment = tooltip(this.text, this.placement);
+            this.anchorFor = key;
+            this.anchorAttachment = (wrapper) => attachment((wrapper.firstElementChild as HTMLElement | null) ?? wrapper);
+        }
+        return this.anchorAttachment;
+    }
+}

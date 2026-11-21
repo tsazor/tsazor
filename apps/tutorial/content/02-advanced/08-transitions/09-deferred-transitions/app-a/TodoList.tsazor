@@ -1,0 +1,17 @@
+@import type { Todo } from "./Todo"
+
+<ul class="todos">
+    @foreach (const todo of Todos) {
+        <li @key="todo.id">
+            <label>
+                <input type="checkbox" checked="@todo.done" @onchange="() => onToggle?.invokeAsync(todo)" />
+                @todo.description
+            </label>
+        </li>
+    }
+</ul>
+
+@code {
+    @Parameter() Todos: Todo[] = [];
+    @Parameter() onToggle?: EventCallback<Todo>;
+}

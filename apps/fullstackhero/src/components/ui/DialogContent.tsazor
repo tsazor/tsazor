@@ -1,0 +1,66 @@
+@* components/ui/dialog.tsx's DialogContent: the overlay and the centered panel, with the Close button in its corner.
+   Radix's behavior comes from @tsazor/ui: the focus moves in and stays (focusTrap, back to the opener on close), the
+   page behind doesn't scroll (scrollLock), and Escape or a press outside the panel asks the Dialog to close
+   (dismissible) — one layer, so a menu open in it closes first. Radix's Portal is the browser's top layer
+   (lib/top-layer.ts). Radix animates the exit; this unmounts at once. *@
+@import { X } from "lucide"
+@import { createLayer, dismissible, focusableElements, focusTrap, scrollLock } from "@tsazor/ui"
+@import { cn } from "@/lib/cn"
+@import { topLayer, topLayerClass } from "@/lib/top-layer"
+@import Dialog from "./Dialog.tsazor"
+
+@if (dialog?.open) {
+    <div popover="manual" class="@topLayerClass" @attach="topLayer()">
+        <div data-slot="dialog-overlay" data-state="open" class="fixed inset-0 z-50 bg-[oklch(0_0_0_/_0.4)] backdrop-blur-[6px] data-[state=open]:animate-fsh-overlay-in" @attach="lock"></div>
+        <div role="dialog" aria-modal="true" aria-labelledby="@dialog.titleId" aria-describedby="@dialog.descriptionId" data-slot="dialog-content" data-state="open" tabindex="-1"
+             @attributes="@this.attributes" @attach="trap" @attach:dismiss="dismiss">
+            @childContent
+            <button type="button" data-slot="dialog-close" aria-label="Close" class="@closeClass" @onclick="this.close"><Icon icon="@X" class="size-4" /></button>
+        </div>
+    </div>
+}
+
+@code {
+    /** Max width — defaults to `md`: `sm` = max-w-sm, `md` = max-w-lg, `lg` = max-w-2xl, `xl` = max-w-4xl. */
+    @Parameter() size: "sm" | "md" | "lg" | "xl" = "md";
+    @CascadingParameter({ type: Dialog }) dialog?: Dialog;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly layer = createLayer();
+    // Radix focuses the element marked autofocus, else the first focusable one (the close button comes last).
+    private readonly trap = focusTrap({ layer: this.layer, initialFocus: (element) => element.querySelector<HTMLElement>("[autofocus]") ?? focusableElements(element)[0] ?? null });
+    private readonly lock = scrollLock();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close() });
+
+    private readonly closeClass = cn(
+        "absolute top-3.5 right-3.5 size-9 rounded-lg flex items-center justify-center",
+        "text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)] hover:text-[var(--color-foreground)]",
+        "hover:bg-[var(--color-accent)] transition-colors cursor-pointer outline-none",
+        "focus-visible:border-[var(--color-ring)] focus-visible:ring-[3px] focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]",
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+    );
+
+    private get attributes(): Record<string, unknown> {
+        const sizeClass = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" }[this.size];
+        return {
+            ...this.additionalAttributes,
+            class: cn(
+                "fixed left-1/2 top-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2",
+                // Cap height to the viewport and scroll when content overflows so the footer
+                // (submit/cancel) stays reachable on short viewports and tall forms.
+                "max-h-[calc(100dvh-2rem)] overflow-y-auto",
+                sizeClass,
+                "rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]",
+                "shadow-xl outline-none",
+                "data-[state=open]:animate-fsh-dialog-in",
+                this.additionalAttributes?.class as string | undefined,
+            ),
+        };
+    }
+
+    private close(): void {
+        // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
+        this.dialog?.setOpen(false)?.catch((error) => this.dispatchExceptionAsync(error));
+    }
+}

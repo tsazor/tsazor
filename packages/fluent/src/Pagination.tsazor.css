@@ -5,6 +5,9 @@
 }
 .fui-pagination__button,
 .fui-pagination__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: var(--fui-height-s);
     height: var(--fui-height-s);
     padding: 0 var(--fui-spacing-s);
@@ -15,26 +18,32 @@
     font-size: var(--fui-font-size-body);
     cursor: pointer;
 }
-.fui-pagination__button:hover:not(:disabled),
-.fui-pagination__page:hover:not(:disabled) {
+.fui-pagination__button:hover:not(:disabled):not([aria-disabled="true"]),
+.fui-pagination__page:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--fui-stroke-1);
     color: var(--fui-foreground-1);
 }
-.fui-pagination__button:disabled {
+.fui-pagination__button:disabled,
+.fui-pagination__button[aria-disabled="true"] {
     color: var(--fui-foreground-disabled);
     cursor: default;
 }
 .fui-pagination__page--current {
-    background: var(--fui-accent);
+    background: var(--fui-brand-background);
     color: var(--fui-foreground-on-brand);
     font-weight: var(--fui-font-weight-semibold);
 }
-.fui-pagination__page--current:hover:not(:disabled) {
-    background: var(--fui-accent-hover);
+.fui-pagination__page--current:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--fui-brand-background-hover);
     color: var(--fui-foreground-on-brand);
 }
 .fui-pagination__ellipsis {
     min-width: var(--fui-height-s);
     text-align: center;
     color: var(--fui-foreground-3);
+}
+
+/* Right to left: the arrows point the way the pages go (first and previous at the right). */
+.fui-pagination__button:dir(rtl) .fui-icon {
+  transform: scaleX(-1);
 }

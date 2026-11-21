@@ -1,0 +1,49 @@
+/* Skeleton — Fluent 2 loading placeholder: neutral shapes with a moving shimmer. */
+
+.fui-skeleton--text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-s);
+}
+
+.fui-skeleton__line,
+.fui-skeleton__block {
+  display: block;
+  background: linear-gradient(90deg, var(--fui-control-fill-active) 0%, var(--fui-control-fill-hover) 50%, var(--fui-control-fill-active) 100%);
+  background-size: 300% 100%;
+  animation: fui-skeleton-shimmer 1.6s linear infinite;
+}
+
+.fui-skeleton__line {
+  height: 12px;
+  border-radius: var(--fui-radius-sm);
+}
+
+.fui-skeleton__line--last {
+  width: 60%;
+}
+
+.fui-skeleton--rect {
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-skeleton--circle {
+  display: inline-block;
+  border-radius: 50%;
+}
+
+@keyframes fui-skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-skeleton__line,
+  .fui-skeleton__block {
+    animation: none;
+  }
+}

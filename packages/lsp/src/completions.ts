@@ -1,25 +1,49 @@
 /**
  * Completion for .tsazor files: classifies the cursor position from the raw
  * source (the AST has no per-attribute-name/value spans) and returns
- * candidates for four contexts:
+ * candidates for five contexts:
  *
- *   <Gr                    → component tags (from @using dirs + runtime built-ins)
- *   <Greeter …             → the resolved component's @Parameter() attributes,
- *                            plus directive attributes (@bind, @onclick, …)
- *   @                      → directives (top level) or expression members
- *   Count: @co             → members of @code state, the code-behind class and @inject fields
+ *   <Gr                    → component tags (@using dirs, package exports, runtime built-ins)
+ *                                and, inside a component's content, its named slots
+ *                                (`<Found>` — the RenderFragment parameters of the
+ *                                direct parent, 2.5)
+ *   <Greeter …             → the resolved component's parameters (2.1 metadata,
+ *                            incl. inherited; @bind-X where XChanged is an
+ *                            EventCallback), plus directive attributes (@bind, @onclick, …)
+ *   @                      → directives (top level) or expression members — members
+ *                            include the fragment's context variable inside a slot body
+ *   Count: @co             → members of @code state, the code-behind class, @inject fields
+ *                            and @import names (own + inherited from _Imports.tsazor)
+ *   <Found …               → of a slot: the Context attribute (RenderFragment<T> only)
  *
  * Positions: LSP (0-based line/character) in, completions out. The compiler's
  * AST spans are 1-based/0-based-columns — nodeAt already handles the shift.
  */
-import { parseDocument, DiagnosticBag, type CodeBlockNode, type ElementNode, type ExpressionNode } from "@tsazor/compiler";
-import { RUNTIME_COMPONENT_PARAMS, RUNTIME_PACKAGE, RUNTIME_COMPONENTS, candidateDirs } from "@tsazor/workspace";
+import { maskedCode, type CodeBlockNode, type ComponentParameter, type ElementNode, type ExpressionNode, type MarkupNode } from "@tsazor/compiler";
+import {
+  RUNTIME_MANIFEST,
+  RUNTIME_PACKAGE,
+  RUNTIME_COMPONENTS,
+  candidateDirs,
+  isPathLikeUsing,
+  packageExports,
+} from "@tsazor/workspace";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { AnalyzedFile } from "./analysis";
-import { nodeAt } from "./analysis";
+import type { AnalyzedFile } from "./analysis.js";
+import { ATTACH_DOC, MOTION_DOCS, nodeAt } from "./analysis.js";
+import {
+  chainAt,
+  contextNameOf,
+  elementMetadata,
+  enclosingElementOf,
+  fragmentParametersOfParent,
+  fragmentContextAt,
+  innermostElementOf,
+  slotParameterOf,
+} from "./slots.js";
 
-export type CompletionKind = "component" | "attribute" | "directive" | "member";
+export type CompletionKind = "component" | "attribute" | "directive" | "member" | "slot";
 
 export interface CompletionCandidate {
   label: string;
@@ -37,17 +61,18 @@ export function completeAt(analyzed: AnalyzedFile, line: number, character: numb
   const node = nodeAt(analyzed.document, line, character);
   const typed = source.slice(offsetOfLineStart(source, cursor), cursor);
 
-  if (node?.kind === "codeBlock") return [];
+  if (node?.kind === "codeBlock" || node?.kind === "statement") return [];
   if (node?.kind === "expression") {
     const expression = node as ExpressionNode;
     const start = offsetAt(source, expression.pos.line - 1, expression.pos.column);
     const prefix = source.slice(start, cursor).replace(/^@/, "");
+    const context = slotContextCandidates(analyzed, chainAt(analyzed, line, character));
     if (directiveShapedLine(typed)) {
       // Line so far is only "@word": could be a directive or an expression —
       // offer both (VS Code filters by the remaining prefix either way).
-      return [...directiveCandidates(prefix), ...memberCandidates(analyzed, prefix)];
+      return [...directiveCandidates(prefix), ...memberCandidates(analyzed, prefix, context)];
     }
-    return memberCandidates(analyzed, prefix);
+    return memberCandidates(analyzed, prefix, context);
   }
 
   if (node?.kind === "directive") {
@@ -57,16 +82,51 @@ export function completeAt(analyzed: AnalyzedFile, line: number, character: numb
   if (node?.kind === "element") {
     const element = node as ElementNode;
     const region = classifyTagRegion(analyzed, element, cursor);
-    if (region.state === "past") return plainFallback(analyzed, typed); // cursor in the element's content
+    const chain = chainAt(analyzed, line, character);
+    if (region.state === "past") return contentCandidates(analyzed, typed, chain); // cursor in the element's content
     if (region.state === "value") return [];
     if (region.state === "tagName") {
-      if (/^[A-Za-z]/.test(region.prefix) || region.prefix === "") return componentCandidates(analyzed, region.prefix);
+      if (/^[A-Za-z]/.test(region.prefix) || region.prefix === "") {
+        const fragments = fragmentParametersOfParent(analyzed, chain, true);
+        return [...tagCandidates(analyzed, chain, true, region.prefix), ...componentCandidates(analyzed, region.prefix).filter(notSlotTag(fragments))];
+      }
       return [];
     }
-    return attributeCandidates(analyzed, element, region.prefix);
+    return attributeCandidates(analyzed, element, region.prefix, chain);
   }
 
+  const context = slotContextCandidates(analyzed, chainAt(analyzed, line, character));
+  if (context.length > 0) {
+    const tags = plainFallback(analyzed, typed);
+    return tags.length > 0 ? tags : context;
+  }
   return plainFallback(analyzed, typed);
+}
+
+/**
+ * Content region of the innermost element: a tag being typed — slot and
+ * component candidates of the host; an expression — members with the
+ * fragment's context variable.
+ */
+function contentCandidates(analyzed: AnalyzedFile, typed: string, chain: readonly MarkupNode[]): CompletionCandidate[] {
+  const tagTyped = typed.match(/<(?:([A-Za-z][\w.\-]*))?$/);
+  if (tagTyped !== null) {
+    const fragments = fragmentParametersOfParent(analyzed, chain, false);
+    return [
+      ...tagCandidates(analyzed, chain, false, tagTyped[1] ?? ""),
+      ...componentCandidates(analyzed, tagTyped[1] ?? "").filter(notSlotTag(fragments)),
+    ];
+  }
+  const expressionTyped = typed.match(/@([\w$]*)$/);
+  if (expressionTyped !== null) {
+    const word = expressionTyped[1] ?? "";
+    const context = slotContextCandidates(analyzed, chain);
+    if (directiveShapedLine(typed)) {
+      return [...directiveCandidates(word), ...memberCandidates(analyzed, word, context)];
+    }
+    return memberCandidates(analyzed, word, context);
+  }
+  return [];
 }
 
 /** Text-level fallback: a freshly typed `<tag` or `@…` outside any AST span. */
@@ -136,7 +196,7 @@ export function classifySlice(slice: string): TagRegion {
 
 /* Attribute candidates -------------------------------------------------------- */
 
-const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string }> = [
+const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string; elementOnly?: boolean }> = [
   { label: "@bind", doc: "Two-way value binding (input.value ↔ member)." },
   { label: "@onclick", doc: "Click event handler." },
   { label: "@onchange", doc: "Change event handler." },
@@ -144,6 +204,12 @@ const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string }> = [
   { label: "@ref", doc: "Capture the element's DOM reference." },
   { label: "@key", doc: "Diff key for stable element identity." },
   { label: "@attributes", doc: "Attribute splat." },
+  { label: "@attach", doc: ATTACH_DOC, elementOnly: true },
+  { label: "@attach:", doc: `${ATTACH_DOC} The named form \`@attach:name="…"\` adds another, independent attachment to the same element.`, elementOnly: true },
+  { label: "@transition", doc: MOTION_DOCS.transition, elementOnly: true },
+  { label: "@in", doc: MOTION_DOCS.in, elementOnly: true },
+  { label: "@out", doc: MOTION_DOCS.out, elementOnly: true },
+  { label: "@animate", doc: MOTION_DOCS.animate, elementOnly: true },
 ];
 
 const ELEMENT_ATTRS: ReadonlyArray<{ label: string; doc?: string }> = [
@@ -156,24 +222,47 @@ const ELEMENT_ATTRS: ReadonlyArray<{ label: string; doc?: string }> = [
   { label: "data-testid", doc: "Test hook attribute." },
 ];
 
-function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefix: string): CompletionCandidate[] {
+function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefix: string, chain?: readonly MarkupNode[]): CompletionCandidate[] {
   const items: CompletionCandidate[] = [];
   const push = (candidate: CompletionCandidate): void => {
     if (!items.some((i) => i.label === candidate.label)) items.push(candidate);
   };
 
   if (element.isComponent) {
-    for (const param of parametersOfComponent(analyzed, element.tagName)) {
-      push({ label: param.name, kind: "attribute", detail: element.tagName, doc: param.doc });
+    const parameters = parametersOfComponent(analyzed, element.tagName);
+    for (const param of parameters) {
+      push({ label: param.name, kind: "attribute", detail: parameterDetail(element.tagName, param), doc: param.doc });
+    }
+    // @bind-X needs the X + XChanged pair (Blazor: Value/ValueChanged), XChanged an EventCallback.
+    for (const param of parameters) {
+      const changed = parameters.find((candidate) => candidate.name.toLowerCase() === `${param.name.toLowerCase()}changed`);
+      if (!changed || (changed.category !== "EventCallback" && changed.category !== "EventCallback<T>")) continue;
       push({
         label: `@bind-${param.name}`,
         kind: "attribute",
         detail: "two-way binding",
-        doc: `Value + ${param.name}Changed pair (like Blazor's @bind-Value).`,
+        doc: `Binds ${param.name} and ${changed.name} (like Blazor's @bind-Value).`,
+      });
+    }
+    // Context (2.5): renames the context variable of a RenderFragment<T> child
+    // content — on a slot element (its own context) or on the component (its
+    // generic ChildContent's context).
+    const slot = chain === undefined ? null : slotParameterOf(analyzed, chain, element);
+    const generic = slot !== null && slot.category === "RenderFragment<T>";
+    const childContentGeneric = contextNameCandidateOf(analyzed, element, slot !== null);
+    if (generic || childContentGeneric) {
+      push({
+        label: "Context",
+        kind: "attribute",
+        detail: generic ? `slot context name (RenderFragment<${slot!.typeArgument ?? "unknown"}>)` : "context name of the generic ChildContent body",
+        doc: 'Renames the context variable of the RenderFragment<T> body (default: `context`).',
       });
     }
   }
-  for (const attr of DIRECTIVE_ATTRS) push({ label: attr.label, kind: "attribute", detail: "directive attribute", doc: attr.doc });
+  for (const attr of DIRECTIVE_ATTRS) {
+    if (attr.elementOnly && element.isComponent) continue;
+    push({ label: attr.label, kind: "attribute", detail: "directive attribute", doc: attr.doc });
+  }
   if (!element.isComponent) {
     for (const attr of ELEMENT_ATTRS) push({ label: attr.label, kind: "attribute", detail: "HTML attribute", doc: attr.doc });
   }
@@ -182,35 +271,29 @@ function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefi
   return items.filter((item) => item.label.toLowerCase().startsWith(needle));
 }
 
-/** Parameters of the component the tag resolves to (built-in table or .tsazor scan). */
-function parametersOfComponent(
-  analyzed: AnalyzedFile,
-  tagName: string,
-): ReadonlyArray<{ name: string; doc?: string }> {
-  const file = analyzed.context.resolveImportable(tagName);
-  const params = file ? parameterNamesOfTsazorFile(file) : [];
-  if (params.length > 0) return params;
-  return RUNTIME_COMPONENT_PARAMS[tagName] ?? [];
+/**
+ * Parameters settable from markup on the component the tag resolves to —
+ * from the parameter metadata (2.1: own, code-behind and inherited
+ * parameters; runtime and package components from their manifests).
+ * Cascading parameters only take cascaded values (Blazor rejects them as
+ * attributes) and are not offered.
+ */
+function parametersOfComponent(analyzed: AnalyzedFile, tagName: string): readonly ComponentParameter[] {
+  const metadata = analyzed.context.resolveComponentMetadata(tagName, [...analyzed.usings], analyzed.ownImports);
+  return (metadata?.parameters ?? []).filter((parameter) => parameter.cascading === undefined);
 }
 
-/** Regex extraction of @Parameter() names from a component's @code (v1 heuristic). */
-export function parameterNamesOfTsazorFile(file: string): ReadonlyArray<{ name: string; doc?: string }> {
-  let source: string;
-  try {
-    source = readFileSync(file, "utf8");
-  } catch {
-    return [];
-  }
-  const parsed = parseDocument(source, new DiagnosticBag());
-  const text = parsed.body
-    .filter((n): n is CodeBlockNode => n.kind === "codeBlock" && n.member === true)
-    .map((n) => n.code)
-    .join("\n");
-  const names = new Map<string, { name: string; doc?: string }>();
-  for (const match of text.matchAll(/@(?:Cascading)?Parameter\s*\([^)]*\)\s*([\w$]+)/g)) {
-    if (!names.has(match[1]!)) names.set(match[1]!, { name: match[1]! });
-  }
-  return [...names.values()];
+function parameterDetail(tagName: string, parameter: ComponentParameter): string {
+  const type = parameter.type ?? parameter.inferredType;
+  return `${tagName} · ${parameter.category}${type ? ` · ${type}` : ""}`;
+}
+
+/** True when the element is a component (not itself a slot) with a generic
+ *  ChildContent parameter — its Context attribute renames the body's context. */
+function contextNameCandidateOf(analyzed: AnalyzedFile, element: ElementNode, isSlot: boolean): boolean {
+  if (isSlot) return false;
+  const child = elementMetadata(analyzed, element.tagName)?.parameters.find((p) => p.name === "ChildContent");
+  return child !== undefined && child.category === "RenderFragment<T>";
 }
 
 /* Component tag candidates ----------------------------------------------------- */
@@ -234,14 +317,80 @@ function componentCandidates(analyzed: AnalyzedFile, prefix: string): Completion
       items.push({ label: tag, kind: "component", detail: path.basename(dir), doc: `<${tag}> — component in ${path.basename(dir)}` });
     }
   }
+  // Bare-package @usings: exactly the names the package exports (same list the build resolves against).
+  for (const using of analyzed.context.chain.usings) {
+    if (isPathLikeUsing(using)) continue;
+    const name = using.replace(/^['"]|['"]$/g, "");
+    if (name === RUNTIME_PACKAGE) continue;
+    for (const [tag, isValue] of packageExports(name, analyzed.fileDir) ?? []) {
+      if (!isValue || !PASCAL_TAG.test(tag) || !seen.add(tag)) continue;
+      items.push({ label: tag, kind: "component", detail: name, doc: `<${tag}> — exported by ${name}` });
+    }
+  }
   for (const tag of RUNTIME_COMPONENTS) {
     if (!seen.add(tag)) continue;
-    const params = RUNTIME_COMPONENT_PARAMS[tag];
+    const params = RUNTIME_MANIFEST.components[tag]?.parameters.filter((p) => p.cascading === undefined);
     const names = params && params.length > 0 ? `params: ${params.map((p) => p.name).join(", ")}` : undefined;
     items.push({ label: tag, kind: "component", detail: RUNTIME_PACKAGE, doc: `<${tag}> — ${names ?? "@tsazor/runtime"}` });
   }
   const needle = prefix.toLowerCase();
   return items.filter((item) => item.label.toLowerCase().startsWith(needle)).sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/* Slot candidates --------------------------------------------------------------- */
+
+/**
+ * Tag candidates of the component whose content hosts the cursor (2.5
+ * slots): each RenderFragment / RenderFragment<T> parameter is set by a child
+ * content element naming it. `notSlotTag` removes those labels from the
+ * component list — a shadowing component may exist, but as a direct child of
+ * the parent the slot binds first (how the compiler resolves it, TZS025's
+ * rename rule). The direct parent only (TZS027): inside a slot's fragment
+ * body or nested in markup no slot applies.
+ */
+function tagCandidates(analyzed: AnalyzedFile, chain: readonly MarkupNode[], tagNameRegion: boolean, prefix: string): CompletionCandidate[] {
+  const innermost = innermostElementOf(chain);
+  const parent = tagNameRegion ? (innermost === null ? null : enclosingElementOf(chain, innermost)) : innermost;
+  if (parent === null || !parent.isComponent) return [];
+  const parameters = fragmentParametersOfParent(analyzed, chain, tagNameRegion);
+  const needle = prefix.toLowerCase();
+  return parameters
+    .filter((parameter) => parameter.name.toLowerCase().startsWith(needle))
+    .map((parameter) => ({
+    label: slotTagName(parameter),
+    kind: "slot" as const,
+    detail: `slot of <${parent.tagName}> · ${parameter.category}`,
+    doc:
+      parameter.category === "RenderFragment<T>"
+        ? `\`<${slotTagName(parameter)}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\`. RenderFragment<${parameter.typeArgument ?? "unknown"}> — \`${contextNameOf(parent) ?? "context"}\` is the body's context (own \`Context="…"\` renames it).`
+        : `\`<${slotTagName(parameter)}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\` (RenderFragment).`,
+    snippet: parameterTagSnippet(parameter),
+  }));
+}
+
+/** The slot's tag as markup writes it: PascalCase (slot tags match their
+ *  parameter case-insensitively), so `then` / `errorContent` are offered as
+ *  `<Then>` / `<ErrorContent>`. */
+const slotTagName = (parameter: ComponentParameter): string => parameter.name.charAt(0).toUpperCase() + parameter.name.slice(1);
+
+const parameterTagSnippet = (parameter: ComponentParameter): string => {
+  const generic = parameter.category === "RenderFragment<T>";
+  const context = generic && /^[A-Za-z_$][\w$]*$/.test(parameter.typeArgument ?? "") ? ` Context="${parameter.typeArgument}"` : "";
+  const tag = slotTagName(parameter);
+  return `${tag}${context}>\n\t$0\n</${tag}>`;
+};
+
+/** Component list minus the labels the host's fragment parameters covered. */
+function notSlotTag(parameters: readonly ComponentParameter[]): (candidate: { label: string }) => boolean {
+  const tags = new Set(parameters.map((parameter) => slotTagName(parameter)));
+  return (candidate) => !tags.has(candidate.label);
+}
+
+/** The fragment's context variable as an extra member candidate (2.5). */
+function slotContextCandidates(analyzed: AnalyzedFile, chain: readonly MarkupNode[]): CompletionCandidate[] {
+  const context = fragmentContextAt(analyzed, chain);
+  if (context === null) return [];
+  return [{ label: context.name, kind: "member", detail: `slot context · ${context.type}` }];
 }
 
 /* Directive candidates ---------------------------------------------------------- */
@@ -252,9 +401,10 @@ const DIRECTIVES: ReadonlyArray<{ label: string; doc: string; snippet?: string }
   { label: "using", doc: "`@using ./Shared` — imports a module/directory for resolution.", snippet: "using $0" },
   { label: "inject", doc: "`@inject ServiceType Name` — resolves a DI service into a field.", snippet: "inject $0" },
   { label: "inherits", doc: "`@inherits LayoutComponentBase` — base class of the generated component.", snippet: "inherits $0" },
-  { label: "typeparam", doc: "`@typeparam T` — generic type parameter.", snippet: "typeparam $0" },
-  { label: "authorize", doc: "Bare `@authorize` — route requires authentication." },
-  { label: "attribute", doc: "`@attribute [attr]` — appends an attribute to the class declaration." },
+  { label: "typeparam", doc: "`@typeparam T` / `@typeparam T extends X` — generic type parameter.", snippet: "typeparam $0" },
+  { label: "authorize", doc: "`@authorize` / `@authorize({ roles: [\"A\"], policy: \"P\" })` — route requires authentication (and roles/policy); in `_Imports.tsazor`, every page below." },
+  { label: "allowAnonymous", doc: "`@allowAnonymous` — the page (in `_Imports.tsazor`: every page below) opts out of an inherited `@authorize` (Blazor's `[AllowAnonymous]`)." },
+  { label: "attribute", doc: "`@attribute @decorator()` — a TS class decorator on the generated class." },
   { label: "code", doc: "`@code { … }` — component state and methods.", snippet: "code {\n\t$0\n}" },
   { label: "functions", doc: "Alias of @code.", snippet: "functions {\n\t$0\n}" },
   { label: "if", doc: "Conditional markup block.", snippet: "if ($0) {\n}" },
@@ -305,8 +455,9 @@ export function memberNamesOf(source: string, origin: string): CompletionCandida
   return [...items.values()];
 }
 
-function memberCandidates(analyzed: AnalyzedFile, prefix: string): CompletionCandidate[] {
+function memberCandidates(analyzed: AnalyzedFile, prefix: string, extra: readonly CompletionCandidate[] = []): CompletionCandidate[] {
   const members = new Map<string, CompletionCandidate>();
+  for (const candidate of extra) members.set(candidate.label, candidate); // e.g. the slot context — not a class member
   const sources: Array<[string, string]> = [
     ...memberCodeSources(analyzed).map((code, i) => [`@code #${i + 1}`, code] as [string, string]),
   ];
@@ -321,6 +472,11 @@ function memberCandidates(analyzed: AnalyzedFile, prefix: string): CompletionCan
   for (const inject of analyzed.injects) {
     if (!members.has(inject.name)) members.set(inject.name, { label: inject.name, kind: "member", detail: `@inject ${inject.type}` });
   }
+  for (const imported of analyzed.imports) {
+    if (!members.has(imported.name)) {
+      members.set(imported.name, { label: imported.name, kind: "member", detail: `@import from "${imported.specifier}"` });
+    }
+  }
 
   const needle = prefix.toLowerCase();
   return [...members.values()].filter((m) => m.label.toLowerCase().startsWith(needle)).sort((a, b) => a.label.localeCompare(b.label));
@@ -329,7 +485,7 @@ function memberCandidates(analyzed: AnalyzedFile, prefix: string): CompletionCan
 function memberCodeSources(analyzed: AnalyzedFile): string[] {
   return analyzed.document.body
     .filter((n): n is CodeBlockNode => n.kind === "codeBlock" && n.member === true)
-    .map((n) => n.code);
+    .map((n) => maskedCode(n));
 }
 
 /** The sibling X.tsazor.ts code-behind source, if present. */

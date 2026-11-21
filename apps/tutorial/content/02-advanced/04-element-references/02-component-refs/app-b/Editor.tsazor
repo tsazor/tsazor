@@ -1,0 +1,12 @@
+<textarea class="editor" rows="5" @bind="text" @bind:event="oninput"></textarea>
+<p class="count">@text.length characters</p>
+
+@code {
+    text = "Dear Grace,\n\nthanks for the compiler!\n";
+
+    /** Appends a snippet at the end of the text. */
+    insert(snippet: string) {
+        this.text += snippet;
+        this.stateHasChanged();
+    }
+}

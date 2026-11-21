@@ -1,0 +1,57 @@
+@inherits BasePlugin
+@import type { LayoutDetailResponse, SiteDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { dateTime } from "../../../format"
+
+<PluginBody title="Layouts">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create Layout")" label="Add Layout" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.layouts" ariaLabel="Layouts">
+            <PropertyColumn property="(layout) => layout.name" title="Name" />
+            <PropertyColumn property="(layout) => layout.createdBy ?? ''" title="Created By" />
+            <PropertyColumn property="(layout) => layout.createdAt" format="dateTime" title="Created At" />
+            <PropertyColumn property="(layout) => layout.modifiedBy ?? ''" title="Modified By" />
+            <PropertyColumn property="(layout) => layout.modifiedAt" format="dateTime" title="Modified At" />
+            <TemplateColumn title="Actions" Context="layout">
+                <ActionButtons>
+                    <ActionButtonDelete visible="@(!this.inUse(layout))" @onclick="() => this.selected = layout" aria-label="@(`Delete ${layout.name}`)" />
+                    <ActionButtonEdit href="@this.getUrl("Update Layout", { id: layout.id })" />
+                </ActionButtons>
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete <b>"@this.selected?.name"</b> layout?
+</Confirm>
+
+@code {
+    private layouts: LayoutDetailResponse[] = [];
+    private site?: SiteDetailResponse;
+    private selected?: LayoutDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        const siteId = this.viewState.site.id;
+        this.site = ensureOk(await this.api.siteGetById(siteId));
+        this.layouts = ensureOk(await this.api.layoutGetBySiteId({ siteId })) ?? [];
+    }
+
+    /** The site's own layouts can't go: its default, edit and detail layout. */
+    private inUse(layout: LayoutDetailResponse): boolean {
+        return [this.site?.layoutId, this.site?.editLayoutId, this.site?.detailLayoutId].includes(layout.id);
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.layoutDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

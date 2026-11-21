@@ -66,6 +66,58 @@
   color: var(--fui-color-red-1);
 }
 
+/* contentBefore/contentAfter: one field box around the slots and the input (Fluent 2's Input). The box takes
+   the input's chrome; the input inside goes borderless. */
+.fui-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  height: var(--fui-height);
+  padding: 0 var(--fui-spacing-xs);
+  background: var(--fui-control-fill-input);
+  border: 1px solid var(--fui-control-stroke);
+  border-radius: var(--fui-radius-md);
+  box-sizing: border-box;
+  transition: border-color var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-input-group:hover {
+  background: var(--fui-control-fill-input-hover);
+  border-color: var(--fui-control-stroke-hover);
+}
+
+.fui-input-group:focus-within {
+  border-color: var(--fui-control-focus-stroke);
+  box-shadow: 0 1px 4px var(--fui-control-focus-outer-stroke);
+}
+
+.fui-input-group:has(.fui-input--invalid) {
+  border-color: var(--fui-color-red-1);
+}
+
+.fui-input-group:has(.fui-input--valid) {
+  border-color: var(--fui-color-green-1);
+}
+
+.fui-input-group > .fui-input,
+.fui-input-group > .fui-input:hover,
+.fui-input-group > .fui-input:focus-visible {
+  flex: 1;
+  height: 100%;
+  padding: 0 var(--fui-spacing-xs);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fui-input-group__before,
+.fui-input-group__after {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--fui-foreground-3);
+}
+
 .fui-input__message {
   font-size: var(--fui-font-size-caption);
   line-height: var(--fui-line-height-caption);
@@ -126,4 +178,54 @@
 
 .fui-input__message {
   min-height: var(--fui-line-height-caption);
+}
+
+/* Help text below a field (DateInput, FileInput, RadioGroup, FormField). */
+.fui-input__help {
+  display: block;
+  margin-top: var(--fui-spacing-xs);
+  font-size: var(--fui-font-size-caption);
+  color: var(--fui-foreground-3);
+}
+
+/* The native file picker in the field look. */
+.fui-file-input {
+  padding: var(--fui-spacing-xs);
+  cursor: pointer;
+}
+
+/* Text for screen readers only: a live region's announcement, a column's name without chrome. */
+.fui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Plain links in app content — a "← All runs", a link in a paragraph — in the link colors of either theme: put
+   class="fui-links" on their container (FluentProvider's, a page's, an article's). Opt-in, so an app's own link styles
+   and the components' links stay as they are. */
+.fui-links a[href]:not([class*="fui-"]) {
+  color: var(--fui-foreground-link);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.fui-links a[href]:not([class*="fui-"]):hover {
+  color: var(--fui-foreground-link-hover);
+}
+
+.fui-links a[href]:not([class*="fui-"]):active {
+  color: var(--fui-foreground-link-pressed);
+}
+
+.fui-links a[href]:not([class*="fui-"]):focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+  border-radius: var(--fui-radius-sm);
 }

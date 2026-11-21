@@ -1,0 +1,32 @@
+@import type { Transition } from "@tsazor/runtime"
+
+<p @in="typewriter()">@messages[index]</p>
+
+<button @onclick="next">Next</button>
+
+@code {
+    index = 0;
+    messages = [
+        "Reticulating splines…",
+        "Generating witty dialogue…",
+        "Swapping time and space…",
+        "Spinning violently around the y-axis…",
+        "Tokenizing real life…",
+    ];
+
+    next() {
+        this.index = (this.index + 1) % this.messages.length;
+    }
+
+    typewriter(speed = 2): Transition {
+        return (element) => {
+            const text = element.textContent ?? "";
+            return {
+                duration: text.length / (speed * 0.01),
+                tick: (t) => {
+                    element.textContent = text.slice(0, Math.trunc(text.length * t));
+                },
+            };
+        };
+    }
+}

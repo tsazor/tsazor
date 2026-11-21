@@ -1,0 +1,503 @@
+@** A Bootstrap calendar (Fluent UI Blazor's FluentCalendar, MudBlazor's MudDatePicker with PickerVariant.Static;
+    InputBase — bind it with @bind-value): a month of days to pick from, or the months of a year, or twelve years
+    (`view`). The value is an ISO date ("2026-10-10"), which no
+    time zone shifts. `minDate`, `maxDate` and `disabledDateFunc` keep days from being picked; `selectMode` multiple or
+    range picks days into `selectedDates` (a range: its start, then its end; `selectDatesHover` picks a set at once,
+    a week). The title zooms out to the months and the years. The keys follow the WAI-ARIA date grid: the arrows by a
+    day or a week, Home and End to the week's ends, Page Up and Page Down by a month (with Shift a year), Enter or
+    Space picks. The title is a polite live region: a month turned is announced. The names and the week's first day come from `locale` — the same parameters as the Fluent skin's
+    Calendar. *@
+@import {
+    isoDate, parseIsoDate, today, uniqueId, type CalendarDay, type CalendarLabels, type CalendarSelectMode,
+    type CalendarView, type IsoDate,
+} from "@tsazor/ui"
+@import {
+    addDays, addMonths, addYears, calendarKeyTarget, calendarWeeks, calendarYears, clampDate, datesOfRange,
+    daysInMonth, firstDayOfWeek, formatIsoDate, isDateDisabled, isMonthDisabled, isYearDisabled, monthNames,
+    nextDateRange, nextMultipleDates, rangeOfDates, startOfMonth, weekdayNames, type DateLimits,
+} from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+@import { ChevronLeft, ChevronRight } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+@import { calendarLabelsFrom, isRightToLeft, logicalArrowKey } from "@tsazor/ui/kit"
+
+@inherits InputBase<string>
+
+<div role="group" aria-label="@this.ariaLabel" aria-disabled="@(this.disabled ? "true" : null)" @attributes="@withClass(this.calendarClass, this.additionalAttributes)" @ref="root">
+    <div class="tz-calendar__header">
+        @if (this.canZoomOut) {
+            <button type="button" class="tz-calendar__title" id="@this.titleId" aria-live="polite" @onclick="this.zoomOut">@this.title</button>
+        } else {
+            <span class="tz-calendar__title" id="@this.titleId" aria-live="polite">@this.title</span>
+        }
+        <button type="button" class="tz-calendar__step" aria-label="@this.stepLabels[0]" title="@this.stepLabels[0]" disabled="@(this.inert || this.stepDisabled(-1))" @onclick="() => this.step(-1)"><Icon value="@ChevronLeft" /></button>
+        <button type="button" class="tz-calendar__step" aria-label="@this.stepLabels[1]" title="@this.stepLabels[1]" disabled="@(this.inert || this.stepDisabled(1))" @onclick="() => this.step(1)"><Icon value="@ChevronRight" /></button>
+    </div>
+    @switch (this.shownView) {
+        case "days":
+            const marks = this.marks;
+            <table role="grid" class="tz-calendar__grid" aria-labelledby="@this.titleId" @onkeydown="this.dayKeydown" @onmouseleave="() => this.hover = undefined">
+                <thead>
+                    <tr>
+                        @foreach (const name of this.weekdays) {
+                            <th scope="col" abbr="@name.long" class="tz-calendar__weekday">@name.short</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (const week of this.weeks) {
+                        <tr>
+                            @foreach (const day of week) {
+                                <td class="@this.dayClass(day, marks)" data-value="@day.date" tabindex="@(day.date === this.focusDate ? 0 : -1)" aria-label="@day.title" aria-selected="@(day.isSelected ? "true" : null)" aria-disabled="@(day.isDisabled || day.isInactive || this.inert ? "true" : null)" aria-current="@(day.isToday && this.displayToday ? "date" : null)" @onclick="() => this.pickDay(day)" @onmouseover="() => this.hoverDay(day)">
+                                    @if (this.daysTemplate) {
+                                        @this.daysTemplate(day)
+                                    } else {
+                                        @day.dayNumber
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            break;
+        case "months":
+            <table role="grid" class="tz-calendar__grid tz-calendar__grid--wide" aria-labelledby="@this.titleId" @onkeydown="this.monthKeydown">
+                <tbody>
+                    @foreach (const row of [0, 1, 2, 3]) {
+                        <tr>
+                            @foreach (const column of [0, 1, 2]) {
+                                <td class="@this.periodClass(this.monthSelected(row * 3 + column + 1), this.monthDisabled(row * 3 + column + 1), this.isThisMonth(row * 3 + column + 1))" data-value="@this.monthValue(row * 3 + column + 1)" tabindex="@(this.focusMonth === row * 3 + column + 1 ? 0 : -1)" aria-label="@this.monthTitle(row * 3 + column + 1)" aria-selected="@(this.monthSelected(row * 3 + column + 1) ? "true" : null)" aria-disabled="@(this.monthDisabled(row * 3 + column + 1) || this.inert ? "true" : null)" @onclick="() => this.pickMonth(row * 3 + column + 1)">@this.monthShortNames[row * 3 + column]</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            break;
+        case "years":
+            <table role="grid" class="tz-calendar__grid tz-calendar__grid--wide" aria-labelledby="@this.titleId" @onkeydown="this.yearKeydown">
+                <tbody>
+                    @foreach (const row of [0, 1, 2, 3]) {
+                        <tr>
+                            @foreach (const year of this.years.slice(row * 3, row * 3 + 3)) {
+                                <td class="@this.periodClass(this.yearSelected(year), this.yearDisabled(year), year === this.todayYear)" data-value="@year" tabindex="@(this.focusYear === year ? 0 : -1)" aria-selected="@(this.yearSelected(year) ? "true" : null)" aria-disabled="@(this.yearDisabled(year) || this.inert ? "true" : null)" @onclick="() => this.pickYear(year)">@year</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            break;
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** What it shows and picks: days (default), months or years (`CalendarViews`). */
+    @Parameter() view: CalendarView = "days";
+    /** The first day that can be picked (ISO). */
+    @Parameter() minDate?: IsoDate;
+    /** The last day that can be picked (ISO). */
+    @Parameter() maxDate?: IsoDate;
+    /** Rules out single days: `(date) => isWeekend(date)` (`DisabledDateFunc`). */
+    @Parameter() disabledDateFunc?: (date: IsoDate) => boolean;
+    /** Months and years count as disabled when every day is, not only the first (`DisabledCheckAllDaysOfMonthYear`). */
+    @Parameter() disabledCheckAllDaysOfMonthYear: boolean = false;
+    /** Ruled-out days look disabled (default); false draws them as the others, though they still can't be picked. */
+    @Parameter() disabledSelectable: boolean = true;
+    /** The day number: numeric ("7", default) or 2-digit ("07") (`DayFormat`). */
+    @Parameter() dayFormat: "numeric" | "2-digit" = "numeric";
+    /** The locale of the names and of the week's first day ("de-DE"; Fluent UI Blazor's `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
+    @Parameter() locale?: string;
+    /** The week's first day, 0 (Sunday) to 6, instead of the locale's (MudBlazor's `FirstDayOfWeek`). */
+    @Parameter() firstDayOfWeek?: number;
+    /** The month shown (any day of it), two-way with @bind-pickerMonth (`PickerMonth`). */
+    @Parameter() pickerMonth?: IsoDate;
+    /** Raised with the first day of the month shown when it changes. */
+    @Parameter() pickerMonthChanged?: EventCallback<IsoDate>;
+    /** Marks today (default). */
+    @Parameter() displayToday: boolean = true;
+    /** single (default: the value), multiple or range (`selectedDates`). */
+    @Parameter() selectMode: CalendarSelectMode = "single";
+    /** The days picked in multiple and range mode, two-way with @bind-selectedDates. */
+    @Parameter() selectedDates?: IsoDate[];
+    /** Raised with the days picked in multiple and range mode. */
+    @Parameter() selectedDatesChanged?: EventCallback<IsoDate[]>;
+    /** In multiple and range mode, what a day stands for: `(date) => theWeekOf(date)` picks a week at a time. */
+    @Parameter() selectDatesHover?: (date: IsoDate) => IsoDate[];
+    /** A day's content instead of its number (`DaysTemplate`). */
+    @Parameter() daysTemplate?: (day: CalendarDay) => RenderFragment;
+    /** The buttons' texts (English by default). */
+    @Parameter() labels?: Partial<CalendarLabels>;
+    /** Shows the value without letting it change. */
+    @Parameter() readOnly: boolean = false;
+    /** Disables the calendar. */
+    @Parameter() disabled: boolean = false;
+    /** The calendar's accessible name. */
+    @Parameter() ariaLabel?: string;
+
+    private root?: HTMLDivElement;
+    private readonly titleId = uniqueId("tz-calendar-title");
+    private shownView: CalendarView = "days";
+    private viewFor?: CalendarView;
+    /** The first day of the month shown. */
+    private shownMonth: IsoDate = startOfMonth(today());
+    private monthFor?: IsoDate;
+    /** The cell with the tab stop: a day, a month (1–12) of the year shown, a year. */
+    private focusDate: IsoDate = today();
+    private focusMonth = 1;
+    private focusYear = 2026;
+    private moveFocus = false;
+    private hover?: IsoDate;
+    /** The days picked in multiple and range mode, while no @bind-selectedDates keeps them. */
+    private picked: IsoDate[] = [];
+    private pickedFor?: IsoDate[];
+
+    protected override onParametersSet(): void {
+        if (this.viewFor !== this.view) {
+            this.viewFor = this.view;
+            this.shownView = this.view;
+        }
+        if (this.selectedDates !== undefined && this.selectedDates !== this.pickedFor) {
+            this.pickedFor = this.selectedDates;
+            this.picked = [...this.selectedDates].sort();
+        }
+        const month = this.pickerMonth && parseIsoDate(this.pickerMonth) ? startOfMonth(this.pickerMonth) : undefined;
+        if (month !== undefined && month !== this.monthFor) {
+            this.monthFor = month;
+            this.show(month);
+        } else if (this.monthFor === undefined) {
+            this.monthFor = "";
+            this.show(startOfMonth(this.anchorDate));
+        }
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.moveFocus) return;
+        this.moveFocus = false;
+        this.root?.querySelector<HTMLElement>("[role=grid] [tabindex='0']")?.focus();
+    }
+
+    private get locales(): string {
+        return this.locale ?? this.t.locale;
+    }
+
+    private get firstDay(): number {
+        return this.firstDayOfWeek ?? firstDayOfWeek(this.locales);
+    }
+
+    private get inert(): boolean {
+        return this.readOnly || this.disabled;
+    }
+
+    private get limits(): DateLimits {
+        return { minDate: this.minDate, maxDate: this.maxDate, disabledDateFunc: this.disabledDateFunc };
+    }
+
+    private get valueDate(): IsoDate | undefined {
+        const value = this.currentValue;
+        return typeof value === "string" && parseIsoDate(value) ? value : undefined;
+    }
+
+    /** Where the calendar opens: the value, the first day picked, else today, inside min and max. */
+    private get anchorDate(): IsoDate {
+        const start = this.selectMode === "single" ? this.valueDate : this.picked[0];
+        return clampDate(start ?? today(), this.minDate, this.maxDate);
+    }
+
+    /** Shows the month of `date` and gives it the tab stop. */
+    private show(date: IsoDate): void {
+        this.shownMonth = startOfMonth(date);
+        this.focusDate = date.slice(0, 7) === this.anchorDate.slice(0, 7) ? this.anchorDate : date;
+        this.focusMonth = Number(date.slice(5, 7));
+        this.focusYear = Number(date.slice(0, 4));
+    }
+
+    /** Shows another month (and tells @bind-pickerMonth); the tab stop moves along to the same day in it. */
+    private async goTo(date: IsoDate): Promise<void> {
+        const month = startOfMonth(date);
+        if (month === this.shownMonth) return;
+        this.shownMonth = month;
+        this.monthFor = month;
+        if (this.focusDate.slice(0, 7) !== month.slice(0, 7)) {
+            const year = Number(month.slice(0, 4));
+            const monthNumber = Number(month.slice(5, 7));
+            const day = Math.min(Number(this.focusDate.slice(8, 10)), daysInMonth(year, monthNumber));
+            this.focusDate = clampDate(isoDate(year, monthNumber, day), this.minDate, this.maxDate);
+        }
+        await this.pickerMonthChanged?.invokeAsync(month);
+    }
+
+    private get calendarClass(): string {
+        let cls = `tz-calendar tz-calendar--${this.shownView}`;
+        if (this.selectMode === "range") cls += " tz-calendar--range";
+        if (this.disabled) cls += " tz-calendar--disabled";
+        return cls;
+    }
+
+    private get shownYear(): number {
+        return Number(this.shownMonth.slice(0, 4));
+    }
+
+    private get title(): string {
+        if (this.shownView === "days") return formatIsoDate(this.shownMonth, this.locales, { year: "numeric", month: "long" });
+        if (this.shownView === "months") return String(this.shownYear);
+        const years = this.years;
+        return `${years[0]} – ${years[years.length - 1]}`;
+    }
+
+    private get canZoomOut(): boolean {
+        return !this.inert && this.shownView !== "years";
+    }
+
+    private zoomOut(): void {
+        this.shownView = this.shownView === "days" ? "months" : "years";
+        this.focusMonth = Number(this.shownMonth.slice(5, 7));
+        this.focusYear = this.shownYear;
+        this.moveFocus = true;
+    }
+
+    private get texts(): CalendarLabels {
+        return { ...calendarLabelsFrom(this.t), ...this.labels };
+    }
+
+    private get stepLabels(): [string, string] {
+        const texts = this.texts;
+        if (this.shownView === "days") return [texts.previousMonth, texts.nextMonth];
+        if (this.shownView === "months") return [texts.previousYear, texts.nextYear];
+        return [texts.previousYears, texts.nextYears];
+    }
+
+    /** The month, year or twelve years before (-1) or after (1). */
+    private stepTarget(direction: -1 | 1): IsoDate {
+        if (this.shownView === "days") return addMonths(this.shownMonth, direction);
+        return addYears(this.shownMonth, direction * (this.shownView === "months" ? 1 : 12));
+    }
+
+    /** Nothing before minDate or after maxDate to go to. */
+    private stepDisabled(direction: -1 | 1): boolean {
+        const target = this.stepTarget(direction);
+        if (direction < 0 && this.minDate) {
+            const end = this.shownView === "days" ? addDays(addMonths(target, 1), -1)
+                : this.shownView === "months" ? `${target.slice(0, 4)}-12-31` : `${calendarYears(target)[11]}-12-31`;
+            return end < this.minDate;
+        }
+        if (direction > 0 && this.maxDate) {
+            const start = this.shownView === "years" ? `${calendarYears(target)[0]}-01-01` : this.shownView === "months" ? `${target.slice(0, 4)}-01-01` : target;
+            return start > this.maxDate;
+        }
+        return false;
+    }
+
+    private async step(direction: -1 | 1): Promise<void> {
+        this.focusYear += this.shownView === "years" ? direction * 12 : this.shownView === "months" ? direction : 0;
+        await this.goTo(this.stepTarget(direction));
+    }
+
+    private get weekdays(): { short: string; long: string }[] {
+        const short = weekdayNames(this.locales, this.firstDay, "short");
+        const long = weekdayNames(this.locales, this.firstDay, "long");
+        return short.map((name, index) => ({ short: name, long: long[index]! }));
+    }
+
+    /** The dates that show as picked: the value, or the days picked (and a range's preview while it is open). */
+    private get selection(): Set<IsoDate> {
+        if (this.selectMode === "single") return new Set(this.valueDate ? [this.valueDate] : []);
+        return new Set(this.picked);
+    }
+
+    /** A range's ends, and while it has its start only, the days up to the one under the pointer (or the focus). */
+    private get marks(): { start?: IsoDate; end?: IsoDate; preview: Set<IsoDate> } {
+        if (this.selectMode !== "range") return { preview: new Set() };
+        const range = rangeOfDates(this.picked);
+        const marks: { start?: IsoDate; end?: IsoDate; preview: Set<IsoDate> } = { start: range.start, end: range.end ?? range.start, preview: new Set() };
+        if (range.start === undefined || range.end !== undefined || this.hover === undefined) return marks;
+        const [from, to] = this.hover < range.start ? [this.hover, range.start] : [range.start, this.hover];
+        return { ...marks, preview: new Set(datesOfRange({ start: from, end: to }).filter((date) => !isDateDisabled(date, this.limits))) };
+    }
+
+    private get weeks(): CalendarDay[][] {
+        const selection = this.selection;
+        const now = today();
+        const month = this.shownMonth.slice(0, 7);
+        const dayFormat = new Intl.DateTimeFormat(this.locales, { day: this.dayFormat, timeZone: "UTC" });
+        return calendarWeeks(this.shownMonth, this.firstDay).map((week) => week.map((date) => ({
+            date,
+            dayNumber: dayFormat.format(new Date(`${date}T00:00:00Z`)),
+            title: formatIsoDate(date, this.locales, { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+            isToday: date === now,
+            isSelected: selection.has(date),
+            isDisabled: isDateDisabled(date, this.limits),
+            isInactive: date.slice(0, 7) !== month,
+        })));
+    }
+
+    private dayClass(day: CalendarDay, marks: { start?: IsoDate; end?: IsoDate; preview: Set<IsoDate> }): string {
+        let cls = "tz-calendar__day";
+        if (day.isInactive) cls += " tz-calendar__day--inactive";
+        if (day.isDisabled && this.disabledSelectable) cls += " tz-calendar__day--disabled";
+        if (day.isToday && this.displayToday) cls += " tz-calendar__day--today";
+        if (day.isSelected) cls += " tz-calendar__day--selected";
+        if (day.isSelected && day.date === marks.start) cls += " tz-calendar__day--range-start";
+        if (day.isSelected && day.date === marks.end) cls += " tz-calendar__day--range-end";
+        if (marks.preview.has(day.date)) cls += " tz-calendar__day--preview";
+        return cls;
+    }
+
+    private hoverDay(day: CalendarDay): void {
+        if (this.selectMode !== "range" || day.isInactive) return;
+        this.hover = day.date;
+    }
+
+    private async pickDay(day: CalendarDay): Promise<void> {
+        if (this.inert || day.isDisabled || day.isInactive) return;
+        this.focusDate = day.date;
+        await this.pick(day.date);
+    }
+
+    private async pick(date: IsoDate): Promise<void> {
+        if (this.selectMode === "single") {
+            this.currentValue = date;
+            return;
+        }
+        const next = this.selectMode === "multiple"
+            ? nextMultipleDates(this.picked, date, this.selectDatesHover)
+            : datesOfRange(nextDateRange(rangeOfDates(this.picked), date, this.selectDatesHover));
+        this.picked = next.filter((day) => !isDateDisabled(day, this.limits));
+        this.pickedFor = this.picked;
+        await this.selectedDatesChanged?.invokeAsync(this.picked);
+    }
+
+    private async dayKeydown(e: KeyboardEvent): Promise<void> {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (this.inert || isDateDisabled(this.focusDate, this.limits)) return;
+            await this.pick(this.focusDate);
+            return;
+        }
+        const rtl = this.root !== undefined && getComputedStyle(this.root).direction === "rtl";
+        const target = calendarKeyTarget(this.focusDate, e, this.firstDay, rtl);
+        if (target === undefined) return;
+        e.preventDefault();
+        this.focusDate = clampDate(target, this.minDate, this.maxDate);
+        if (this.selectMode === "range") this.hover = this.focusDate;
+        this.moveFocus = true;
+        await this.goTo(this.focusDate);
+    }
+
+    private get monthShortNames(): string[] {
+        return monthNames(this.locales, "short");
+    }
+
+    private monthValue(month: number): string {
+        return isoDate(this.shownYear, month, 1).slice(0, 7);
+    }
+
+    private monthTitle(month: number): string {
+        return formatIsoDate(isoDate(this.shownYear, month, 1), this.locales, { year: "numeric", month: "long" });
+    }
+
+    private monthDisabled(month: number): boolean {
+        return isMonthDisabled(this.shownYear, month, this.limits, this.disabledCheckAllDaysOfMonthYear);
+    }
+
+    private monthSelected(month: number): boolean {
+        return this.view === "months" && this.valueDate?.slice(0, 7) === this.monthValue(month);
+    }
+
+    private isThisMonth(month: number): boolean {
+        return this.displayToday && today().slice(0, 7) === this.monthValue(month);
+    }
+
+    private periodClass(selected: boolean, disabled: boolean, current: boolean): string {
+        let cls = "tz-calendar__period";
+        if (disabled) cls += " tz-calendar__period--disabled";
+        if (current && this.displayToday) cls += " tz-calendar__period--today";
+        if (selected) cls += " tz-calendar__period--selected";
+        return cls;
+    }
+
+    private async pickMonth(month: number): Promise<void> {
+        if (this.inert || this.monthDisabled(month)) return;
+        this.focusMonth = month;
+        const first = isoDate(this.shownYear, month, 1);
+        if (this.view === "months") {
+            this.currentValue = first;
+            return;
+        }
+        // Zoom back in to the month's days.
+        this.shownView = "days";
+        this.focusDate = clampDate(isoDate(this.shownYear, month, Math.min(Number(this.focusDate.slice(8, 10)), 28)), this.minDate, this.maxDate);
+        this.moveFocus = true;
+        await this.goTo(first);
+    }
+
+    private async monthKeydown(e: KeyboardEvent): Promise<void> {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            await this.pickMonth(this.focusMonth);
+            return;
+        }
+        const index = this.shownYear * 12 + this.focusMonth - 1;
+        const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3, PageUp: -12, PageDown: 12 };
+        // Right to left: ArrowLeft is the next month, as in the day grid.
+        const key = logicalArrowKey(e.key, this.root !== undefined && isRightToLeft(this.root));
+        let next = moves[key] !== undefined ? index + moves[key]! : undefined;
+        if (e.key === "Home") next = this.shownYear * 12;
+        if (e.key === "End") next = this.shownYear * 12 + 11;
+        if (next === undefined) return;
+        e.preventDefault();
+        const year = Math.floor(next / 12);
+        this.focusMonth = next - year * 12 + 1;
+        this.moveFocus = true;
+        await this.goTo(isoDate(year, Number(this.shownMonth.slice(5, 7)), 1));
+    }
+
+    private get years(): number[] {
+        return calendarYears(this.shownMonth);
+    }
+
+    private get todayYear(): number {
+        return Number(today().slice(0, 4));
+    }
+
+    private yearDisabled(year: number): boolean {
+        return isYearDisabled(year, this.limits, this.disabledCheckAllDaysOfMonthYear);
+    }
+
+    private yearSelected(year: number): boolean {
+        return this.view === "years" && this.valueDate?.slice(0, 4) === String(year);
+    }
+
+    private async pickYear(year: number): Promise<void> {
+        if (this.inert || this.yearDisabled(year)) return;
+        this.focusYear = year;
+        if (this.view === "years") {
+            this.currentValue = isoDate(year, 1, 1);
+            return;
+        }
+        // Zoom back in to the year's months.
+        this.shownView = "months";
+        this.moveFocus = true;
+        await this.goTo(isoDate(year, Number(this.shownMonth.slice(5, 7)), 1));
+    }
+
+    private async yearKeydown(e: KeyboardEvent): Promise<void> {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            await this.pickYear(this.focusYear);
+            return;
+        }
+        const years = this.years;
+        const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3, PageUp: -12, PageDown: 12 };
+        const key = logicalArrowKey(e.key, this.root !== undefined && isRightToLeft(this.root));
+        let next = moves[key] !== undefined ? this.focusYear + moves[key]! : undefined;
+        if (e.key === "Home") next = years[0];
+        if (e.key === "End") next = years[years.length - 1];
+        if (next === undefined) return;
+        e.preventDefault();
+        this.focusYear = next;
+        this.moveFocus = true;
+        await this.goTo(isoDate(next, Number(this.shownMonth.slice(5, 7)), 1));
+    }
+}

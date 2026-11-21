@@ -1,0 +1,26 @@
+@import { NavLinkMatch } from "@tsazor/runtime"
+@import type { NavigationContext } from "@tsazor/runtime"
+
+<nav class="menu">
+    <NavLink href="/" Match="@NavLinkMatch.All">Home</NavLink>
+    <NavLink href="/orders">Orders</NavLink>
+</nav>
+<main>
+    <Router OnNavigateAsync="prepare">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" />
+        </Found>
+        <NotFound>
+            <Lost />
+        </NotFound>
+    </Router>
+</main>
+
+@code {
+    /** Before a page shows, the router waits for this — here: the orders need a moment. */
+    async prepare(context: NavigationContext) {
+        if (context.path.startsWith("orders")) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+    }
+}

@@ -1,0 +1,766 @@
+@** A data grid on Bootstrap's `.table`, shaped like Blazor's QuickGrid: the columns are child
+    components (PropertyColumn, TemplateColumn) and take the row type from the grid. Rows come
+    from `items` (sorted and paged here) or an `itemsProvider` (sorted and paged by your code or a
+    server, with an AbortSignal). Sortable columns sort on a click on their header (`aria-sort`);
+    with a `pagination` state, a Paginator pages the grid. `selectionMode` adds a selection column
+    (checkboxes or radio buttons) bound to `selectedItems`. A filterable column offers the built-in
+    filter (operator, value) in its options panel. `density="compact"` is the dense table. *@
+@typeparam TGridItem
+@attribute @CascadingTypeParameter("TGridItem")
+@import Defer from "./Defer.tsazor"
+@import { ArrowDownUp, CaretDownFill, CaretUpFill, Filter, GripVertical } from "./core-icons"
+@import { Virtualize, VirtualizeAnchorMode, EventCallback, type RenderFragment } from "@tsazor/runtime"
+@import {
+DataGridModel, isRowClick, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridColumnsSnapshot, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
+type IconValue,
+} from "@tsazor/ui"
+@import { gridExportCsv, startColumnResize, startColumnReorder } from "@tsazor/ui"
+@import { isRightToLeft, logicalArrowKey, toggleAll, toggleSelection } from "@tsazor/ui/kit"
+@import { libraryTexts } from "@tsazor/ui"
+
+<CascadingValue Value="model">
+    @{ this.model.startCollectingColumns(); }
+    @childContent
+    <Defer>
+        @{ this.finishColumns(); }
+        <div class="@wrapperClass">
+            <table class="@tableClass" aria-label="@ariaLabel" aria-busy="@busy" aria-rowcount="@rowCount" @attributes="otherAttributes">
+                <colgroup>
+                    @if (selectionMode !== "none") {
+                        <col class="tz-grid-col-select" />
+                    }
+                    @foreach (const column of this.model.orderedColumns) {
+                        <col style="@this.colStyle(column)" />
+                    }
+                </colgroup>
+                <thead class="@headClass">
+                    <tr>
+                        @if (selectionMode === "multiple") {
+                            <th scope="col" class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@t("dataGrid.selectAll")" checked="@allSelected" @onchange="selectAll" /></th>
+                        } else if (selectionMode === "single") {
+                            <th scope="col" class="tz-grid-select"><span class="visually-hidden">@t("dataGrid.selected")</span></th>
+                        }
+                        @foreach (const column of this.model.orderedColumns) {
+                            <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)" aria-label="@this.headerName(column)">
+                                <div class="d-flex align-items-center tz-grid-header">
+                                    @if (this.reorderableColumns) {
+                                        <div class="tz-grid-grip" role="button" tabindex="0" aria-label="@t("dataGrid.reorder")" @onpointerdown="(event: PointerEvent) => this.startReorder(column, event)" @onkeydown="(event: KeyboardEvent) => this.reorderKey(column, event)"><Icon value="@GripVertical" size="12" /></div>
+                                    }
+                                    @if ((column.filterable || column.columnOptions !== undefined) && column.align === "end") {
+                                        <button type="button" class="@this.optionsClass(column)" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter" size="12" /></button>
+                                    }
+                                    @if (column.sortable) {
+                                        <button type="button" class="p-0 border-0 bg-transparent text-reset fw-semibold tz-grid-sort" @onclick="() => this.sort(column)">
+                                            @if (column.headerContent) { @column.headerContent } else { @column.title }
+                                            <span class="ms-1 tz-grid-sort-indicator" aria-hidden="true"><Icon value="@this.indicator(column)" size="12" /></span>
+                                        </button>
+                                    } else if (column.headerContent) {
+                                        @column.headerContent
+                                    } else {
+                                        @column.title
+                                    }
+                                    @if ((column.filterable || column.columnOptions !== undefined) && column.align !== "end") {
+                                        <button type="button" class="@this.optionsClass(column)" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter" size="12" /></button>
+                                    }
+                                </div>
+                                @if (this.optionsOwner === column.owner && (column.filterable || column.columnOptions !== undefined)) {
+                                    <div class="tz-grid-options-panel">
+                                        @if (column.filterable === true) {
+                                            <div class="tz-grid-filter">
+                                                <select class="form-select form-select-sm tz-grid-filter-operator" aria-label="@t("dataGrid.filterOperator")" value="@this.filterDraft(column).operator" @onchange="(event: Event) => this.setFilterOperator(column, event)">
+                                                    @foreach (const operator of this.filterOperators) {
+                                                        <option value="@operator">@t(`dataGrid.operator.${operator}`)</option>
+                                                    }
+                                                </select>
+                                                @if (this.filterNeedsValue(this.filterDraft(column).operator)) {
+                                                    <input type="text" class="form-control form-control-sm tz-grid-filter-value" aria-label="@t("dataGrid.filterValue")" value="@this.filterDraft(column).value" @oninput="(event: Event) => this.setFilterValue(column, event)" />
+                                                }
+                                                <div class="tz-grid-filter-actions">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => this.applyFilter(column)">@t("dataGrid.filterApply")</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => this.clearFilter(column)">@t("dataGrid.filterClear")</button>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (column.columnOptions !== undefined) { @column.columnOptions }
+                                    </div>
+                                }
+                                @if (this.resizableColumns) {
+                                    <div class="tz-grid-resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" aria-valuenow="@this.widthNow(column)" aria-valuemin="40" aria-valuemax="@Math.max(1920, this.widthNow(column))" @onfocus="(event: FocusEvent) => this.measureWidth(column, event)" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
+                                }
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (virtualize) {
+                        @if (this.items !== undefined && this.items.length === 0) {
+                            <tr class="tz-grid-placeholder"><td colspan="@this.columnCount" class="text-center text-body-secondary py-3">@if (emptyContent) { @emptyContent } else { <span>@t("noEntries")</span> }</td></tr>
+                        }
+                        <Virtualize Items="@virtualItems" ItemsProvider="@(this.itemsProvider !== undefined ? this.virtualProvider : undefined)" ItemSize="@itemSize" OverscanCount="@overscanCount" SpacerElement="tr" AnchorMode="@anchorMode" ItemComparer="@(itemComparer ?? Object.is)" InitialItemIndex="@initialItemIndex" @ref="virtualizer">
+                            <ItemContent Context="row">
+                                <tr @key="this.keyOf(row)" class="@this.rowClasses(row)" style="@this.rowStyleOf(row)" @onclick="(event: MouseEvent) => this.rowClicked(row, event)" aria-rowindex="@(this.virtualIndexOf(row) + 2)">
+                                    @if (selectionMode === "multiple") {
+                                        <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
+                                    } else if (selectionMode === "single") {
+                                        <td class="tz-grid-select"><input type="radio" class="form-check-input" name="@groupName" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
+                                    }
+                                    @foreach (const column of this.model.orderedColumns) {
+                                        <td class="@this.cellClass(column)">@this.cellContent(column, row)</td>
+                                    }
+                                </tr>
+                                @if (detailContent !== undefined && this.model.isDetailsOpen(row)) {
+                                    <tr @key="this.detailKeyOf(row)" id="@this.model.detailsId(row)" class="tz-grid-detail" data-virtualize-continuation>
+                                        <td colspan="@this.columnCount">@detailContent(row)</td>
+                                    </tr>
+                                }
+                            </ItemContent>
+                            <Placeholder Context="placeholder">
+                                <tr class="tz-grid-placeholder" aria-rowindex="@(placeholder.index + 2)" style="@(`height: ${placeholder.size}px;`)"><td colspan="@this.columnCount"></td></tr>
+                            </Placeholder>
+                        </Virtualize>
+                    } else {
+                    @if (this.rows.length === 0) {
+                        <tr class="tz-grid-placeholder">
+                            <td colspan="@this.columnCount" class="text-center text-body-secondary py-3">
+                                @if (this.model.loading) {
+                                    @if (loadingContent) { @loadingContent } else { <span>@t("loading")</span> }
+                                } else if (emptyContent) {
+                                    @emptyContent
+                                } else {
+                                    <span>@t("noEntries")</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @for (let i = 0; i < this.lines.length; i++) {
+                        const line = this.lines[i]!;
+                        @if (line.kind === "group") {
+                            <tr class="tz-grid-group">
+                                <td colspan="@this.columnCount" class="tz-grid-group-cell">
+                                    <button type="button" class="p-0 border-0 bg-transparent tz-grid-group-toggle" aria-expanded="@this.groupExpanded(line.open)" @onclick="() => this.model.toggleGroup(line.value)">
+                                        <span class="tz-grid-group-chevron" aria-hidden="true"><Icon value="@CaretDownFill" size="12" /></span>
+                                        <span class="fw-semibold">@this.groupText(line.value)</span>
+                                        <span class="text-body-secondary ms-1">(@line.count)</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        } else {
+                        const item = line.item;
+                        <tr @key="this.keyOf(item)" class="@this.rowClasses(item)" style="@this.rowStyleOf(item)" @onclick="(event: MouseEvent) => this.rowClicked(item, event)" @onkeydown="(event: KeyboardEvent) => this.editKey(item, event)">
+                            @if (selectionMode === "multiple") {
+                                <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                            } else if (selectionMode === "single") {
+                                <td class="tz-grid-select"><input type="radio" class="form-check-input" name="@groupName" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                            }
+                            @foreach (const column of this.model.orderedColumns) {
+                                <td class="@this.cellClass(column)">@this.cellContent(column, item)</td>
+                            }
+                        </tr>
+                        @if (detailContent !== undefined && this.model.isDetailsOpen(item)) {
+                            <tr @key="this.detailKeyOf(item)" id="@this.model.detailsId(item)" class="tz-grid-detail">
+                                <td colspan="@this.columnCount">@detailContent(item)</td>
+                            </tr>
+                        }
+                        }
+                    }
+                    }
+                </tbody>
+                @if (this.footColumns) {
+                    <tfoot class="tz-grid-foot">
+                        <tr>
+                            @if (selectionMode !== "none") {
+                                <td></td>
+                            }
+                            @foreach (const column of this.model.orderedColumns) {
+                                <td class="@this.cellClass(column)">@this.aggregateText(column)</td>
+                            }
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+            @* A screen reader hears a load, a filter or a provider's new page as their outcome. *@
+            <span class="visually-hidden" role="status">@this.statusText</span>
+        </div>
+    </Defer>
+</CascadingValue>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The grid's status: "Loading…" while it loads, then how many rows the filters leave. */
+    private get statusText(): string {
+        if (this.model.loading) return this.t("loading");
+        const total = this.model.totalItemCount ?? this.totalCount;
+        return total === undefined ? "" : this.t.plural("dataGrid.results", total);
+    }
+
+    /** The rows, sorted and paged by the grid. Set this or itemsProvider. */
+    @Parameter() items?: TGridItem[];
+    /** Loads the rows of a page on demand (server-side paging and sorting). Set this or items. */
+    @Parameter() itemsProvider?: GridItemsProvider<TGridItem>;
+    /** Paging state shared with a Paginator; without it, the grid shows all rows. */
+    @Parameter() pagination?: PaginationState;
+    /** A row's identity for `@key` (default: the item itself); keeps row state across sorting. */
+    @Parameter() itemKey?: (item: TGridItem) => string | number | object;
+    /** The columns: PropertyColumn and TemplateColumn. */
+    @Parameter() childContent?: RenderFragment;
+    /** Shown when there are no rows (default "No entries"). */
+    @Parameter() emptyContent?: RenderFragment;
+    /** Shown while an itemsProvider loads and no rows are shown yet (default "Loading…"). */
+    @Parameter() loadingContent?: RenderFragment;
+    /** none (default), single (radio buttons) or multiple (checkboxes, with "select all"). */
+    @Parameter() selectionMode: SelectionMode = "none";
+    /** The selected rows; bind it with `@bind-selectedItems`. */
+    @Bindable() accessor selectedItems: TGridItem[] = [];
+    /** Names the table for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Shades alternating rows (table-striped). */
+    @Parameter() striped: boolean = false;
+    /** Highlights the row under the pointer (table-hover). */
+    @Parameter() hover: boolean = false;
+    /** Draws borders on all cells (table-bordered). */
+    @Parameter() bordered: boolean = false;
+    /** The compact table variant; `small` was its name through 1.0 — new code takes `density="compact"`. */
+    @Parameter() small: boolean = false;
+    /** comfortable (the normal row height) or compact (the dense table). */
+    @Parameter() density?: "comfortable" | "compact";
+    /**
+     * Each column gets a handle to change its width: dragged, or the arrow keys (Fluent UI Blazor's `ResizableColumns`,
+     * MudBlazor's `ColumnResizeMode`). Off by default; widths set in code (`setColumnWidthAsync`) apply either way.
+     */
+    @Parameter() resizableColumns: boolean = false;
+    /**
+     * Each column gets a grip to move it: dragged, or the arrow keys (MudBlazor's `DragDropColumnReordering`). Off by
+     * default; an order set in code (`moveColumnAsync`) applies either way.
+     */
+    @Parameter() reorderableColumns: boolean = false;
+    /**
+     * What a column's footer aggregates over: all the grid's rows (the default) or the current
+     * page's. With an ItemsProvider the grid holds one window, so the scope is that window.
+     */
+    @Parameter() aggregateScope: AggregateScope = "all";
+    /** The grid's inline editing: a row's columns with an EditContent render it while the row is the edited one. */
+    @Parameter() editing: EditingMode = "none";
+    /** Fired when a row's edit ends, with its Enter (commit) or Escape (cancel); the app saves there. */
+    @Parameter() onEditEnded?: EventCallback<{ item: TGridItem; reason: "commit" | "cancel" }>;
+    /**
+     * Groups the rows by the lambda's value: a group header row per value (collapsible, open by
+     * default, its rows when open), groups by their value order, the rows within a group in the
+     * sort's order. Doesn't combine with Virtualize (v1).
+     */
+    @Parameter() group?: (item: TGridItem) => unknown;
+    /** Formats a group's value for its header (default: the value as text; Date: its ISO date). */
+    @Parameter() groupFormat?: (value: unknown) => string;
+    /**
+     * A row's details, in a row of their own below it while they show (MudDataGrid's ChildRowContent, MudTable's
+     * ChildRowContent): open them with a DetailsColumn's toggle or toggleDetailsAsync. In a grouped grid they stay
+     * with their row; in a virtualized one the detail row is part of its row's item (its height measured with it).
+     */
+    @Parameter() detailContent?: (item: TGridItem) => RenderFragment;
+    /** "multiple" (default): each row's details open and close by themselves; "single": opening one closes the others. */
+    @Parameter() detailsMode: "multiple" | "single" = "multiple";
+    /**
+     * Raised with a row's item when the row is clicked (Fluent UI Blazor's OnRowClick, MudDataGrid's RowClick) — not
+     * when the click was on a link, a button, a field or a label in the row, nor when it ended a text selection. A
+     * pointer convenience: the keyboard and a screen reader need the same action in a cell, as a link or a button
+     * (the row's name links to its page).
+     */
+    @Parameter() onRowClick?: EventCallback<TGridItem>;
+    /** A row's own class from its item (Fluent UI Blazor's RowClass, MudDataGrid's RowClassFunc): a failed run's row. */
+    @Parameter() rowClass?: (item: TGridItem) => string | null | undefined;
+    /** A row's own style from its item (Fluent UI Blazor's RowStyle, MudDataGrid's RowStyleFunc). */
+    @Parameter() rowStyle?: (item: TGridItem) => string | null | undefined;
+    /** Wraps the table in .table-responsive for horizontal scrolling. */
+    @Parameter() responsive: boolean = false;
+    /**
+     * Renders only the rows in view (runtime Virtualize): for thousands of rows. Put the grid in a
+     * scrolling container with a height; it doesn't combine with pagination.
+     */
+    @Parameter() virtualize: boolean = false;
+    /** The estimated row height in px when virtualized, until the rendered rows are measured (QuickGrid's ItemSize). */
+    @Parameter() itemSize: number = 41;
+    /** Rows rendered above and below the visible ones when virtualized. */
+    @Parameter() overscanCount: number = 3;
+    /**
+     * Virtualized: how the grid behaves at its edges when rows arrive (QuickGrid's AnchorMode). `End` follows
+     * rows appended at the bottom, as a log or a feed.
+     */
+    @Parameter() anchorMode: VirtualizeAnchorMode = VirtualizeAnchorMode.Start;
+    /**
+     * Virtualized with an itemsProvider: whether two rows are the same row, to tell rows inserted above from
+     * rows appended (QuickGrid's ItemComparer). Compare by key when the provider returns fresh objects.
+     */
+    @Parameter() itemComparer?: (a: TGridItem, b: TGridItem) => boolean;
+    /** Virtualized: the row to scroll to on the first render (QuickGrid's InitialItemIndex). */
+    @Parameter() initialItemIndex: number = 0;
+    /** Keeps the header row visible while the page (or a scrolling parent) scrolls. */
+    @Parameter() stickyHeader: boolean = false;
+    /** Further attributes for the table element (class adds to the table's classes). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
+    private readonly groupName = uniqueId("tz-grid-select");
+    /** The column whose options panel is open (by owner, the column component's stable identity). */
+    private optionsOwner?: object;
+    /** The built-in filter's operators, in the select's order. */
+    private readonly filterOperators: readonly GridFilterOperator[] = ["contains", "notContains", "startsWith", "endsWith", "equals", "notEquals", "greaterThan", "greaterThanOrEqual", "lessThan", "lessThanOrEqual", "empty", "notEmpty"];
+    /** The operators that compare by value: with a filter value that parses as a number, the filter compares numerically. */
+    private readonly compareOperators: ReadonlySet<GridFilterOperator> = new Set(["greaterThan", "greaterThanOrEqual", "lessThan", "lessThanOrEqual"]);
+    /** The unsaved filter of the open options panel, by column (it survives a re-render; the panel is the only renderer). */
+    private readonly filterDrafts = new Map<object, { operator: GridFilterOperator; value: string }>();
+    private rendered = false;
+    private virtualizer?: Virtualize<TGridItem>;
+    /** Provider mode: the rows of the loaded window with their positions (for aria-rowindex and labels). */
+    private readonly windowIndex = new Map<unknown, number>();
+    private totalCount?: number;
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => this.model.dispose());
+        this.disposeSignal.addEventListener("abort", () => this.columnCleanup?.());
+    }
+
+    protected override onParametersSet(): void {
+        if (this.virtualize && this.group !== undefined) {
+            throw new Error("DataGrid: Virtualize and grouping don't combine (yet). Group a page's grid, or virtualize an ungrouped one.");
+        }
+        const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
+        this.model.setGroup(this.group);
+        this.model.configureDetails({ key: (item) => this.keyOf(item), single: this.detailsMode === "single" });
+        this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshDataAsync() ?? Promise.resolve() : undefined);
+        if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+    }
+
+    /** Virtualized rows of Items: all of them, sorted. */
+    private get virtualItems(): readonly TGridItem[] | undefined {
+        return this.items === undefined ? undefined : this.model.sortedItems;
+    }
+
+    /** Virtualized rows of an ItemsProvider: the grid's request for the window in view. */
+    private readonly virtualProvider = async (request: { startIndex: number; count: number; signal: AbortSignal }) => {
+        const result = await this.model.provideRangeAsync(request.startIndex, request.count, request.signal);
+        this.windowIndex.clear();
+        result.items.forEach((item, offset) => this.windowIndex.set(item, request.startIndex + offset));
+        if (this.totalCount !== result.totalItemCount) {
+            this.totalCount = result.totalItemCount;
+            this.stateHasChanged();
+        }
+        return result;
+    };
+
+    private virtualIndexOf(row: TGridItem): number {
+        return this.items !== undefined ? this.model.sortedItems.indexOf(row) : this.windowIndex.get(row) ?? 0;
+    }
+
+    /** A virtualized table says how many rows it has (screen readers see only the rendered ones). */
+    private get rowCount(): number | null {
+        if (!this.virtualize) return null;
+        // The rows the grid shows: a filter leaves fewer than the items.
+        const total = this.items !== undefined ? this.model.sortedItems.length : this.totalCount;
+        return total === undefined ? null : total + 1;
+    }
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (!firstRender) return;
+        // The columns (and the default sort) are known now: the first request can go out.
+        this.rendered = true;
+        // (Virtualized, the Virtualize requests its window itself.)
+        if (this.itemsProvider !== undefined && !this.virtualize) void this.model.refreshDataAsync();
+    }
+
+    /**
+     * Virtualized: scrolls so the row at `index` is at the top (QuickGrid's ScrollToItemAsync). A newer call
+     * supersedes this one, which then resolves; it rejects only when `signal` aborts.
+     */
+    scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void> {
+        if (this.virtualizer === undefined) throw new Error("DataGrid: scrollToItemAsync needs Virtualize and a rendered grid.");
+        return this.virtualizer.scrollToItemAsync(index, signal);
+    }
+
+    /** Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed. */
+    refreshDataAsync(): Promise<void> {
+        return this.model.refreshDataAsync();
+    }
+
+    /** Sorts by a column, as a click on its header does (QuickGrid's SortByColumnAsync). */
+    sortByColumnAsync(column: GridColumn<TGridItem>, direction: "auto" | "ascending" | "descending" = "auto"): Promise<void> {
+        return this.model.sortByColumnAsync(column, direction);
+    }
+
+    private finishColumns(): void {
+        if (this.model.finishCollectingColumns() && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+    }
+
+    private get rows(): readonly TGridItem[] {
+        return this.model.rows;
+    }
+
+    /** The view's lines (the rows, or a group's header when the grid groups). */
+    private get lines(): readonly GridRow<TGridItem>[] {
+        return this.model.lines;
+    }
+
+    /** A group's header cell's expanded state, as the string the attribute reads. */
+    private groupExpanded(open: boolean): string {
+        return open ? "true" : "false";
+    }
+
+    /** A group's value for its header (the grid's format, else the date's ISO or the text). */
+    private groupText(value: unknown): string {
+        if (this.groupFormat !== undefined) return this.groupFormat(value);
+        return value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
+    }
+
+    private get columnCount(): number {
+        return this.model.columns.length + (this.selectionMode === "none" ? 0 : 1);
+    }
+
+    private get busy(): string | null {
+        return this.model.loading ? "true" : null;
+    }
+
+    private get wrapperClass(): string | null {
+        return this.responsive ? "table-responsive" : null;
+    }
+
+    /** The compact classes: table-sm for `small`, its alias `density="compact"`, and (once rendered) the measured rows. */
+    private get tableClass(): string {
+        const parts = ["table", "tz-grid"];
+        if (this.striped) parts.push("table-striped");
+        if (this.hover) parts.push("table-hover");
+        if (this.bordered) parts.push("table-bordered");
+        if (this.small || this.density === "compact") parts.push("table-sm");
+        if (this.model.orderedColumns.some((column) => this.model.widthOf(column) !== undefined)) parts.push("tz-grid--sized");
+        const extra = this.additionalAttributes?.["class"];
+        if (typeof extra === "string" && extra.length > 0) parts.push(extra);
+        return parts.join(" ");
+    }
+
+    /** The captured attributes without class (that one joins tableClass). */
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+
+    /** A column's width for its col, when the model holds one (the sized table lays the rest out itself). */
+    private colStyle(column: GridColumn<TGridItem>): string | null {
+        const width = this.model.widthOf(column);
+        return width === undefined ? null : `width: ${width};`;
+    }
+
+    /** Header widths measured when a handle takes focus, by the column's owner (a render makes new column objects): the valuenow of a column without a px width (unset, percent). */
+    private readonly measuredWidths = new Map<object, number>();
+
+    /** A column's width in px: its px width when set, else its header cell's (measured now, or at the handle's focus), else 120. */
+    private pxWidth(column: GridColumn<TGridItem>, head?: Element | null): number {
+        const set = this.model.widthOf(column);
+        if (set !== undefined && set.endsWith("px")) return parseFloat(set);
+        const measured = head?.getBoundingClientRect().width;
+        if (measured !== undefined && measured > 0) return measured;
+        return this.measuredWidths.get(column.owner) ?? 120;
+    }
+
+    /** The handle's valuenow: the column's width in px, at least the 40 a resize keeps. */
+    private widthNow(column: GridColumn<TGridItem>): number {
+        return Math.max(40, Math.round(this.pxWidth(column)));
+    }
+
+    /** A focused handle measures its column, so a width the table laid out (or a percent) reads in px. */
+    private measureWidth(column: GridColumn<TGridItem>, event: FocusEvent): void {
+        const width = (event.currentTarget as HTMLElement).closest("th")?.getBoundingClientRect().width;
+        if (width !== undefined && width > 0) this.measuredWidths.set(column.owner, width);
+    }
+
+    /* Column resize and order ------------------------------------------------- */
+
+    /** A running resize's or drag's cleanup: the document listeners go when the component does. */
+    private columnCleanup: (() => void) | undefined;
+
+    /** Starts resizing from the handle at the header's end (the drag follows the pointer over the document). */
+    private startResize(column: GridColumn<TGridItem>, pointer: PointerEvent): void {
+        pointer.preventDefault();
+        const initial = this.pxWidth(column, (pointer.currentTarget as HTMLElement).closest("th"));
+        this.columnCleanup?.();
+        this.columnCleanup = startColumnResize({
+            pointer,
+            initialWidth: initial,
+            onResize: (width) => void this.model.setColumnWidthAsync(column, `${width}px`),
+        });
+    }
+
+    /** The handle's arrow keys resize too: 5 px at a time, 20 with Shift, never below 40 px (a percent width turns px). */
+    private async resizeKey(column: GridColumn<TGridItem>, event: KeyboardEvent): Promise<void> {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        // Right to left: the handle is at the column's left edge, so ArrowLeft widens it.
+        const step = (event.shiftKey ? 20 : 5) * (logicalArrowKey(event.key, isRightToLeft(event.target as Element)) === "ArrowRight" ? 1 : -1);
+        const current = this.pxWidth(column, (event.currentTarget as HTMLElement).closest("th"));
+        await this.model.setColumnWidthAsync(column, `${Math.max(40, Math.round(current + step))}px`);
+    }
+
+    /** Starts a reorder drag from the grip (the head's th cells are the columns in display order). */
+    private startReorder(column: GridColumn<TGridItem>, pointer: PointerEvent): void {
+        const head = (pointer.currentTarget as HTMLElement).closest("thead") as HTMLElement | null;
+        const from = this.model.indexOfColumn(column);
+        if (head === null || from === -1) return;
+        this.columnCleanup?.();
+        this.columnCleanup = startColumnReorder({
+            pointer,
+            head,
+            fromIndex: from,
+            onDone: (fromIndex, toIndex) => this.model.moveColumnAsync(this.model.orderedColumns[fromIndex]!, toIndex),
+        });
+    }
+
+    /** The grip's arrow keys move the column one place. */
+    private reorderKey(column: GridColumn<TGridItem>, event: KeyboardEvent): void {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const index = this.model.indexOfColumn(column);
+        // Right to left: ArrowLeft moves it towards the end.
+        this.model.moveColumnAsync(column, index + (logicalArrowKey(event.key, isRightToLeft(event.target as Element)) === "ArrowRight" ? 1 : -1));
+    }
+
+    private get headClass(): string | null {
+        return this.stickyHeader ? "sticky-top" : null;
+    }
+
+    private alignClass(column: GridColumn<TGridItem>): string | null {
+        return column.align === "center" ? "text-center" : column.align === "end" ? "text-end" : null;
+    }
+
+    private cellClass(column: GridColumn<TGridItem>): string | null {
+        const parts = [this.alignClass(column), column.className].filter((part): part is string => !!part);
+        return parts.length > 0 ? parts.join(" ") : null;
+    }
+
+    /**
+     * The column's name for its cells: its title alone, when the header holds controls besides it — the grip, the
+     * options button, the resize separator, an open filter — whose names would join it on every cell. A header of
+     * its own (headerContent) keeps its content's name.
+     */
+    private headerName(column: GridColumn<TGridItem>): string | null {
+        const controls = this.reorderableColumns || this.resizableColumns || column.filterable === true || column.columnOptions !== undefined;
+        return controls && !column.headerContent && column.title ? column.title : null;
+    }
+
+    private ariaSort(column: GridColumn<TGridItem>): string | null {
+        return this.model.sortDirectionOf(column) ?? null;
+    }
+
+    private indicator(column: GridColumn<TGridItem>): IconValue {
+        const direction = this.model.sortDirectionOf(column);
+        return direction === "ascending" ? CaretUpFill : direction === "descending" ? CaretDownFill : ArrowDownUp;
+    }
+
+    private sort(column: GridColumn<TGridItem>): Promise<void> {
+        return this.model.sortByColumnAsync(column);
+    }
+
+    /* The footer's aggregates -------------------------------------------------- */
+
+    /** True when any column has a footer summary (the tfoot renders then). */
+    private get footColumns(): boolean {
+        return this.model.columns.some((column) => column.aggregate !== undefined);
+    }
+
+    /** A footer cell's text: the aggregate's value, via the column's own format. */
+    private aggregateText(column: GridColumn<TGridItem>): string {
+        const value = this.model.aggregateOf(column, this.aggregateScope);
+        if (value === undefined) return "";
+        return column.aggregateFormat !== undefined ? column.aggregateFormat(value) : String(value);
+    }
+
+    /* The built-in column filter ---------------------------------------------- */
+
+    /** The panel's unsaved filter for `column`; fresh from the column's active filter. */
+    private filterDraft(column: GridColumn<TGridItem>): { operator: GridFilterOperator; value: string } {
+        let draft = this.filterDrafts.get(column.owner);
+        if (draft === undefined) {
+            const active = this.model.filterOf(column);
+            draft = {
+                operator: active?.operator ?? "contains",
+                value: active?.value === undefined || typeof active.value === "boolean" ? "" : String(active.value),
+            };
+            this.filterDrafts.set(column.owner, draft);
+        }
+        return draft;
+    }
+
+    private setFilterOperator(column: GridColumn<TGridItem>, event: Event): void {
+        const target = event.target as HTMLSelectElement;
+        this.filterDrafts.set(column.owner, { operator: target.value as GridFilterOperator, value: this.filterDraft(column).value });
+    }
+
+    private setFilterValue(column: GridColumn<TGridItem>, event: Event): void {
+        this.filterDraft(column).value = (event.target as HTMLInputElement).value;
+    }
+
+    /** Whether `operator` carries a filter value (`empty` and `notEmpty` don't). */
+    private filterNeedsValue(operator: GridFilterOperator): boolean {
+        return operator !== "empty" && operator !== "notEmpty";
+    }
+
+    /** Applies the panel's draft as the column's filter (an empty value clears it). */
+    private applyFilter(column: GridColumn<TGridItem>): Promise<void> {
+        const draft = this.filterDraft(column);
+        const rule = !this.filterNeedsValue(draft.operator)
+            ? { operator: draft.operator }
+            : draft.value.trim() === ""
+              ? undefined
+              : this.compareOperators.has(draft.operator) && Number.isFinite(Number(draft.value))
+                ? { operator: draft.operator, value: Number(draft.value) }
+                : { operator: draft.operator, value: draft.value };
+        return this.model.setFilterAsync(column, rule);
+    }
+
+    /** Clears the column's filter and the panel's draft. */
+    private async clearFilter(column: GridColumn<TGridItem>): Promise<void> {
+        this.filterDrafts.delete(column.owner);
+        await this.model.setFilterAsync(column, undefined);
+    }
+
+    /** The options button of a column with an active filter says so visually. */
+    private optionsClass(column: GridColumn<TGridItem>): string | null {
+        const active = this.model.filterOf(column) !== undefined;
+        return active ? "p-0 border-0 bg-transparent tz-grid-options tz-grid-options--active" : "p-0 border-0 bg-transparent tz-grid-options";
+    }
+
+    private toggleOptions(column: GridColumn<TGridItem>): void {
+        this.optionsOwner = this.optionsOwner === column.owner ? undefined : column.owner;
+        // A draft belongs to the open panel; closing or switching drops it.
+        for (const owner of this.filterDrafts.keys()) {
+            if (owner !== this.optionsOwner) this.filterDrafts.delete(owner);
+        }
+    }
+
+    private optionsExpanded(column: GridColumn<TGridItem>): string {
+        return this.optionsOwner === column.owner ? "true" : "false";
+    }
+
+    private keyOf(item: TGridItem): string | number | object | null | undefined {
+        return this.itemKey ? this.itemKey(item) : (item as string | number | object | null | undefined);
+    }
+
+    private isSelected(item: TGridItem): boolean {
+        return this.selectedItems.includes(item);
+    }
+
+    private rowClasses(item: TGridItem): string | null {
+        const parts: string[] = [];
+        const own = this.rowClass?.(item);
+        if (own) parts.push(own);
+        if (this.onRowClick !== undefined) parts.push("tz-grid-row-clickable");
+        if (this.selectionMode !== "none" && this.isSelected(item)) parts.push("table-active");
+        if (this.model.isEditing(item)) parts.push("tz-grid-row-editing");
+        return parts.length > 0 ? parts.join(" ") : null;
+    }
+
+    private rowStyleOf(item: TGridItem): string | null {
+        return this.rowStyle?.(item) || null;
+    }
+
+    private rowClicked(item: TGridItem, event: MouseEvent): Promise<void> | undefined {
+        if (this.onRowClick === undefined || !isRowClick(event)) return undefined;
+        return this.onRowClick.invokeAsync(item);
+    }
+
+    /** A row cell's content: the column's edit cell while its row is the edited one, else its cell. */
+    private cellContent(column: GridColumn<TGridItem>, item: TGridItem): RenderFragment {
+        const editing = this.editing === "row" && this.model.isEditing(item) && column.editContent !== undefined;
+        return editing ? column.editContent!(item) : column.cell(item);
+    }
+
+    /* The grid's inline edit --------------------------------------------------- */
+
+    /** Puts a row into the grid's inline edit (the columns' edit cells render in it). */
+    async editRowAsync(item: TGridItem): Promise<void> {
+        if (this.editing !== "row") throw new Error('DataGrid: to edit a row, set editing="row".');
+        this.model.editRow(item);
+    }
+
+    /** Ends the row's edit; `onEditEnded` reports it, with the reason (the app saves on "commit"). */
+    async endEditAsync(reason: "commit" | "cancel"): Promise<void> {
+        const item = this.model.editedRow;
+        if (item === undefined) return;
+        this.model.endEdit();
+        await this.onEditEnded?.invokeAsync({ item, reason });
+    }
+
+    /** Whether `item` is the row in the grid's edit (your edit row's buttons render by it). */
+    isEditing(item: TGridItem): boolean {
+        return this.model.isEditing(item);
+    }
+
+    /** Opens or closes a row's details (`detailContent`); with `detailsMode="single"` the others close. */
+    async toggleDetailsAsync(item: TGridItem): Promise<void> {
+        if (this.detailContent === undefined) throw new Error("DataGrid: a row's details need a detailContent.");
+        this.model.toggleDetails(item);
+    }
+
+    /** Whether `item`'s details show. */
+    isDetailsOpen(item: TGridItem): boolean {
+        return this.model.isDetailsOpen(item);
+    }
+
+    /** The id of `item`'s detail row while it shows, for your own toggle's aria-controls. */
+    detailsId(item: TGridItem): string {
+        return this.model.detailsId(item);
+    }
+
+    /** Closes every row's details. */
+    async closeAllDetailsAsync(): Promise<void> {
+        this.model.closeAllDetails();
+    }
+
+    /** The detail rows' keys: one token per row key, so a detail row never takes its row's key. */
+    private readonly detailKeys = new Map<unknown, object>();
+
+    private detailKeyOf(item: TGridItem): object {
+        const key = this.keyOf(item);
+        let token = this.detailKeys.get(key);
+        if (token === undefined) this.detailKeys.set(key, (token = {}));
+        return token;
+    }
+
+    /** The grid's state as plain data (the columns' order and widths, the sort, the filters); the app stores it where it wants. */
+    columnsSnapshot(): GridColumnsSnapshot {
+        return this.model.snapshotColumns();
+    }
+
+    /** Restores a snapshot taken with columnsSnapshot() (order, widths, sort, filters) and reloads the rows to match. */
+    restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void> {
+        return this.model.restoreColumnsAsync(snapshot);
+    }
+
+    /** The rows' CSV text (RFC 4180): the columns in display order that carry a text, over the scope (all, or the page's). */
+    exportCsv(scope: "all" | "page" = "all", delimiter: "," | ";" | "	" = ","): string {
+        return gridExportCsv(this.model.orderedColumns, this.model.aggregateRows(scope), { delimiter });
+    }
+
+    /** The edit's default keys: Enter commits (not on a button; its click commits itself), Escape cancels. */
+    private async editKey(item: TGridItem, event: KeyboardEvent): Promise<void> {
+        if (!this.model.isEditing(item) || (event.key !== "Enter" && event.key !== "Escape")) return;
+        if ((event.target as HTMLElement | undefined)?.tagName === "BUTTON") return;
+        event.preventDefault();
+        await this.endEditAsync(event.key === "Enter" ? "commit" : "cancel");
+    }
+
+    private selectLabel(index: number): string {
+        const pagination = this.pagination;
+        const row = (pagination ? pagination.currentPageIndex * pagination.itemsPerPage : 0) + index + 1;
+        return this.t("dataGrid.selectRow", { row });
+    }
+
+    private get allSelected(): boolean {
+        return this.rows.length > 0 && this.rows.every((row) => this.selectedItems.includes(row));
+    }
+
+    private select(item: TGridItem): void {
+        this.selectedItems = toggleSelection(this.selectedItems, item, this.selectionMode);
+    }
+
+    private selectAll(): void {
+        this.selectedItems = toggleAll(this.selectedItems, this.rows);
+    }
+}

@@ -1,0 +1,41 @@
+@** Renders Bootstrap's `.progress` bar with `role="progressbar"` and `aria-valuenow`, for a value
+    in percent clamped to 0–100. *@
+@import { libraryTexts, type Intent } from "@tsazor/ui"
+@import { backgroundColor } from "./vocabulary"
+<div class="progress" role="progressbar" aria-label="@accessibleName" aria-valuenow="@clamped" aria-valuemin="0" aria-valuemax="100">
+    <div class="@barClass" style="width: @(clamped)%">@label</div>
+</div>
+
+@code {
+    /** Progress value in percent (0–100). */
+    @Parameter() value: number = 0;
+    /** Renders diagonal stripes on the bar. */
+    @Parameter() striped: boolean = false;
+    /** Animates the stripes (implies striped). */
+    @Parameter() animated: boolean = false;
+    /** Optional bar color role (Bootstrap's default blue without one). */
+    @Parameter() intent?: Intent;
+    /** Optional label rendered inside the bar (also the accessible name when `ariaLabel` is unset). */
+    @Parameter() label?: string;
+    /** The progress bar's accessible name, e.g. "Upload" — a screen reader needs one (WCAG 4.1.2). */
+    @Parameter() ariaLabel?: string;
+
+    private readonly t = libraryTexts();
+
+    /** A progressbar needs a name: the label, else a generic one ('Progress, 40%'). */
+    private get accessibleName(): string {
+        return this.ariaLabel ?? (this.label || this.t("progress"));
+    }
+
+    private get clamped(): number {
+        return Math.max(0, Math.min(100, this.value));
+    }
+
+    private get barClass(): string {
+        const parts = ["progress-bar"];
+        if (this.intent) parts.push(`bg-${backgroundColor(this.intent)}`);
+        if (this.striped || this.animated) parts.push("progress-bar-striped");
+        if (this.animated) parts.push("progress-bar-animated");
+        return parts.join(" ");
+    }
+}

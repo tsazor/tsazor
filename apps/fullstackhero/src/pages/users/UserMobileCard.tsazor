@@ -1,0 +1,39 @@
+@* pages/users/list.tsx's UserMobileCard: a user as a card on small screens ("Open user …") — monogram, name and email,
+   then the status and email pills; a disabled account is dimmed. *@
+@import { ChevronRight } from "lucide"
+@import type { UserDto } from "@/api/users"
+
+<li class="list-none">
+    <button type="button" @onclick="() => onClick?.invokeAsync()" aria-label="@(`Open user ${display}`)"
+            class="@cn("group w-full overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-left shadow-xs", "transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-accent)]", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]", !user.isActive && "opacity-75")">
+        <div class="flex items-center justify-between">
+            <div class="flex min-w-0 items-center gap-3">
+                <Monogram seed="@(user.id ?? user.userName ?? String(index))" firstName="@user.firstName" lastName="@user.lastName" fallback="@(user.userName ?? user.email)" size="md" />
+                <div class="min-w-0">
+                    <p class="truncate text-[14px] font-medium text-[var(--color-foreground)]">@display</p>
+                    <p class="mt-0.5 truncate text-[11px] text-[var(--color-muted-foreground)]">@(user.email ?? "no email")</p>
+                </div>
+            </div>
+            <Icon icon="@ChevronRight" class="size-4 shrink-0 text-[var(--color-border)] transition-colors group-hover:text-[var(--color-muted-foreground)]" />
+        </div>
+        <div class="mt-2 ml-[52px] flex flex-wrap items-center gap-1.5">
+            <span class="@cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10.5px] font-medium", user.isActive ? "bg-[oklch(from_var(--color-success)_l_c_h_/_0.12)] text-[var(--color-success)]" : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]")">
+                @(user.isActive ? "Active" : "Inactive")
+            </span>
+            <span class="@cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10.5px] font-medium", user.emailConfirmed ? "bg-[oklch(from_var(--color-info)_l_c_h_/_0.12)] text-[var(--color-info)]" : "bg-[oklch(from_var(--color-warning)_l_c_h_/_0.12)] text-[var(--color-warning)]")">
+                @(user.emailConfirmed ? "Email confirmed" : "Email pending")
+            </span>
+        </div>
+    </button>
+</li>
+
+@code {
+    @Parameter() user!: UserDto;
+    @Parameter() index: number = 0;
+    @Parameter() onClick?: EventCallback;
+
+    private get display(): string {
+        const fullName = [this.user.firstName, this.user.lastName].filter(Boolean).join(" ").trim();
+        return fullName || this.user.userName || this.user.email || "Unnamed";
+    }
+}

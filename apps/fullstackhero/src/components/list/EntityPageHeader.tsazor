@@ -1,0 +1,45 @@
+@* components/list/entity-page-header.tsx: a tone-tinted icon tile, the Outfit title with a count chip and the
+   description on the left, the actions (ChildContent) on the right — stacked full-width on mobile. React's
+   `title: ReactNode` is `title` (text) or `TitleContent` (markup), as Blazor libraries pair Title and TitleContent;
+   `description` likewise. *@
+@import type { IconNode } from "lucide"
+@import type { ToneIconTileTone } from "./tone"
+
+<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex items-start gap-3.5">
+        <ToneIconTile icon="@icon" tone="@tone" size="lg" />
+        <div class="min-w-0">
+            <div class="flex items-baseline gap-2">
+                <h1 class="font-display text-display-page font-semibold tracking-tight text-[var(--color-foreground)]">
+                    @if (titleContent) { @titleContent } else { @title }
+                </h1>
+                @if (total !== undefined && total !== null) {
+                    <span class="font-mono text-[11px] text-[var(--color-muted-foreground)]">@total @(total === 1 ? unit : `${unit}s`)</span>
+                }
+            </div>
+            @if (descriptionContent || description) {
+                <p class="mt-0.5 text-[13px] text-[var(--color-muted-foreground)]">
+                    @if (descriptionContent) { @descriptionContent } else { @description }
+                </p>
+            }
+        </div>
+    </div>
+
+    @if (childContent) {
+        <div class="flex w-full gap-2 sm:w-auto">@childContent</div>
+    }
+</div>
+
+@code {
+    @Parameter() icon!: IconNode;
+    @Parameter() title?: string;
+    @Parameter() titleContent?: RenderFragment;
+    /** Icon tile tone. Defaults to `primary`. Pick `saffron` / `info` / etc. for pages where the rose tile fights the page's own accent. */
+    @Parameter() tone: ToneIconTileTone = "primary";
+    @Parameter() total?: number | null;
+    @Parameter() unit: string = "item";
+    @Parameter() description?: string;
+    @Parameter() descriptionContent?: RenderFragment;
+    /** Action buttons rendered on the right (stack full-width on mobile). */
+    @Parameter() childContent?: RenderFragment;
+}

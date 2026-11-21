@@ -1,13 +1,13 @@
 <div class="event-log">
     @if (this.entries.length === 0) {
-        <p class="event-log-empty">Warten auf den ersten Tick…</p>
+        <p class="event-log-empty">Waiting for the first tick…</p>
     } else {
         <ListGroup Flush="@true">
             @for (const entry of this.entries) {
                 <ListGroupItem>
                     <span class="at">@this.clock(entry.at)</span>
                     <span class="pt">@this.price(entry.snapshot.lastPrice)</span>
-                    <Badge Variant="@entry.changeVariant">@entry.changeText</Badge>
+                    <Badge Intent="@entry.changeVariant">@entry.changeText</Badge>
                 </ListGroupItem>
             }
         </ListGroup>
@@ -22,7 +22,7 @@
         return new Date(at).toTimeString().slice(0, 8);
     }
 
-    private price(value: number): string {
-        return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    private price(value: number | undefined): string {
+        return value === undefined ? "—" : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 }

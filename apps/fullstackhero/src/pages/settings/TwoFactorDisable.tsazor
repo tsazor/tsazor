@@ -1,0 +1,79 @@
+@* pages/settings/security.tsx's TwoFactorDisable: with 2FA on, the current password disables it (and rotates the
+   authenticator secret). The mutation is a plain handler; its error state (`mutation.isError`) shows inline. *@
+@import { AlertCircle, ShieldOff } from "lucide"
+@import { disableTwoFactor } from "@/api/two-factor"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+
+<SettingsSection title="Two-factor authentication" icon="@ShieldOff">
+    <DescriptionContent>
+        <span class="flex flex-wrap items-center gap-2">
+            Two-factor is currently enabled on your account. Confirm your password to disable — this
+            rotates the authenticator secret, so a fresh enroll will generate a new QR.
+            <Badge variant="success" class="font-mono uppercase tracking-[0.14em]">enabled</Badge>
+        </span>
+    </DescriptionContent>
+    <Footer>
+        <div class="flex items-center justify-end gap-2">
+            <Button type="button" variant="destructive" onClick="@disable" disabled="@(password.length === 0 || pending)">
+                <Icon icon="@ShieldOff" class="mr-1 h-3.5 w-3.5" />
+                @(pending ? "Disabling…" : "Disable two-factor")
+            </Button>
+        </div>
+    </Footer>
+    <ChildContent>
+        <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div class="space-y-1.5">
+                <Label for="disable-pw">Current password</Label>
+                <Input id="disable-pw" type="password" autocomplete="current-password" @bind-value="password" class="font-mono" />
+            </div>
+            @* Inline action for the sm breakpoint — the footer handles the final CTA at all widths but this
+               grid-col-auto slot keeps things tidy on desktop. *@
+            <div class="hidden sm:block">
+                <Button type="button" variant="destructive" onClick="@disable" disabled="@(password.length === 0 || pending)">
+                    <Icon icon="@ShieldOff" class="mr-1 h-3.5 w-3.5" />
+                    @(pending ? "Disabling…" : "Disable")
+                </Button>
+            </div>
+        </div>
+
+        @if (error) {
+            <div role="alert" class="mt-3 flex items-start gap-2 rounded-md border border-[oklch(from_var(--color-destructive)_l_c_h_/_0.40)] bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.08)] px-3 py-2 text-sm text-[var(--color-destructive)]">
+                <Icon icon="@AlertCircle" class="mt-0.5 h-4 w-4 shrink-0" />
+                <span>@(error instanceof ApiRequestError ? (error.problem?.detail ?? error.message) : (error as Error).message)</span>
+            </div>
+        }
+    </ChildContent>
+</SettingsSection>
+
+@code {
+    private password = "";
+    private pending = false;
+    /** The mutation's error (`mutation.isError`/`mutation.error`); a new attempt clears it. */
+    private error: unknown = null;
+
+    private async disable(): Promise<void> {
+        this.pending = true;
+        this.error = null;
+        try {
+            const data = await disableTwoFactor(this.password);
+            if (data.success) {
+                toast.success("Two-factor disabled");
+                this.password = "";
+                void queryClient.invalidateQueries({ queryKey: ["identity", "profile"] });
+            } else {
+                toast.error("Disable failed", { description: "Password verification failed." });
+            }
+        } catch (err) {
+            this.error = err;
+            const detail =
+                err instanceof ApiRequestError
+                    ? (err.problem?.detail ?? err.problem?.title ?? err.message)
+                    : (err as Error).message;
+            toast.error("Disable failed", { description: detail });
+        } finally {
+            this.pending = false;
+        }
+    }
+}

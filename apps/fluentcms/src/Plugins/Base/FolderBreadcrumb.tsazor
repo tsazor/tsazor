@@ -1,0 +1,27 @@
+@* The trail from the root folder to the open one (the breadcrumb over FluentCMS's FilesTable): a folder above
+   the open one opens it. *@
+@import type { FolderDetailResponse } from "../../api/models"
+
+<Breadcrumb aria-label="Folder path">
+    @foreach (const folder of folders) {
+        @if (folder.id === current) {
+            <BreadcrumbItem active>@folder.name</BreadcrumbItem>
+        } else {
+            <BreadcrumbItem onClick="() => this.onNavigate?.invokeAsync(folder.id)">
+                @if (folder.id === rootId) {
+                    <Icon value="@IconName.Folder" />
+                }
+                @folder.name
+            </BreadcrumbItem>
+        }
+    }
+</Breadcrumb>
+
+@code {
+    /** The folders from the root down to the open one. */
+    @Parameter() folders: FolderDetailResponse[] = [];
+    /** The open folder's id. */
+    @Parameter() current: string | null = null;
+    @Parameter() rootId?: string;
+    @Parameter() onNavigate?: EventCallback<string>;
+}

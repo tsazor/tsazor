@@ -1,9 +1,0 @@
-@if (isOpen) {
-    <div class="collapse show">@childContent</div>
-}
-
-@code {
-    /** Whether the collapsible content is visible. */
-    @Parameter() isOpen: boolean = false;
-    @Parameter() childContent?: RenderFragment;
-}

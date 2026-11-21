@@ -1,0 +1,41 @@
+@page "/virtualization/nested-variable-height"
+@import type { OuterItem } from "./models"
+<p>
+    Nested Virtualize with variable heights at both levels:<br />
+    <span id="nested-vh-outer-count">Outer: @outerItems.length</span>
+    <span id="nested-vh-inner-count">Inner per group: 30</span>
+    <div id="nested-vh-outer-container" style="background-color: #eee; height: 400px; overflow-y: auto">
+        <Virtualize Items="@outerItems" ItemSize="150">
+            <div @key="context.index" id="nested-vh-outer-@context.index" class="nested-vh-outer"
+                 style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 90%); padding: 4px; box-sizing: border-box;">
+                <span class="outer-index">Category @context.index (H:@context.height)</span>
+                <div id="nested-vh-inner-container-@context.index" class="nested-vh-inner-container"
+                     style="height: @(context.height - 30)px; overflow-y: auto; background-color: hsl(@(context.hue), 50%, 80%);">
+                    <Virtualize Items="@context.children" ItemSize="25" Context="innerCtx">
+                        <div @key="innerCtx.index" class="nested-vh-inner"
+                             style="height: @(innerCtx.height)px; background-color: hsl(@(innerCtx.hue), 70%, 70%); box-sizing: border-box;">
+                            Inner @innerCtx.index (H:@innerCtx.height)
+                        </div>
+                    </Virtualize>
+                </div>
+            </div>
+        </Virtualize>
+    </div>
+</p>
+
+@code {
+    outerItems: OuterItem[] = [];
+
+    protected override onInitialized(): void {
+        this.outerItems = range(0, 40).map((i) => ({
+            index: i,
+            height: 100 + (i * 47 % 201), // 100-300px
+            hue: i * 30 % 360,
+            children: range(0, 30).map((j) => ({
+                index: j,
+                height: 15 + (j * 11 % 31), // 15-45px
+                hue: j * 12 % 360,
+            })),
+        }));
+    }
+}

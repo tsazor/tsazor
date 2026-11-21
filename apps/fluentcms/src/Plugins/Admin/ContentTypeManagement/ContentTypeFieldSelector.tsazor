@@ -1,0 +1,30 @@
+@* Picks a new field's type (FluentCMS's ContentTypeFieldSelector). *@
+@import { ORDERED_FIELD_TYPES, type FieldTypeKey } from "./field-models"
+
+<Dialog isOpen title="Select a field type" size="large" onClosed="@this.cancel">
+    <ChildContent>
+        <div class="field-types">
+            @foreach (const fieldType of ORDERED_FIELD_TYPES) {
+                <button type="button" class="field-type" @key="fieldType.key" @onclick="() => this.onSelect?.invokeAsync(fieldType.key)">
+                    <Icon value="@fieldType.icon" class="field-type-icon" />
+                    <span class="field-type-text">
+                        <span class="field-type-title">@fieldType.title</span>
+                        <span class="field-type-description">@fieldType.description</span>
+                    </span>
+                </button>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        <Button onClick="@this.cancel">Cancel</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @Parameter() onSelect?: EventCallback<FieldTypeKey>;
+    @Parameter() onCancel?: EventCallback;
+
+    private cancel(): Promise<void> | undefined {
+        return this.onCancel?.invokeAsync();
+    }
+}

@@ -1,0 +1,43 @@
+@* The admin pages' layout (FluentCMS's AdminLayout and AdminSidebar), in Fluent: the header with the user's menu, the sidebar, and the Main section. *@
+@inject ViewState ViewState
+@inject NavigationManager Navigation
+
+<div class="admin-shell">
+    <header class="admin-header">
+        <a class="admin-brand" href="/"><img src="/files/images/logo.svg" alt="FluentCMS" height="28" /></a>
+        <Menu label="@(this.ViewState.user.username ?? "Account")" appearance="subtle" placement="bottom-end">
+            <MenuItem onSelect="() => this.Navigation.navigateTo('/auth/profile')">Profile</MenuItem>
+            <MenuItem onSelect="() => this.Navigation.navigateTo('/auth/logout')">Logout</MenuItem>
+        </Menu>
+    </header>
+    <div class="admin-body">
+        <aside class="admin-sidebar">
+            <SidebarNav links="@this.links" ariaLabel="Administration" />
+            <a class="admin-api-docs" href="/api/doc" target="_blank" rel="noopener">API documentation</a>
+        </aside>
+        <main class="admin-main">
+            <PluginsSection name="Main" />
+        </main>
+    </div>
+</div>
+
+@code {
+    private readonly links: { href: string; label: string; match?: NavLinkMatch }[] = [
+        { href: "/admin", label: "Home", match: NavLinkMatch.All },
+        { href: "/admin/pages", label: "Pages" },
+        { href: "/admin/blocks", label: "Blocks" },
+        { href: "/admin/plugins", label: "Plugins" },
+        { href: "/admin/layouts", label: "Layouts" },
+        { href: "/admin/roles", label: "Roles" },
+        { href: "/admin/content-types", label: "Content Types" },
+        { href: "/admin/sites", label: "Sites" },
+        { href: "/admin/files", label: "File Management" },
+        { href: "/admin/users", label: "Users" },
+        { href: "/admin/api-tokens", label: "API Tokens" },
+        { href: "/admin/globalsettings", label: "Global Settings" },
+    ];
+
+    protected override onInitialized(): void {
+        this.observe(this.ViewState);
+    }
+}

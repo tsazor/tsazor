@@ -1,0 +1,52 @@
+@* Client/Pages/Authentication/Register.razor(.cs): signing up — a new user, inactive and with a confirmation mail
+   (the API's RegisterAsync); an administrator activates them. Register stays enabled, as on the login (U6). *@
+@page "/register"
+@allowAnonymous
+@import { Toaster } from "@tsazor/fluent"
+@import { RegisterRequest } from "../../Application/Identity"
+@import { registerRequestValidators } from "../../Application/Validators/Identity"
+@inject UserManager userManager
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<FluentForm model="@registerUserModel" validators="@validators" onValidSubmit="@submitAsync" novalidate class="bh-login">
+    <Icon value="@BlazorHeroLogo" size="100" class="bh-login__logo" />
+    <Typography variant="h1" class="bh-login__title">@L("Register")</Typography>
+    <p class="bh-login__text">@L("Already have an account?") <Link href="/login">@L("Sign In")</Link></p>
+    <TextInput label="@L("User Name")" @bind-Value="registerUserModel.userName" />
+    <div class="bh-form-grid">
+        <TextInput label="@L("First Name")" @bind-Value="registerUserModel.firstName" />
+        <TextInput label="@L("Last Name")" @bind-Value="registerUserModel.lastName" />
+        <TextInput label="@L("E-mail")" type="email" @bind-Value="registerUserModel.email" />
+        <TextInput label="@L("Phone Number")" @bind-Value="registerUserModel.phoneNumber" />
+        <TextInput label="@L("Password")" type="@(passwordVisible ? "text" : "password")" @bind-Value="registerUserModel.password">
+            <ContentAfter>
+                <Button appearance="transparent" size="small" iconStart="@(passwordVisible ? Icons.Eye : Icons.EyeOff)" ariaLabel="@(passwordVisible ? "Hide password" : "Show password")" onClick="@togglePasswordVisibility" />
+            </ContentAfter>
+        </TextInput>
+        <TextInput label="@L("Confirm Password")" type="password" @bind-Value="registerUserModel.confirmPassword" />
+    </div>
+    <Button type="submit" intent="primary" size="large" class="bh-login__submit">@L("Register")</Button>
+</FluentForm>
+
+@code {
+    private readonly L = localizerFor("Register");
+    private readonly validators = registerRequestValidators(localizerFor("RegisterRequestValidator"));
+    private registerUserModel = new RegisterRequest();
+    private passwordVisible = false;
+
+    private async submitAsync(): Promise<void> {
+        const response = await this.userManager.registerUserAsync(this.registerUserModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.navigation.navigateTo("/login");
+            this.registerUserModel = new RegisterRequest();
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private togglePasswordVisibility(): void {
+        this.passwordVisible = !this.passwordVisible;
+    }
+}

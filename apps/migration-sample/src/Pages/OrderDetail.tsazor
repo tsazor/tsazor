@@ -1,0 +1,27 @@
+@page "/orders/{id:int}"
+@authorize
+@inject OrdersClient Orders
+
+<PageTitle>Order @id · Bakery admin</PageTitle>
+
+<p><a href="orders">All orders</a></p>
+@if (order) {
+    <h1>Order @order.id</h1>
+    <dl class="order">
+        <dt>Customer</dt><dd>@order.customer</dd>
+        <dt>Item</dt><dd>@order.item</dd>
+        <dt>Total</dt><dd>@order.total.toFixed(2)</dd>
+        <dt>Status</dt><dd>@order.status</dd>
+    </dl>
+} else {
+    <p role="status">Loading…</p>
+}
+
+@code {
+    @Parameter() id = 0;
+    private order?: Order;
+
+    protected override async onParametersSet(): Promise<void> {
+        this.order = await this.Orders.getOrder(this.id);
+    }
+}

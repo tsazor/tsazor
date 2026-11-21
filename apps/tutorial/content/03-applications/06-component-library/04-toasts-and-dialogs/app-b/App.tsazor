@@ -1,0 +1,30 @@
+@using @tsazor/bootstrap
+@import { Toaster } from "@tsazor/bootstrap"
+@inject Toaster toaster
+
+<Card>
+    <CardBody>
+        <CardTitle>Order 101</CardTitle>
+        <p>Two sourdough loaves and one rye, for Marta.</p>
+        <Button Intent="danger" data-action="delete" OnClick="@(() => this.confirming = true)">Delete order</Button>
+    </CardBody>
+</Card>
+
+<Dialog IsOpen="@confirming" Title="Delete order 101?" OnClosed="@(() => this.confirming = false)">
+    <ChildContent>The order and its lines are removed. This cannot be undone.</ChildContent>
+    <Footer>
+        <Button Appearance="subtle" OnClick="@(() => this.confirming = false)">Cancel</Button>
+        <Button Intent="danger" data-action="confirm" OnClick="deleteOrder">Delete</Button>
+    </Footer>
+</Dialog>
+
+<ToastRegion />
+
+@code {
+    confirming = false;
+
+    deleteOrder() {
+        this.confirming = false;
+        this.toaster.show({ title: "Deleted", message: "Order 101 is gone.", intent: "success" });
+    }
+}

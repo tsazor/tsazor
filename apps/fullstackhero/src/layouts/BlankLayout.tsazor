@@ -1,0 +1,5 @@
+@* The public pages' layout (login, password reset, email confirmation, not found): no shell — routes.tsx mounts them
+   outside AppShell. *@
+@inherits LayoutComponentBase
+
+@Body

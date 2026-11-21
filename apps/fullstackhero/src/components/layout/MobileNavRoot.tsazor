@@ -1,0 +1,54 @@
+@* components/layout/mobile-nav.tsx's MobileNavRoot: the left-edge sheet the hamburger opens below `md`, with the
+   sidebar's nav body. It closes on a nav click and on every route change (browser back/forward too). *@
+@import { findSectionForPath } from "./nav-items"
+@import { ShellState } from "./shell-state"
+@import { visibleSections } from "./visible-sections"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+<Dialog open="@shell.mobileNavOpen" openChanged="@((open: boolean) => shell.setMobileNavOpen(open))">
+    <SheetContent side="left" class="flex flex-col p-0">
+        @* A dialog needs a title for the accessible tree. *@
+        <DialogTitle class="sr-only">Primary navigation</DialogTitle>
+        <DialogDescription class="sr-only">Admin sections and account links.</DialogDescription>
+
+        @* Brand row — matches Topbar height *@
+        <div class="flex h-14 shrink-0 items-center gap-2.5 border-b border-[var(--color-border)] px-4">
+            <span aria-hidden="true" class="brand-mark grid h-7 w-7 shrink-0 place-items-center rounded-md text-[11px] font-bold tracking-tight text-[var(--color-primary-foreground)] shadow-[0_1px_0_oklch(1_0_0_/_0.18)_inset,0_4px_14px_-4px_oklch(from_var(--color-primary)_l_c_h_/_0.45)]">F</span>
+            <div class="flex flex-col">
+                <span class="whitespace-nowrap font-display text-[15px] font-bold leading-none tracking-tight text-[var(--color-foreground)]">fullstack<span class="text-[var(--color-primary)]">hero</span></span>
+                <span class="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">Admin</span>
+            </div>
+        </div>
+
+        <SidebarNavBody collapsed="false" openSection="@openSection" openSectionChanged="@((id: string | null) => openSection = id)"
+                        visibleSections="@visibleSections(auth)" pathname="@pathname" onNavigate="@(() => shell.setMobileNavOpen(false))" />
+
+        <div class="border-t border-[var(--color-border)] px-5 py-3">
+            <p class="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">v0.1 · admin</p>
+        </div>
+    </SheetContent>
+</Dialog>
+
+@code {
+    @CascadingParameter({ type: ShellState }) shell!: ShellState;
+
+    private pathname = "/";
+    private openSection: string | null = null;
+
+    protected override onInitialized(): void {
+        this.observe(this.shell);
+        this.observe(this.auth.changes);
+        this.follow();
+        this.observe(this.navigation, () => {
+            this.follow();
+            // Close the drawer on route changes (e.g. browser back/forward).
+            this.shell.setMobileNavOpen(false);
+        });
+    }
+
+    private follow(): void {
+        this.pathname = new URL(this.navigation.uri).pathname;
+        this.openSection = findSectionForPath(this.pathname);
+    }
+}

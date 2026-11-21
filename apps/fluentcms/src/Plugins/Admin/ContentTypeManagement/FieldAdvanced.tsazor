@@ -1,0 +1,13 @@
+@* What every field's Advanced tab has (FluentCMS's field settings): whether its value must be unique, then the
+   type's own settings (a pattern, a default value). *@
+@import type { AnyFieldModel } from "./field-models"
+
+<div class="field-settings">
+    <Switch @bind-Value="model.unique" label="Unique" />
+    @childContent
+</div>
+
+@code {
+    @Parameter() model!: AnyFieldModel;
+    @Parameter() childContent?: RenderFragment;
+}

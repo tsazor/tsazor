@@ -1,0 +1,41 @@
+@page "/reference/components/{packageSlug}"
+@import reference from "virtual:tutorial-reference"
+@import type { ReferencePackage } from "../../reference-types"
+
+<PageTitle>@(pkg?.name ?? "Not found") · Tsazor reference</PageTitle>
+<ReferenceShell Section="components" PackageSlug="@packageSlug">
+    @if (pkg) {
+        <h1>@pkg.name</h1>
+        <p class="lead">@pkg.description</p>
+        <table class="components">
+            <thead>
+                <tr><th scope="col">Component</th><th scope="col">Description</th></tr>
+            </thead>
+            <tbody>
+                @foreach (const component of pkg.components) {
+                    <tr @key="component.name">
+                        <td><a href="@("reference/components/" + pkg.slug + "/" + component.name)"><code>@component.name</code></a></td>
+                        <td>
+                            @(new MarkupString(component.summary))
+                            @if (component.baseClass) {
+                                <span class="tag">base class</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    } else {
+        <h1>Not in the reference</h1>
+        <p>There is no package “@packageSlug”. The <a href="reference">overview</a> lists them all.</p>
+    }
+</ReferenceShell>
+
+@code {
+    /** Route parameter: runtime | components | fluent. */
+    @Parameter() packageSlug = "";
+
+    private get pkg(): ReferencePackage | undefined {
+        return reference.packages.find((candidate) => candidate.slug === this.packageSlug);
+    }
+}

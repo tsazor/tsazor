@@ -1,0 +1,6 @@
+@* A yes/no field in the content list as a green or red indicator (FluentCMS's BooleanFieldDataTableIndicator). *@
+@inherits BaseFieldValueView<boolean, BooleanFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { BooleanFieldModel } from "../field-models"
+
+<Indicator intent="@(fieldValue.value ? "success" : "danger")">@(fieldValue.value ? "Yes" : "No")</Indicator>

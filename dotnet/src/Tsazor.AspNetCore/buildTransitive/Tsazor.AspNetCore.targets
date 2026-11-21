@@ -1,0 +1,95 @@
+<Project>
+  <!-- The client's build in the server's build; the properties are in Tsazor.AspNetCore.props. -->
+
+  <PropertyGroup Condition="'$(TsazorClientProject)' != ''">
+    <_TsazorClientDir>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '$(TsazorClientProject)'))))))</_TsazorClientDir>
+    <_TsazorClientDist>$(_TsazorClientDir)$(TsazorClientDistFolder)/</_TsazorClientDist>
+    <_TsazorInstallStamp>$(_TsazorClientDir)node_modules/.tsazor-install.stamp</_TsazorInstallStamp>
+    <_TsazorEnabled Condition="'$(DesignTimeBuild)' != 'true' and '$(BuildingForLiveUnitTesting)' != 'true'">true</_TsazorEnabled>
+    <!-- Empty TsazorBuildClient: the client is built on Release builds (and always on publish, below). -->
+    <_TsazorBuildOnBuild Condition="'$(TsazorBuildClient)' == 'true' or ('$(TsazorBuildClient)' == '' and '$(Configuration)' == 'Release')">true</_TsazorBuildOnBuild>
+    <TsazorOpenApiDocument Condition="'$(TsazorOpenApiDocument)' == '' and '$(OpenApiDocumentsDirectory)' != ''">$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '$(OpenApiDocumentsDirectory)', '$(MSBuildProjectName).json'))))</TsazorOpenApiDocument>
+  </PropertyGroup>
+
+  <Target Name="TsazorCheckClient" Condition="'$(_TsazorEnabled)' == 'true'">
+    <Error Code="TSAZOR002" Condition="!Exists('$(_TsazorClientDir)package.json')"
+           Text="Tsazor: no package.json in $(_TsazorClientDir) (TsazorClientProject = '$(TsazorClientProject)')." />
+    <Exec Command="node --version" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+      <Output TaskParameter="ExitCode" PropertyName="_TsazorNodeExitCode" />
+    </Exec>
+    <Error Code="TSAZOR001" Condition="'$(_TsazorNodeExitCode)' != '0'"
+           Text="Tsazor: Node.js was not found. The client ($(_TsazorClientDir)) is built with npm: install Node.js 22.12 or later (https://nodejs.org) and build again, or skip the client with -p:TsazorNpmInstall=false -p:TsazorBuildClient=false -p:TsazorGenerateApiClient=false." />
+  </Target>
+
+  <!-- npm install when package.json or the lock file is newer than the last install, or node_modules is missing. -->
+  <Target Name="TsazorNpmInstall"
+          Condition="'$(_TsazorEnabled)' == 'true' and '$(TsazorNpmInstall)' == 'true'"
+          DependsOnTargets="TsazorCheckClient"
+          Inputs="$(_TsazorClientDir)package.json;$(_TsazorClientDir)package-lock.json"
+          Outputs="$(_TsazorInstallStamp)">
+    <Message Importance="high" Text="Tsazor: $(TsazorNpmInstallCommand) in $(_TsazorClientDir)" />
+    <Exec Command="$(TsazorNpmInstallCommand)" WorkingDirectory="$(_TsazorClientDir)" />
+    <Touch Files="$(_TsazorInstallStamp)" AlwaysCreate="true" />
+  </Target>
+
+  <!-- Opt-in: the typed client from the OpenAPI document the build writes (Microsoft.Extensions.ApiDescription.Server). -->
+  <Target Name="TsazorGenerateApiClient"
+          Condition="'$(_TsazorEnabled)' == 'true' and '$(TsazorGenerateApiClient)' == 'true'"
+          DependsOnTargets="TsazorCheckClient;TsazorNpmInstall"
+          Inputs="$(TsazorOpenApiDocument)"
+          Outputs="$(IntermediateOutputPath)tsazor-api-client.stamp">
+    <Error Code="TSAZOR003" Condition="'$(TsazorOpenApiDocument)' == '' or !Exists('$(TsazorOpenApiDocument)')"
+           Text="Tsazor: no OpenAPI document at '$(TsazorOpenApiDocument)'. TsazorGenerateApiClient needs the build to write one: reference Microsoft.Extensions.ApiDescription.Server, or set TsazorOpenApiDocument." />
+    <Message Importance="high" Text="Tsazor: the API client from $(TsazorOpenApiDocument) into $(TsazorApiClientOutput)" />
+    <Exec Command="npm exec --no -- tsazor-dotnet generate &quot;$(TsazorOpenApiDocument)&quot; --out &quot;$(TsazorApiClientOutput)&quot; $(TsazorApiClientArguments)"
+          WorkingDirectory="$(_TsazorClientDir)" />
+    <Touch Files="$(IntermediateOutputPath)tsazor-api-client.stamp" AlwaysCreate="true" />
+  </Target>
+
+  <!-- npm run build when a file of the client is newer than dist/index.html. -->
+  <Target Name="TsazorBuildClient"
+          Condition="'$(_TsazorEnabled)' == 'true'"
+          DependsOnTargets="TsazorCheckClient;TsazorNpmInstall;TsazorGenerateApiClient;_TsazorClientInputs"
+          Inputs="@(_TsazorClientInput)"
+          Outputs="$(_TsazorClientDist)index.html">
+    <Message Importance="high" Text="Tsazor: $(TsazorBuildCommand) in $(_TsazorClientDir)" />
+    <Exec Command="$(TsazorBuildCommand)" WorkingDirectory="$(_TsazorClientDir)" />
+    <Touch Files="$(_TsazorClientDist)index.html" />
+  </Target>
+
+  <Target Name="_TsazorClientInputs">
+    <ItemGroup>
+      <_TsazorClientInput Include="$(_TsazorClientDir)**"
+                          Exclude="$(_TsazorClientDir)node_modules/**;$(_TsazorClientDist)**;$(_TsazorClientDir)obj/**;$(_TsazorClientDir)bin/**;$(_TsazorClientDir).vscode/**;$(_TsazorClientDir).vs/**" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_TsazorDistFiles">
+    <ItemGroup>
+      <_TsazorDistFile Include="$(_TsazorClientDist)**" />
+    </ItemGroup>
+  </Target>
+
+  <!-- After the server's build: install, the API client, and on a Release build the client, copied to the output's wwwroot. -->
+  <Target Name="TsazorAfterBuild" AfterTargets="Build" Condition="'$(_TsazorEnabled)' == 'true'"
+          DependsOnTargets="TsazorNpmInstall;TsazorGenerateApiClient">
+    <CallTarget Targets="TsazorBuildClient;_TsazorCopyClientToOutput" Condition="'$(_TsazorBuildOnBuild)' == 'true'" />
+  </Target>
+
+  <Target Name="_TsazorCopyClientToOutput" DependsOnTargets="_TsazorDistFiles">
+    <Copy SourceFiles="@(_TsazorDistFile)" DestinationFiles="@(_TsazorDistFile->'$(OutDir)$(TsazorWebRootFolder)/%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- dotnet publish: the client is built (unless TsazorBuildClient is false) and its dist goes to the output's wwwroot. -->
+  <Target Name="TsazorPublishClient" AfterTargets="ComputeFilesToPublish"
+          Condition="'$(_TsazorEnabled)' == 'true' and '$(TsazorBuildClient)' != 'false'"
+          DependsOnTargets="TsazorBuildClient;_TsazorDistFiles">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(_TsazorDistFile->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)"
+                             RelativePath="$(TsazorWebRootFolder)/%(RecursiveDir)%(Filename)%(Extension)"
+                             CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -1,0 +1,101 @@
+.prose ::deep p,
+.prose ::deep li {
+    line-height: 1.65;
+}
+
+.prose ::deep h2 {
+    margin: 1.75rem 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.prose ::deep code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+    background: var(--bg-sunken);
+}
+
+.prose ::deep pre.code {
+    margin: 1rem 0;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    background: var(--editor-bg);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    line-height: 1.55;
+}
+
+.prose ::deep pre.code code {
+    padding: 0;
+    background: none;
+    font-size: 0.86rem;
+}
+
+.prose ::deep blockquote {
+    margin: 1.25rem 0;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    background: var(--accent-soft);
+}
+
+.prose ::deep blockquote p {
+    margin: 0.4rem 0;
+}
+
+.prose ::deep a {
+    color: var(--accent-strong);
+}
+
+.prose ::deep table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 1rem 0;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.prose ::deep th,
+.prose ::deep td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+.prose ::deep th {
+    font-weight: 600;
+    border-bottom-width: 2px;
+}
+
+.prose ::deep h2,
+.prose ::deep h3,
+.prose ::deep h4 {
+    scroll-margin-top: 1rem;
+}
+
+.prose ::deep h3 {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.05rem;
+}
+
+.prose ::deep .doc-link {
+    font-style: italic;
+}
+
+.prose ::deep p:first-child {
+    margin-top: 0;
+}
+
+.prose ::deep :not(pre) > code {
+    overflow-wrap: anywhere;
+}
+
+/* A code span linked to its reference entry (build/reference-links.ts). */
+.prose ::deep a.ref-link {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+}

@@ -1,0 +1,104 @@
+@* pages/users/detail.tsx's RolesEditor: the user's roles as On/Off toggles, batched in a draft — the description counts
+   the pending changes; Save sends the whole list (each role enabled or not), Discard drops the draft. A new roles
+   list (after a save) resets the draft, as the original's effect on `roles`. The footer only shows with roles. *@
+@import { Check, ShieldCheck } from "lucide"
+@import { assignUserRoles, type UserRoleDto } from "@/api/users"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import RoleRow from "./RoleRow.tsazor"
+
+<SettingsSection title="Role assignment" icon="@ShieldCheck" description="@description" footer="@(!loading && roles.length > 0 ? footer : undefined)">
+    @if (error) {
+        <ErrorBand message="@describeErr(error)" />
+    } else if (loading) {
+        <p class="text-sm text-[var(--color-muted-foreground)]">
+            Loading
+            <span class="caret text-[var(--color-accent-signal)]"></span>
+        </p>
+    } else if (roles.length === 0) {
+        <p class="text-sm text-[var(--color-muted-foreground)]">No roles defined for this tenant.</p>
+    } else {
+        <ul class="divide-y divide-[var(--color-border)]">
+            @foreach (const r of roles) {
+                <RoleRow @key="r.roleId" role="@r" enabled="@(!!draft[r.roleId])" changed="@(Boolean(draft[r.roleId]) !== Boolean(original[r.roleId]))" onToggle="@(() => toggle(r.roleId))" />
+            }
+        </ul>
+    }
+</SettingsSection>
+
+@code {
+    /** React's `footer={cond ? <…/> : undefined}`: a Razor template the section gets only then (F17). */
+    private readonly footer: RenderFragment = @<div class="flex items-center gap-2">
+        <Button onClick="@save" disabled="@(dirtyCount === 0 || saving)" class="h-9 rounded-lg px-4 text-[13px]">
+            <Icon icon="@Check" class="mr-1 h-3.5 w-3.5" />
+            @(saving ? "Saving…" : "Save changes")
+        </Button>
+        <Button variant="outline" onClick="@discard" disabled="@(dirtyCount === 0 || saving)" class="h-9 rounded-lg px-4 text-[13px]">
+            Discard
+        </Button>
+    </div>;
+
+    @Parameter() userId!: string;
+    @Parameter() roles: UserRoleDto[] = [];
+    @Parameter() loading: boolean = false;
+    @Parameter() error?: unknown;
+    @Parameter() onSaved?: EventCallback;
+
+    private draft: Record<string, boolean> = {};
+    private syncedRoles?: UserRoleDto[];
+    private saving = false;
+
+    /** The original's `useEffect(() => setDraft(…), [roles])`: a new roles list resets the draft. */
+    protected override onParametersSet(): void {
+        if (this.roles !== this.syncedRoles) {
+            this.syncedRoles = this.roles;
+            this.draft = this.original;
+        }
+    }
+
+    private get original(): Record<string, boolean> {
+        return Object.fromEntries(this.roles.map((r) => [r.roleId, r.enabled]));
+    }
+
+    private get dirtyCount(): number {
+        const original = this.original;
+        return Object.keys(this.draft).reduce((acc, k) => acc + (Boolean(this.draft[k]) === Boolean(original[k]) ? 0 : 1), 0);
+    }
+
+    private get description(): string {
+        const dirtyCount = this.dirtyCount;
+        return dirtyCount > 0
+            ? `${dirtyCount} pending change${dirtyCount === 1 ? "" : "s"} — review and save when ready.`
+            : "Tap any role to toggle. Changes are batched — review and save when ready.";
+    }
+
+    private toggle(roleId: string): void {
+        this.draft = { ...this.draft, [roleId]: !this.draft[roleId] };
+    }
+
+    private discard(): void {
+        this.draft = this.original;
+    }
+
+    private async save(): Promise<void> {
+        const next = this.roles.map<UserRoleDto>((r) => ({ ...r, enabled: !!this.draft[r.roleId] }));
+        this.saving = true;
+        try {
+            await assignUserRoles(this.userId, next);
+            toast.success("Roles updated");
+            void queryClient.invalidateQueries({ queryKey: ["user", this.userId, "roles"] });
+            await this.onSaved?.invokeAsync();
+        } catch (err) {
+            toast.error("Role update failed", { description: this.describeErr(err) });
+        } finally {
+            this.saving = false;
+        }
+    }
+
+    private describeErr(err: unknown): string {
+        if (err instanceof ApiRequestError) return err.problem?.detail ?? err.problem?.title ?? err.message;
+        if (err instanceof Error) return err.message;
+        return String(err);
+    }
+}

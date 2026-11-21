@@ -81,12 +81,12 @@ describe("parser", () => {
     expect(node.isForEach).toBe(false);
     expect(node.code).toBe("let i = 0; i < 3; i++");
 
-    const { doc: doc2 } = parse("@foreach (var item in items) { <li>@item</li> }");
+    const { doc: doc2 } = parse("@foreach (const item of items) { <li>@item</li> }");
     const node2 = doc2.body[0]!;
     expect(node2.kind).toBe("for");
     if (node2.kind !== "for") return;
     expect(node2.isForEach).toBe(true);
-    expect(node2.code).toBe("var item in items");
+    expect(node2.code).toBe("const item of items");
   });
 
   it("parses switch with cases and skips break statements", () => {
@@ -106,13 +106,16 @@ describe("parser", () => {
     const el = doc.body[0]!;
     expect(el.kind).toBe("element");
     if (el.kind !== "element") return;
-    const [id, cls, title, key, ref, click] = el.attributes;
+    const [id, cls, title, key, ref, click, modifier] = el.attributes;
     expect(id).toMatchObject({ kind: "static", name: "id", value: "x" });
     expect(cls).toMatchObject({ kind: "mixedValue", name: "class" });
     expect(title).toMatchObject({ kind: "expression", name: "title", code: "title" });
     expect(key).toMatchObject({ kind: "key", code: "k" });
     expect(ref).toMatchObject({ kind: "ref", code: "field" });
-    expect(click).toMatchObject({ kind: "eventHandler", name: "onclick", flags: 1 });
+    expect(click).toMatchObject({ kind: "eventHandler", name: "onclick", code: "Go" });
+    // A modifier is an attribute of its own (Blazor's __internal_preventDefault_onclick).
+    expect(modifier).toMatchObject({ kind: "eventModifier", name: "onclick", modifier: "preventDefault" });
+    expect(modifier).not.toHaveProperty("code");
   });
 
   it("parses component tags (uppercase or dotted)", () => {
@@ -183,5 +186,190 @@ describe("parser", () => {
   it("reports a stray '}' outside any element as TZS003", () => {
     const { diagnostics } = parse("a } b");
     expect(diagnostics.all.some((d) => d.code === "TZS003")).toBe(true);
+  });
+});
+
+describe("parser — code-first code contexts (A2)", () => {
+  const kinds = (nodes: Array<{ kind: string }>) => nodes.map((n) => n.kind);
+
+  it("parses control bodies as statements + markup in statement position", () => {
+    const { doc, diagnostics } = parse("@if (a) {\n  const label = x.toUpperCase();\n  <p>@label</p>\n  count++\n  <b>it's {</b>\n}");
+    expect(diagnostics.all).toHaveLength(0);
+    const node = doc.body[0]!;
+    if (node.kind !== "if") throw new Error("expected if");
+    const body = node.branches[0]!.children;
+    expect(kinds(body)).toEqual(["statement", "element", "statement", "element"]);
+    expect(body[0]).toMatchObject({ kind: "statement", code: "const label = x.toUpperCase();", declares: ["label"] });
+    // ASI: `count++` ends at the line break before the tag.
+    expect(body[2]).toMatchObject({ kind: "statement", code: "count++" });
+  });
+
+  it("parses @{ } as a code-first block with markup and declarations", () => {
+    const { doc, diagnostics } = parse("@{\n  const { a, b: [c] } = pair;\n  if (a) {\n    <p>yes</p>\n  }\n}");
+    expect(diagnostics.all).toHaveLength(0);
+    const block = doc.body[0]!;
+    if (block.kind !== "codeBlock") throw new Error("expected codeBlock");
+    expect(block.member).toBeUndefined();
+    expect(kinds(block.children!)).toEqual(["statement", "if"]);
+    expect(block.children![0]).toMatchObject({ declares: ["a", "c"] });
+  });
+
+  it("scans code with the TS lexer: braces in strings, templates, regex and comments", () => {
+    const { doc, diagnostics } = parse("@{\n  const s = `}${'{'}`; // }\n  const r = /[}]/; /* { */\n}\n<p>after</p>");
+    expect(diagnostics.all).toHaveLength(0);
+    expect(kinds(doc.body)).toEqual(["codeBlock", "element"]);
+  });
+
+  it("parses while, do-while and try/catch/finally", () => {
+    const { doc, diagnostics } = parse(
+      "@while (i < 3) { <i>@i</i> i++; }\n@do { <b/> } while (again);\n@try { <p/> } catch (Exception e) { <p>@e</p> } finally { done(); }",
+    );
+    expect(diagnostics.all).toHaveLength(0);
+    expect(doc.body[0]).toMatchObject({ kind: "while", condition: "i < 3", isDoWhile: false });
+    expect(doc.body[1]).toMatchObject({ kind: "while", condition: "again", isDoWhile: true });
+    const tryNode = doc.body[2]!;
+    if (tryNode.kind !== "try") throw new Error("expected try");
+    // C#-typed catch parameter binds its name.
+    expect(tryNode.catchClause).toMatchObject({ param: "e", paramName: "e" });
+    expect(kinds(tryNode.finallyChildren!)).toEqual(["statement"]);
+  });
+
+  it("keeps stacked switch labels as empty (fall-through) cases", () => {
+    const { doc } = parse("@switch (k) {\n  case 1:\n  case 2:\n    <p>low</p>\n    break;\n  default:\n    <p>x</p>\n}");
+    const node = doc.body[0]!;
+    if (node.kind !== "switch") throw new Error("expected switch");
+    expect(node.cases.map((c) => [c.code, kinds(c.children)])).toEqual([
+      ["1", []],
+      ["2", ["element", "statement"]],
+      [null, ["element"]],
+    ]);
+  });
+
+  it("gives control headers a source position", () => {
+    const { doc } = parse("@if (a &&\n    b) { }\n@for (  let i = 0; i < 2; i++) { }");
+    const node = doc.body[0]!;
+    if (node.kind !== "if" || doc.body[1]!.kind !== "for") throw new Error("expected if + for");
+    expect(node.branches[0]!.conditionStart).toEqual({ line: 1, column: 5 });
+    expect(doc.body[1]).toMatchObject({ code: "let i = 0; i < 2; i++", codeStart: { line: 3, column: 8 } });
+  });
+
+  it("treats bare text in a body as an error (Razor: code context), never silently", () => {
+    const { diagnostics } = parse("@if (a) {\n    Loading\n}");
+    expect(diagnostics.all.some((d) => d.code === "TZS015" && d.pos.line === 2)).toBe(true);
+  });
+
+  it("processes @ transitions on @: lines and keeps the line break", () => {
+    const { doc } = parse("@if (a) {\n    @:Hi @name!\n}");
+    const node = doc.body[0]!;
+    if (node.kind !== "if") throw new Error("expected if");
+    expect(node.branches[0]!.children.map((c) => (c.kind === "text" ? c.content : c.kind))).toEqual(["Hi ", "expression", "!\n"]);
+  });
+});
+
+describe("parser — markup fidelity (A2)", () => {
+  it("drops @* *@ comments anywhere", () => {
+    const { doc, diagnostics } = parse("<p @* attr *@ class=\"a\">x @* <b>@y(</b> *@ z</p>@if (a) { @* c *@ <i/> }");
+    expect(diagnostics.all).toHaveLength(0);
+    const p = doc.body[0]!;
+    if (p.kind !== "element") throw new Error("expected element");
+    expect(p.attributes).toHaveLength(1);
+    expect(p.children).toMatchObject([{ kind: "text", content: "x  z" }]);
+  });
+
+  it("applies the email rule in text and attribute values", () => {
+    const { doc } = parse('<a href="mailto:me@x.org">me@x.org</a><i>@a@b</i>');
+    const [a, i] = doc.body;
+    if (a?.kind !== "element" || i?.kind !== "element") throw new Error("expected elements");
+    expect(a.attributes[0]).toMatchObject({ kind: "static", value: "mailto:me@x.org" });
+    expect(a.children).toMatchObject([{ kind: "text", content: "me@x.org" }]);
+    // After an expression the next `@` is a transition again.
+    expect(i.children.map((c) => c.kind)).toEqual(["expression", "expression"]);
+  });
+
+  it("parses unquoted and minimized attributes", () => {
+    const { doc } = parse("<input type=checkbox disabled value=a/b>");
+    const el = doc.body[0]!;
+    if (el.kind !== "element") throw new Error("expected element");
+    expect(el.attributes).toMatchObject([
+      { kind: "static", name: "type", value: "checkbox" },
+      { kind: "static", name: "disabled", minimized: true },
+      { kind: "static", name: "value", value: "a/b" },
+    ]);
+  });
+
+  it("parses an unquoted parenthesized expression value (Blazor: href=@(\"…\"))", () => {
+    const { doc, diagnostics } = parse('<link href=@("a" + b.Id)/>');
+    expect(diagnostics.all).toHaveLength(0);
+    const el = doc.body[0]!;
+    if (el.kind !== "element") throw new Error("expected element");
+    const attr = el.attributes[0]!;
+    expect(attr.kind).toBe("expression");
+    expect(attr).toMatchObject({ name: "href", code: '"a" + b.Id' });
+  });
+
+  it("accepts void close tags, bare '<' in text and braces in component content", () => {
+    const { doc, diagnostics } = parse("<input></input><p>a < b</p><Card>{ json }</Card>");
+    expect(diagnostics.all).toHaveLength(0);
+    expect(doc.body.map((n) => n.kind)).toEqual(["element", "element", "element"]);
+  });
+
+  it("classifies directives: Blazor-only ones are directives, unknown @word stays an expression", () => {
+    const { doc, diagnostics } = parse("@namespace A.B\n@rendermode X\n@foo\n");
+    expect(diagnostics.all).toHaveLength(0);
+    expect(doc.directives.map((d) => d.name)).toEqual(["namespace", "rendermode"]);
+    expect(doc.body[0]).toMatchObject({ kind: "expression", code: "foo" });
+  });
+
+  it("rejects directives inside elements and code", () => {
+    const { diagnostics } = parse('<div>@page "/x"</div>\n@{ @inject X y }');
+    expect(diagnostics.all.filter((d) => d.code === "TZS013")).toHaveLength(2);
+  });
+
+  it("a value named like a directive (`@layout.name`) is TZS013 with the way out, and parsing goes on", () => {
+    const { doc, diagnostics } = parse("@foreach (const layout of layouts) {\n    <option value=\"@layout.id\">@layout.name</option>\n}\n<p>after</p>");
+    const found = diagnostics.all.filter((d) => d.code === "TZS013");
+    // In the attribute value it is an expression already; in the text it is the directive.
+    expect(found.map((d) => d.message)).toEqual([
+      "Directive not allowed here. '@layout' is a directive, so '@layout.name' doesn't read a value named 'layout'. Write '@(layout.name)'.",
+    ]);
+    expect(found[0]!.fix).toEqual({
+      title: "Write '@(layout.name)'",
+      edits: [{ pos: { line: 2, column: 31 }, endPos: { line: 2, column: 43 }, text: "@(layout.name)" }],
+    });
+    // No cascade: the element closes, and the markup after the loop is there.
+    expect(diagnostics.all.filter((d) => d.code !== "TZS013")).toEqual([]);
+    expect(JSON.stringify(doc.body)).toContain("after");
+  });
+
+  it("a quote inside an expression ends the attribute's value, as in Razor: one TZS024 with the way out, no cascade", () => {
+    const { doc, diagnostics } = parse('<Child onClick="() => this.confirm(this.token, "delete")" />\n<p>after</p>');
+    expect(diagnostics.all.map((d) => `${d.code} ${d.message}`)).toEqual([
+      `TZS024 Invalid TypeScript expression. This " ends the attribute's value inside its expression (as in Razor). Put the attribute in single quotes, or write the value as '@(…)'.`,
+    ]);
+    expect(diagnostics.all[0]!.pos).toEqual({ line: 1, column: 47 });
+    expect(diagnostics.all[0]!.fix).toEqual({
+      title: "Put the attribute in single quotes",
+      edits: [
+        { pos: { line: 1, column: 15 }, endPos: { line: 1, column: 16 }, text: "'" },
+        { pos: { line: 1, column: 56 }, endPos: { line: 1, column: 57 }, text: "'" },
+      ],
+    });
+    // Parsing goes on after the value that was meant: the attribute holds it, the next element is there.
+    expect(JSON.stringify(doc.body)).toContain('() => this.confirm(this.token, \\"delete\\")');
+    expect(JSON.stringify(doc.body)).toContain("after");
+
+    // A value with both quotes in it gets '@(…)'; an ordinary value next to an attribute stays as it was.
+    const both = parse(`<button @onclick="() => go("it's")">x</button>`);
+    expect(both.diagnostics.all[0]!.fix?.edits[0]?.text).toBe(`@(() => go("it's"))`);
+    expect(parse('<p class="a"id="b">x</p>').diagnostics.all.filter((d) => d.code === "TZS024")).toEqual([]);
+    expect(parse(`<Child onClick='() => this.confirm(this.token, "delete")' />`).diagnostics.all).toEqual([]);
+  });
+
+  it("a bare directive word in markup offers @(word); @attribute[…] stays the directive", () => {
+    const { diagnostics } = parse("<p>Page @page of 7</p>");
+    expect(diagnostics.all[0]!.message).toContain("To output a value named 'page', write '@(page)'.");
+    expect(diagnostics.all[0]!.fix?.edits[0]?.text).toBe("@(page)");
+    const attribute = parse("@attribute[Authorize]\n<p>x</p>");
+    expect(attribute.diagnostics.all.filter((d) => d.code === "TZS013")).toEqual([]);
   });
 });

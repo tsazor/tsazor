@@ -1,29 +1,16 @@
-<Router Found="@found" NotFound="@notFound" />
-
-@code {
-    // AuthorizeRouteView mirrors the workshop's App.razor: @authorize pages
-    // render only for signed-in users, everything else is public.
-    private found = (routeData: RouteData): RenderFragment => (b: RenderTreeBuilder) => {
-        b.openComponent(0, AuthorizeRouteView);
-        b.addAttribute(1, "RouteData", routeData);
-        b.addAttribute(2, "DefaultLayout", MainLayout);
-        b.addAttribute(3, "NotAuthorized", this.notAuthorized);
-        b.closeComponent();
-    };
-
-    private notAuthorized: RenderFragment = (b: RenderTreeBuilder) => {
-        b.openElement(0, "div");
-        b.addAttribute(1, "class", "main not-authorized");
-        b.openElement(2, "h2");
-        b.addContent(3, "Hold on there, buddy");
-        b.closeElement();
-        b.openElement(4, "p");
-        b.addContent(5, "You need to log in to see this page. ");
-        b.closeElement();
-        b.openElement(6, "a");
-        b.addAttribute(7, "href", "login");
-        b.addContent(8, "Go to login");
-        b.closeElement();
-        b.closeElement();
-    };
-}
+@import MainLayout from "./MainLayout.tsazor"
+@* AuthorizeRouteView mirrors the workshop's App.razor: @authorize pages
+   render only for signed-in users, everything else is public. *@
+<Router>
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@MainLayout">
+            <NotAuthorized>
+                <div class="main not-authorized">
+                    <h2>Hold on there, buddy</h2>
+                    <p>You need to log in to see this page. </p>
+                    <a href="login">Go to login</a>
+                </div>
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+</Router>

@@ -54,3 +54,7 @@
   color: var(--fui-foreground-3);
   border-bottom: none;
 }
+/* `dark`: the table pins the dark palette (data-fluent-theme="dark") and needs its own surface for it. */
+.fui-table--dark {
+  background: var(--fui-background-1);
+}

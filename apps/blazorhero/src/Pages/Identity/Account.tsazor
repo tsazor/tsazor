@@ -1,0 +1,18 @@
+@* Client/Pages/Identity/Account.razor: the signed-in user's account, a tab for the profile and one for the password. *@
+@page "/account"
+@import Profile from "./Profile.tsazor"
+@import Security from "./Security.tsazor"
+
+<HeroTitle title="@L("Account")" description="@L("Manage your account")" />
+<Tabs ariaLabel="@L("Account")" class="bh-account">
+    <Tab title="@L("Profile")">
+        <Profile />
+    </Tab>
+    <Tab title="@L("Security")">
+        <Security />
+    </Tab>
+</Tabs>
+
+@code {
+    private readonly L = localizerFor("Account");
+}

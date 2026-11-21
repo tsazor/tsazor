@@ -1,0 +1,193 @@
+@page "/quickgrid/scroll"
+@import type { DataGrid, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult } from "@tsazor/fluent"
+@import type { ScrollRow } from "./models"
+
+<h1>QuickGrid ScrollToItem / InitialItemIndex</h1>
+
+<p>
+    Mirrors the Virtualize ScrollToItem / InitialItemIndex coverage, but exercises the same behavior
+    through QuickGrid's <code>InitialItemIndex</code> parameter and
+    <code>ScrollToItemAsync</code> method (in both <code>Items</code> and <code>ItemsProvider</code> modes).
+</p>
+
+<style>
+    .qg-scroll-cell .item { box-sizing: border-box; }
+</style>
+
+<div id="scroll-container" style="height: 300px; overflow-y: auto; border: 1px solid black;">
+    @if (listLoaded)
+    {
+        @if (useItemsProvider)
+        {
+            <DataGrid @ref="providerGrid" ItemsProvider="@itemsProvider" Virtualize="@true" ItemSize="50"
+                      InitialItemIndex="@initialItemIndex">
+                <TemplateColumn Title="Item" Class="qg-scroll-cell">
+                    <div class="item" data-index="@context.index" style="min-height: @(context.height)px; line-height: @(context.height)px;">Item @context.index</div>
+                </TemplateColumn>
+            </DataGrid>
+        }
+        else
+        {
+            <DataGrid @ref="itemsGrid" Items="@rows" Virtualize="@true" ItemSize="50"
+                      InitialItemIndex="@initialItemIndex">
+                <TemplateColumn Title="Item" Class="qg-scroll-cell">
+                    <div class="item" data-index="@context.index" style="min-height: @(context.height)px; line-height: @(context.height)px;">Item @context.index</div>
+                </TemplateColumn>
+            </DataGrid>
+        }
+    }
+    else
+    {
+        <p id="list-not-loaded" style="padding: 10px; color: #666;">List not loaded. Set an Initial Index below and click "Load list with Initial Index".</p>
+    }
+</div>
+
+<div style="margin-top: 6px;">
+    <label>Initial Index:
+        <input id="manual-initial-index" type="number" @bind="manualInitialIndex" style="width: 80px;" />
+    </label>
+    <button id="reload-with-initial-index" @onclick="reloadWithInitialIndex">Load list with Initial Index</button>
+    <button id="unload-list" @onclick="unloadList">Unload list</button>
+    <span id="manual-initial-index-bound" data-value="@manualInitialIndex" style="margin-left: 8px; color:#888;">bound:@manualInitialIndex</span>
+</div>
+
+<div style="margin-top: 6px;">
+    <input id="scroll-target-index" type="number" @bind="scrollTargetIndex" style="width: 80px;" />
+    <span id="scroll-target-index-bound" data-value="@scrollTargetIndex" style="margin-left: 8px; color:#888;">bound:@scrollTargetIndex</span>
+    <button id="scroll-to-item" @onclick="scrollToTarget">Scroll To Item</button>
+    <button id="scroll-to-item-rapid" @onclick="scrollRapid">Scroll Rapid (final=250)</button>
+    <button id="scroll-to-item-cancellable" @onclick="scrollCancellable">Scroll Cancellable</button>
+    <button id="cancel-scroll" @onclick="cancelScroll">Cancel Scroll</button>
+</div>
+
+<p id="scroll-status" style="margin: 0; font-size: 12px;">@scrollStatus</p>
+
+<div style="margin-top: 10px;">
+    <button id="toggle-provider" @onclick="toggleProvider">
+        Source: @(useItemsProvider ? "ItemsProvider" : "Items")
+    </button>
+    <button id="toggle-height" @onclick="toggleVariableHeight">
+        Heights: @(useVariableHeight ? "Variable (10-200px)" : "Fixed (50px)")
+    </button>
+    <button id="toggle-delay" @onclick="toggleDelay">
+        Provider Delay: @(useProviderDelay ? "150ms" : "None")
+    </button>
+</div>
+
+<p id="status">@statusMessage</p>
+
+@code {
+    private rows: ScrollRow[] = [];
+    private statusMessage = "Ready";
+    private useVariableHeight = false;
+    private useItemsProvider = false;
+    private useProviderDelay = false;
+
+    private providerGrid?: DataGrid<ScrollRow>;
+    private itemsGrid?: DataGrid<ScrollRow>;
+    private itemsProvider!: GridItemsProvider<ScrollRow>;
+
+    private initialItemIndex = 0;
+    private manualInitialIndex = 0;
+    private listLoaded = true;
+    private scrollTargetIndex = 200;
+    private scrollStatus = "Idle";
+    private userScrollController?: AbortController;
+
+    private get activeGrid(): DataGrid<ScrollRow> | undefined {
+        return this.useItemsProvider ? this.providerGrid : this.itemsGrid;
+    }
+
+    protected override onInitialized(): void {
+        this.rows = range(0, 1000).map((i) => ({ index: i, height: this.getHeight(i) }));
+        this.itemsProvider = (request) => this.getItems(request);
+    }
+
+    private getHeight(index: number): number {
+        return this.useVariableHeight ? 10 + (Math.abs(index * 7 + 13) % 191) : 50;
+    }
+
+    private toggleVariableHeight(): void {
+        this.useVariableHeight = !this.useVariableHeight;
+        for (const row of this.rows) {
+            row.height = this.getHeight(row.index);
+        }
+        this.statusMessage = this.useVariableHeight ? "Switched to variable heights" : "Switched to fixed heights";
+    }
+
+    private toggleProvider(): void {
+        this.useItemsProvider = !this.useItemsProvider;
+        this.statusMessage = this.useItemsProvider ? "Switched to ItemsProvider" : "Switched to Items";
+    }
+
+    private toggleDelay(): void {
+        this.useProviderDelay = !this.useProviderDelay;
+        this.statusMessage = this.useProviderDelay ? "Provider delay for QuickGrid: 150ms" : "Provider delay for QuickGrid: None";
+    }
+
+    private async getItems(request: GridItemsProviderRequest<ScrollRow>): Promise<GridItemsProviderResult<ScrollRow>> {
+        await yieldToEventLoop();
+        if (this.useProviderDelay) {
+            await delay(150, request.signal);
+        }
+
+        const count = request.count ?? this.rows.length;
+        const result = this.rows
+            .slice(request.startIndex, request.startIndex + count)
+            .map((r) => ({ index: r.index, height: r.height }));
+        return { items: result, totalItemCount: this.rows.length };
+    }
+
+    private async reloadWithInitialIndex(): Promise<void> {
+        this.listLoaded = false;
+        this.stateHasChanged();
+        await yieldToEventLoop();
+        this.initialItemIndex = this.manualInitialIndex;
+        this.listLoaded = true;
+    }
+
+    private unloadList(): void {
+        this.listLoaded = false;
+    }
+
+    private async scrollToTarget(): Promise<void> {
+        const grid = this.activeGrid;
+        if (grid === undefined) { this.scrollStatus = "Faulted: no grid"; return; }
+        this.scrollStatus = `Scrolling to ${this.scrollTargetIndex}...`;
+        try {
+            await grid.scrollToItemAsync(this.scrollTargetIndex);
+            this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
+        } catch (error) {
+            this.scrollStatus = isAbortError(error) ? `Canceled: ${this.scrollTargetIndex}` : `Faulted: ${messageOf(error)}`;
+        }
+    }
+
+    private async scrollRapid(): Promise<void> {
+        const grid = this.activeGrid;
+        if (grid === undefined) { this.scrollStatus = "Faulted: no grid"; return; }
+        this.scrollStatus = "Rapid scrolling...";
+        const tasks = [50, 400, 100, 350, 250].map((index) => grid.scrollToItemAsync(index));
+        const outcomes = await Promise.allSettled(tasks);
+        const canceled = outcomes.filter((o) => o.status === "rejected" && isAbortError(o.reason)).length;
+        const completed = outcomes.filter((o) => o.status === "fulfilled").length;
+        const faulted = outcomes.filter((o) => o.status === "rejected" && !isAbortError(o.reason)).length;
+        this.scrollStatus = `Completed: 250 (canceled=${canceled}, completed=${completed}, faulted=${faulted})`;
+    }
+
+    private async scrollCancellable(): Promise<void> {
+        const grid = this.activeGrid;
+        if (grid === undefined) { this.scrollStatus = "Faulted: no grid"; return; }
+        this.userScrollController = new AbortController();
+        this.scrollStatus = `Scrolling to ${this.scrollTargetIndex} (cancellable)...`;
+        try {
+            await grid.scrollToItemAsync(this.scrollTargetIndex, this.userScrollController.signal);
+            this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
+        } catch (error) {
+            this.scrollStatus = isAbortError(error) ? "Canceled" : `Faulted: ${messageOf(error)}`;
+        }
+    }
+
+    private cancelScroll(): void {
+        this.userScrollController?.abort();
+    }
+}

@@ -1,0 +1,370 @@
+@** A chart (MudBlazor's MudChart, its newer API): `chartType` line, area, bar, stacked-bar, donut or pie; `chartSeries`
+    ({ name, data }), `chartLabels` (the label axis, or the slices' names), `chartOptions`. SVG in the skin's tokens
+    (`--tz-chart-1` … `--tz-chart-8` take Fluent's or Bootstrap's colors). A screen reader reads it as a figure named
+    `ariaLabel` and described in words ("Line chart: Rye from 98 to 182, over Mon to Sat"); the numbers follow in a
+    table (`showTable`). With `@bind-selectedIndex` a series or a slice is chosen by a click or by the keyboard (each
+    is a button then); `canHideSeries` turns the legend into checkboxes that hide a series. A point's value shows on
+    hover. It doesn't animate. *@
+@import { areaPath, arcPath, chartSummary, linearScale, linePath, pieSlices, seriesInWords, sliceInWords, stackSeries, valueAxis } from "./chart-math"
+@import type { ChartOptions, ChartSeries, ChartType } from "./chart-types"
+@import type { ValueAxis } from "./chart-math"
+@import { libraryTexts } from "@tsazor/ui"
+
+<figure @attributes="@this.rootAttributes">
+    <svg class="tz-chart__svg" viewBox="@(`0 0 ${this.width} ${this.height}`)" role="@(this.interactive ? "group" : "img")" aria-labelledby="@this.titleId" aria-describedby="@this.descId">
+        <title id="@this.titleId">@this.name</title>
+        <desc id="@this.descId">@this.summary</desc>
+        @if (this.radial) {
+            @for (let i = 0; i < this.slices.length; i++) {
+                @if (this.slices[i]!.share > 0) {
+                    <path class="@this.markClass(i)" d="@this.slices[i]!.path" fill="@this.colorOf(i)" role="@(this.interactive ? "button" : null)" tabindex="@(this.interactive ? 0 : null)"
+                          aria-label="@(this.interactive ? this.slices[i]!.label : null)" aria-pressed="@(this.interactive ? (i === this.selectedIndex ? "true" : "false") : null)"
+                          @onclick="() => this.select(i)" @onkeydown="(e) => this.selectKey(e, i)"><title>@this.slices[i]!.label</title></path>
+                }
+            }
+        } else {
+            <g class="tz-chart__axes" aria-hidden="true">
+                @foreach (const tick of this.axis.ticks) {
+                    @if (this.options.yAxisLines !== false) {
+                        <line class="tz-chart__grid" x1="@this.plot.left" x2="@this.plot.right" y1="@this.y(tick)" y2="@this.y(tick)" />
+                    }
+                    <text class="tz-chart__tick" x="@(this.plot.left - 8)" y="@this.y(tick)" text-anchor="end" dominant-baseline="middle">@this.format(tick)</text>
+                }
+                @for (let i = 0; i < this.chartLabels.length; i++) {
+                    @if (this.options.xAxisLines) {
+                        <line class="tz-chart__grid" x1="@this.labelX(i)" x2="@this.labelX(i)" y1="@this.plot.top" y2="@this.plot.bottom" />
+                    }
+                    @if (i % this.labelStep === 0) {
+                        <text class="tz-chart__tick" x="@this.labelX(i)" y="@(this.plot.bottom + 20)" text-anchor="middle">@this.chartLabels[i]</text>
+                    }
+                }
+                <line class="tz-chart__baseline" x1="@this.plot.left" x2="@this.plot.right" y1="@this.y(0)" y2="@this.y(0)" />
+                @if (this.options.yAxisTitle) {
+                    <text class="tz-chart__title" transform="@(`translate(14 ${(this.plot.top + this.plot.bottom) / 2}) rotate(-90)`)" text-anchor="middle">@this.options.yAxisTitle</text>
+                }
+                @if (this.options.xAxisTitle) {
+                    <text class="tz-chart__title" x="@((this.plot.left + this.plot.right) / 2)" y="@(this.height - 6)" text-anchor="middle">@this.options.xAxisTitle</text>
+                }
+            </g>
+            @for (let s = 0; s < this.chartSeries.length; s++) {
+                @if (!this.hidden.has(s)) {
+                    <g class="@this.markClass(s)" style="@(`--tz-chart-color: ${this.colorOf(s)}`)" role="@(this.interactive ? "button" : null)" tabindex="@(this.interactive ? 0 : null)"
+                       aria-label="@(this.interactive ? this.seriesLabel(s) : null)" aria-pressed="@(this.interactive ? (s === this.selectedIndex ? "true" : "false") : null)"
+                       @onclick="() => this.select(s)" @onkeydown="(e) => this.selectKey(e, s)">
+                        @if (this.chartType === "bar" || this.chartType === "stacked-bar") {
+                            @foreach (const bar of this.bars(s).filter((bar) => bar.value !== 0)) {
+                                <rect class="tz-chart__bar" x="@bar.x" y="@bar.y" width="@bar.width" height="@bar.height" rx="2" style="@bar.style"><title>@bar.title</title></rect>
+                            }
+                        } else {
+                            @if (this.chartType === "area") {
+                                <path class="tz-chart__area" d="@this.area(s)" />
+                            }
+                            <path class="tz-chart__line" d="@this.line(s)" stroke-width="@(this.options.lineStrokeWidth ?? 3)" />
+                            @foreach (const point of this.points(s)) {
+                                <circle class="tz-chart__point" cx="@point.x" cy="@point.y" r="4" style="@point.style"><title>@point.title</title></circle>
+                            }
+                        }
+                    </g>
+                }
+            }
+        }
+    </svg>
+    @if (this.options.showLegend !== false && this.legend.length > 0) {
+        <ul class="tz-chart__legend">
+            @for (let i = 0; i < this.legend.length; i++) {
+                <li class="tz-chart__legend-item">
+                    @if (this.canHideSeries && !this.radial && this.categories.length === 0) {
+                        <label class="tz-chart__toggle">
+                            <input type="checkbox" checked="@(!this.hidden.has(i))" @onchange="() => this.toggle(i)" />
+                            <span class="tz-chart__swatch" style="@(`background: ${this.legendColor(i)}`)"></span>
+                            @this.legend[i]
+                        </label>
+                    } else {
+                        <span class="tz-chart__swatch" style="@(`background: ${this.legendColor(i)}`)"></span>
+                        @this.legend[i]
+                    }
+                </li>
+            }
+        </ul>
+    }
+    @if (this.showTable) {
+        <details class="tz-chart__data">
+            <summary>@this.tableName</summary>
+            <table class="tz-chart__table">
+                <caption>@this.name</caption>
+                @if (this.radial) {
+                    <thead><tr><th scope="col"></th><th scope="col">@(this.chartSeries[0]?.name ?? "")</th></tr></thead>
+                    <tbody>
+                        @for (let i = 0; i < this.chartLabels.length; i++) {
+                            <tr><th scope="row">@this.chartLabels[i]</th><td>@this.format(this.chartSeries[0]?.data[i] ?? 0)</td></tr>
+                        }
+                    </tbody>
+                } else {
+                    <thead><tr><th scope="col"></th>@foreach (const series of this.chartSeries) {<th scope="col">@series.name</th>}</tr></thead>
+                    <tbody>
+                        @for (let i = 0; i < this.chartLabels.length; i++) {
+                            <tr><th scope="row">@this.chartLabels[i]</th>@foreach (const series of this.chartSeries) {<td>@this.pointText(series, i)</td>}</tr>
+                        }
+                    </tbody>
+                }
+            </table>
+        </details>
+    }
+</figure>
+
+@code {
+    /** line (default), area, bar, stacked-bar, donut or pie (`ChartType`). */
+    @Parameter() chartType: ChartType = "line";
+    /** The series: a name and a value per label (`ChartSeries`); a pie or a donut draws the first. */
+    @Parameter() chartSeries: ChartSeries[] = [];
+    /** The label axis's labels, or the slices' names (`ChartLabels`; MudBlazor's older `XAxisLabels`, `InputLabels`). */
+    @Parameter() chartLabels: string[] = [];
+    /** How it draws (`ChartOptions`). */
+    @Parameter() chartOptions?: ChartOptions;
+    /** The chart's name for screen readers and the table's caption; by default the library text "Chart". */
+    @Parameter() ariaLabel?: string;
+    /** The drawing's width in SVG units; it scales to its container (650). */
+    @Parameter() width: number = 650;
+    /** The drawing's height in SVG units (350). */
+    @Parameter() height: number = 350;
+    /** The legend below (default) or at the end (`LegendPosition`). */
+    @Parameter() legendPosition: "bottom" | "end" = "bottom";
+    /** The chosen series or slice (`SelectedIndex`); -1 for none. */
+    @Parameter() selectedIndex: number = -1;
+    /** Raised with a chosen series or slice (`SelectedIndexChanged`); with it, they are buttons. */
+    @Parameter() selectedIndexChanged?: EventCallback<number>;
+    /** The legend's checkboxes hide a series (`CanHideSeries`). */
+    @Parameter() canHideSeries: boolean = false;
+    /** The numbers in a table under the chart (default). */
+    @Parameter() showTable: boolean = true;
+    /** The table's summary line; by default the library text "The data". */
+    @Parameter() tableLabel?: string;
+    /** `@attributes` on the figure (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private static count = 0;
+    private readonly id = `tz-chart-${++Chart.count}`;
+    private hidden = new Set<number>();
+
+    private get titleId(): string {
+        return `${this.id}-title`;
+    }
+
+    private get descId(): string {
+        return `${this.id}-desc`;
+    }
+
+    private get options(): ChartOptions {
+        return this.chartOptions ?? {};
+    }
+
+    private get radial(): boolean {
+        return this.chartType === "donut" || this.chartType === "pie";
+    }
+
+    private get interactive(): boolean {
+        return this.selectedIndexChanged !== undefined;
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        const extra = this.additionalAttributes ?? {};
+        const cls = [`tz-chart tz-chart--${this.chartType} tz-chart--legend-${this.legendPosition}`, typeof extra.class === "string" ? extra.class : null].filter(Boolean).join(" ");
+        return { ...extra, class: cls };
+    }
+
+    /** A value as the axis, the table and the summary write it. */
+    private readonly format = (value: number): string =>
+        this.options.yAxisFormat?.(value) ?? new Intl.NumberFormat(this.t.locale, { maximumFractionDigits: 2 }).format(value);
+
+    private readonly t = libraryTexts();
+
+    private get name(): string {
+        return this.ariaLabel ?? this.t("chart.label");
+    }
+
+    private get tableName(): string {
+        return this.tableLabel ?? this.t("chart.table");
+    }
+
+    private colorOf(index: number): string {
+        const palette = this.options.chartPalette;
+        return palette !== undefined && palette.length > 0 ? palette[index % palette.length]! : `var(--tz-chart-${(index % 8) + 1})`;
+    }
+
+    private get summary(): string {
+        const shown = this.radial ? this.chartSeries.slice(0, 1) : this.chartSeries.filter((_, i) => !this.hidden.has(i));
+        return chartSummary(this.chartType, shown, this.chartLabels, this.format, this.t);
+    }
+
+    private get legend(): string[] {
+        if (this.radial) return this.chartLabels;
+        return this.categories.length > 0 ? this.categories : this.chartSeries.map((series) => series.name);
+    }
+
+    /** The categories of every series' points, in the order they first appear. */
+    private get categories(): string[] {
+        const seen = new Set<string>();
+        for (const series of this.chartSeries) for (const category of series.categories ?? []) if (category !== undefined) seen.add(category);
+        return [...seen];
+    }
+
+    /** A legend entry's color: a slice's, a series' or a category's. */
+    private legendColor(index: number): string {
+        return !this.radial && this.categories.length > 0 ? this.categoryColor(this.categories[index]!) : this.colorOf(index);
+    }
+
+    private categoryColor(category: string): string {
+        return this.options.categoryColors?.[category] ?? this.colorOf(this.categories.indexOf(category));
+    }
+
+    /** A point's own color as a style (its category's), or null for the series' color. */
+    private pointStyle(series: number, index: number): string | null {
+        const category = this.chartSeries[series]!.categories?.[index];
+        return category === undefined ? null : `color: ${this.categoryColor(category)}`;
+    }
+
+    /** A bar's or a point's hover title: "Durations, Run 12: 65, Warning". */
+    private pointTitle(series: number, index: number): string {
+        const data = this.chartSeries[series]!;
+        return `${data.name}, ${this.chartLabels[index] ?? index + 1}: ${this.pointText(data, index)}`;
+    }
+
+    /** A value as its title and the table write it: with its category, if it has one. */
+    private pointText(series: ChartSeries, index: number): string {
+        const value = this.format(series.data[index] ?? 0);
+        const category = series.categories?.[index];
+        return category === undefined ? value : `${value}, ${category}`;
+    }
+
+    private markClass(index: number): string {
+        let cls = this.radial ? "tz-chart__slice" : "tz-chart__series";
+        if (this.selectedIndex >= 0) cls += index === this.selectedIndex ? " tz-chart--selected" : " tz-chart--dimmed";
+        return cls;
+    }
+
+    // The axis charts: the plot area, the value axis, the label positions.
+
+    private get plot(): { left: number; right: number; top: number; bottom: number } {
+        return {
+            left: this.options.yAxisTitle ? 72 : 52,
+            right: this.width - 16,
+            top: 16,
+            bottom: this.height - (this.options.xAxisTitle ? 52 : 34),
+        };
+    }
+
+    private axisMemo?: { series: ChartSeries[]; type: ChartType; options: ChartOptions | undefined; hidden: Set<number>; axis: ValueAxis };
+
+    /** The value axis, worked out once for the same series, type, options and hidden series. */
+    private get axis(): ValueAxis {
+        const memo = this.axisMemo;
+        if (memo && memo.series === this.chartSeries && memo.type === this.chartType && memo.options === this.chartOptions && memo.hidden === this.hidden) return memo.axis;
+        const axis = this.computeAxis();
+        this.axisMemo = { series: this.chartSeries, type: this.chartType, options: this.chartOptions, hidden: this.hidden, axis };
+        return axis;
+    }
+
+    private computeAxis(): ValueAxis {
+        const shown = this.chartSeries.filter((_, i) => !this.hidden.has(i));
+        let values = shown.flatMap((series) => [...series.data]);
+        if (this.chartType === "stacked-bar") values = stackSeries(shown.map((series) => series.data)).flat().flatMap((bar) => [bar.from, bar.to]);
+        const low = values.length > 0 ? Math.min(...values) : 0;
+        const high = values.length > 0 ? Math.max(...values) : 1;
+        return valueAxis(low, high, { maxTicks: this.options.maxNumYAxisTicks, step: this.options.yAxisTicks, min: this.options.yAxisMin, max: this.options.yAxisSuggestedMax });
+    }
+
+    private y(value: number): number {
+        const axis = this.axis;
+        return Math.round(linearScale([axis.min, axis.max], [this.plot.bottom, this.plot.top])(value) * 100) / 100;
+    }
+
+    /** A label's x: points from edge to edge, bars in the middle of their band. */
+    private labelX(index: number): number {
+        const { left, right } = this.plot;
+        const count = Math.max(1, this.chartLabels.length);
+        if (this.chartType === "bar" || this.chartType === "stacked-bar") return Math.round((left + ((index + 0.5) * (right - left)) / count) * 100) / 100;
+        return count === 1 ? (left + right) / 2 : Math.round((left + (index * (right - left)) / (count - 1)) * 100) / 100;
+    }
+
+    private points(series: number): { x: number; y: number; title: string; style: string | null }[] {
+        const data = this.chartSeries[series]!.data;
+        return data.map((_, i) => ({ x: this.labelX(i), y: this.y(data[i]!), title: this.pointTitle(series, i), style: this.pointStyle(series, i) }));
+    }
+
+    private line(series: number): string {
+        return linePath(this.points(series), this.options.interpolation === "smooth");
+    }
+
+    private area(series: number): string {
+        return areaPath(this.points(series), this.y(Math.max(this.axis.min, 0)), this.options.interpolation === "smooth");
+    }
+
+    /** Every how many labels one is drawn: the label axis thins its labels when they would overlap (each still names
+        its bar or point in the hover title and in the table). Estimated from the longest label at the ticks' 12px. */
+    private get labelStep(): number {
+        const count = this.chartLabels.length;
+        if (count < 2) return 1;
+        const { left, right } = this.plot;
+        const bars = this.chartType === "bar" || this.chartType === "stacked-bar";
+        const spacing = (right - left) / (bars ? count : count - 1);
+        const longest = Math.max(...this.chartLabels.map((label) => label.length));
+        return Math.max(1, Math.ceil((longest * 7 + 8) / spacing));
+    }
+
+    private bars(series: number): { x: number; y: number; width: number; height: number; title: string; value: number; style: string | null }[] {
+        const { left, right } = this.plot;
+        const band = (right - left) / Math.max(1, this.chartLabels.length);
+        const shown = this.chartSeries.map((_, i) => i).filter((i) => !this.hidden.has(i));
+        const place = shown.indexOf(series);
+        const stacked = this.chartType === "stacked-bar";
+        const width = stacked ? band * 0.6 : (band * 0.8) / Math.max(1, shown.length);
+        const stacks = stacked ? stackSeries(shown.map((i) => this.chartSeries[i]!.data)) : undefined;
+        const round = (value: number): number => Math.round(value * 100) / 100;
+        return this.chartSeries[series]!.data.map((value, i) => {
+            const from = stacks ? stacks[place]![i]!.from : 0;
+            const to = stacks ? stacks[place]![i]!.to : value;
+            const x = stacked ? left + band * i + band * 0.2 : left + band * i + band * 0.1 + width * place;
+            const [top, bottom] = [this.y(Math.max(from, to)), this.y(Math.min(from, to))];
+            return { x: round(x), y: top, width: round(width), height: round(Math.max(0, bottom - top)), value, title: this.pointTitle(series, i), style: this.pointStyle(series, i) };
+        });
+    }
+
+    private seriesLabel(series: number): string {
+        return seriesInWords(this.chartSeries[series]!, this.format, this.t);
+    }
+
+    // The radial charts.
+
+    private get slices(): { path: string; label: string; share: number }[] {
+        const values = this.chartSeries[0]?.data ?? [];
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+        const radius = Math.min(this.width, this.height) / 2 - 12;
+        const inner = this.chartType === "donut" ? radius * (this.options.donutHole ?? 0.6) : 0;
+        return pieSlices(values).map((slice, i) => ({
+            path: arcPath(cx, cy, radius, inner, slice.start, slice.end),
+            share: slice.share,
+            label: sliceInWords(`${this.chartLabels[i] ?? i + 1}`, this.format(values[i] ?? 0), slice.share, this.t),
+        }));
+    }
+
+    // Choosing and hiding.
+
+    private select(index: number): Promise<void> | undefined {
+        if (!this.interactive) return undefined;
+        return this.selectedIndexChanged?.invokeAsync(index === this.selectedIndex ? -1 : index);
+    }
+
+    private selectKey(e: KeyboardEvent, index: number): Promise<void> | undefined {
+        if (!this.interactive || (e.key !== "Enter" && e.key !== " ")) return undefined;
+        e.preventDefault();
+        return this.select(index);
+    }
+
+    private toggle(index: number): void {
+        const hidden = new Set(this.hidden);
+        if (hidden.has(index)) hidden.delete(index);
+        else hidden.add(index);
+        this.hidden = hidden;
+    }
+}

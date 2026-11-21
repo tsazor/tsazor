@@ -1,6 +1,17 @@
 {
   "name": "@tsazor/runtime",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/runtime#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "description": "The Tsazor runtime: Blazor's component model in the browser, in TypeScript — rendering, lifecycle, parameters, DI, routing, forms, Virtualize, auth and HTTP.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -8,15 +19,53 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "default": "./dist/internal.js"
+    },
+    "./transition": {
+      "types": "./dist/transition.d.ts",
+      "default": "./dist/transition.js"
+    },
+    "./animate": {
+      "types": "./dist/animate.d.ts",
+      "default": "./dist/animate.js"
+    },
+    "./easing": {
+      "types": "./dist/easing.d.ts",
+      "default": "./dist/easing.js"
+    },
+    "./tsazor-components.json": "./dist/tsazor-components.json"
   },
-  "files": ["dist"],
+  "sideEffects": [
+    "./dist/components/parameter-metadata.js"
+  ],
+  "tsazor": {
+    "components": "./dist/tsazor-components.json",
+    "internal": [
+      "./internal"
+    ]
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "MIGRATION.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/compact-components.mjs && node scripts/build-manifest.mjs && node scripts/migration-guide.mjs",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@tsazor/primitives": "workspace:*"
+  },
   "devDependencies": {
-    "happy-dom": "^18.0.1",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
+    "happy-dom": "^21.0.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.7"
   }

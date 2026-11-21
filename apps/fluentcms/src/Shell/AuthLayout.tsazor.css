@@ -1,0 +1,43 @@
+.auth-shell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+    background: var(--fui-background-1);
+}
+
+.auth-form {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.auth-form-inner {
+    width: 100%;
+    max-width: 28rem;
+}
+
+.auth-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: var(--fui-brand-background);
+    color: var(--fui-foreground-on-brand);
+}
+
+.auth-welcome-inner {
+    max-width: 40rem;
+}
+
+.auth-welcome h1 {
+    margin: 16px 0;
+    font-size: var(--fui-font-size-display);
+    line-height: 1.2;
+}
+
+@media (max-width: 992px) {
+    .auth-shell {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,190 @@
+/* The component showcase (design-extended-library.md): a sidebar of components, a column of
+   examples — each a live demo and its .tsazor source with a copy button. Light and dark follow
+   the media query; the demo area itself shows the library as it renders. */
+
+:root {
+  --sz-sidebar-width: 260px;
+  --sz-page-bg: #f8f9fb;
+  --sz-panel-bg: #ffffff;
+  --sz-border: #e2e5ea;
+  --sz-text: #24292f;
+  --sz-text-2: #57606a;
+  --sz-code-bg: #f6f8fa;
+  --sz-accent: #0d6efd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sz-page-bg: #161a20;
+    --sz-panel-bg: #1d232b;
+    --sz-border: #2c333c;
+    --sz-text: #e6e8eb;
+    --sz-text-2: #99a1ad;
+    --sz-code-bg: #10141a;
+    --sz-accent: #6ea8fe;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--sz-page-bg);
+  color: var(--sz-text);
+  font-family: var(--bs-body-font-family, system-ui, sans-serif);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.sz-shell {
+  display: flex;
+  min-height: 100dvh;
+}
+
+/* The sidebar: the brand, then one entry per component page. */
+.sz-sidebar {
+  width: var(--sz-sidebar-width);
+  flex: none;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+  border-right: 1px solid var(--sz-border);
+  background: var(--sz-panel-bg);
+}
+
+.sz-brand {
+  display: block;
+  margin-bottom: 1.25rem;
+  color: var(--sz-text);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.sz-brand span {
+  display: block;
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--sz-text-2);
+}
+
+/* The main column: one component per page, its examples in order. */
+.sz-main {
+  flex: 1;
+  min-width: 0;
+  max-width: 980px;
+  padding: 2rem 2.5rem 4rem;
+}
+
+.sz-main h1 {
+  margin-top: 0;
+  font-size: 1.6rem;
+}
+
+/* An example: title, description, the live demo, then its source. */
+.sz-example {
+  margin: 2.25rem 0;
+}
+
+.sz-example-note {
+  color: var(--sz-text-2);
+}
+
+.sz-example-demo {
+  padding: 1.5rem;
+  border: 1px solid var(--sz-border);
+  border-radius: 0.5rem;
+  background: var(--sz-panel-bg);
+}
+
+.sz-example-demo > *:first-child {
+  margin-top: 0;
+}
+
+.sz-example-demo > *:last-child {
+  margin-bottom: 0;
+}
+
+/* The code panel: a bar with the language and the copy button, the code as text. */
+.sz-code {
+  margin-top: 0.75rem;
+  border: 1px solid var(--sz-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.sz-code__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+  background: var(--sz-code-bg);
+  border-bottom: 1px solid var(--sz-border);
+  color: var(--sz-text-2);
+  font-size: 0.8rem;
+}
+
+.sz-code pre {
+  margin: 0;
+  padding: 1rem;
+  overflow: auto;
+  max-height: 26rem;
+  background: var(--sz-code-bg);
+}
+
+.sz-code code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  color: var(--sz-text);
+}
+
+/* The home page's component cards. */
+.sz-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.sz-card {
+  display: block;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--sz-border);
+  border-radius: 0.5rem;
+  background: var(--sz-panel-bg);
+  color: var(--sz-text);
+  text-decoration: none;
+}
+
+.sz-card:hover {
+  border-color: var(--sz-accent);
+}
+
+.sz-card strong {
+  display: block;
+}
+
+.sz-card span {
+  color: var(--sz-text-2);
+  font-size: 0.85rem;
+}
+
+/* The rich-text area: the demo's contenteditable stands out as an editor surface, not a form. */
+.sz-example-demo [contenteditable="true"] {
+  padding: 0.75rem;
+  border: 1px solid var(--sz-border);
+  border-radius: 0.375rem;
+  background: #fff;
+  min-height: 4rem;
+  outline: none;
+}
+
+.sz-example-demo [contenteditable="true"]:focus {
+  border-color: var(--sz-accent);
+}
+
+/* The rich-text demo's value echo (the example's <code> under the editor). */
+.sz-example-demo p code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}

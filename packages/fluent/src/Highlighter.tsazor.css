@@ -1,0 +1,8 @@
+/* Highlighter — the marked terms on the amber glass, in the text's own color. */
+
+.fui-highlighter {
+  padding: 0 1px;
+  border-radius: var(--fui-radius-sm);
+  background: var(--fui-color-glass-amber);
+  color: inherit;
+}

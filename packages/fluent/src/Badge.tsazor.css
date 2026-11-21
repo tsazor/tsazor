@@ -1,10 +1,11 @@
-/* Badge — Fluent 2 pill with glass-color accents. */
+/* Badge — Fluent 2 pill. Each color role sets its fill, ink and glass; the appearance picks among them. */
 
 .fui-badge {
   display: inline-flex;
   align-items: center;
   height: 20px;
   padding: 0 var(--fui-spacing-s);
+  border: 1px solid transparent;
   border-radius: var(--fui-radius-circular);
   font-family: var(--fui-font-family);
   font-size: var(--fui-font-size-caption);
@@ -20,52 +21,76 @@
   font-size: 11px;
 }
 
+/* Color roles: fill + on-fill (filled), glass + ink (subtle), ink (outline, transparent). */
+
+.fui-badge--brand {
+  --fui-badge-fill: var(--fui-brand-background);
+  --fui-badge-on-fill: var(--fui-foreground-on-brand);
+  --fui-badge-glass: var(--fui-color-glass-blue);
+  --fui-badge-ink: var(--fui-color-blue-1);
+}
+
+.fui-badge--neutral {
+  --fui-badge-fill: var(--fui-foreground-2);
+  --fui-badge-on-fill: var(--fui-background-1);
+  --fui-badge-glass: var(--fui-control-fill-active);
+  --fui-badge-ink: var(--fui-foreground-2);
+}
+
+.fui-badge--success {
+  --fui-badge-fill: var(--fui-color-green-filled);
+  --fui-badge-on-fill: #FFFFFF;
+  --fui-badge-glass: var(--fui-color-glass-green);
+  --fui-badge-ink: var(--fui-color-green-1);
+}
+
+.fui-badge--warning {
+  --fui-badge-fill: var(--fui-color-amber-filled);
+  --fui-badge-on-fill: #FFFFFF;
+  --fui-badge-glass: var(--fui-color-glass-amber);
+  --fui-badge-ink: var(--fui-color-amber-1);
+}
+
+.fui-badge--danger {
+  --fui-badge-fill: var(--fui-color-red-filled);
+  --fui-badge-on-fill: #FFFFFF;
+  --fui-badge-glass: var(--fui-color-glass-red);
+  --fui-badge-ink: var(--fui-color-red-1);
+}
+
+.fui-badge--info {
+  --fui-badge-fill: var(--fui-color-blue-1);
+  --fui-badge-on-fill: #FFFFFF;
+  --fui-badge-glass: var(--fui-color-glass-blue);
+  --fui-badge-ink: var(--fui-color-blue-1);
+}
+
 .fui-badge--filled {
-  border: 1px solid transparent;
+  background: var(--fui-badge-fill);
+  color: var(--fui-badge-on-fill);
 }
 
 .fui-badge--subtle {
-  border: 1px solid transparent;
+  background: var(--fui-badge-glass);
+  color: var(--fui-badge-ink);
 }
 
-/* Color themes: filled = solid, subtle = glass ("color-*-2" pairs). */
-
-.fui-badge--filled.fui-badge--brand {
-  background: var(--fui-accent);
-  color: var(--fui-foreground-on-brand);
+.fui-badge--outline {
+  background: transparent;
+  border-color: currentColor;
+  color: var(--fui-badge-ink);
 }
 
-.fui-badge--subtle.fui-badge--brand {
-  background: var(--fui-color-glass-blue);
-  color: var(--fui-color-blue-1);
+.fui-badge--transparent {
+  background: transparent;
+  color: var(--fui-badge-ink);
 }
 
-.fui-badge--filled.fui-badge--success {
-  background: var(--fui-color-green-1);
-  color: #FFFFFF;
+/* Icon slots: 12px (10px when small), 2px from the text. */
+.fui-badge {
+  gap: 2px;
 }
 
-.fui-badge--subtle.fui-badge--success {
-  background: var(--fui-color-glass-green);
-  color: var(--fui-color-green-1);
-}
-
-.fui-badge--filled.fui-badge--warning {
-  background: var(--fui-color-amber-1);
-  color: #FFFFFF;
-}
-
-.fui-badge--subtle.fui-badge--warning {
-  background: var(--fui-color-glass-amber);
-  color: var(--fui-color-amber-1);
-}
-
-.fui-badge--filled.fui-badge--error {
-  background: var(--fui-color-red-1);
-  color: #FFFFFF;
-}
-
-.fui-badge--subtle.fui-badge--error {
-  background: var(--fui-color-glass-red);
-  color: var(--fui-color-red-1);
+.fui-badge__icon {
+  flex: none;
 }

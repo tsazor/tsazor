@@ -1,0 +1,115 @@
+@* pages/notifications/inbox.tsx: the signed-in user's notifications, unread first by default (the filter switches to
+   all). A NotificationCreated event from the realtime hub refreshes every notifications query (useRealtimeEvent →
+   observing the RealtimeService's event); "Mark read" and "Mark all read" are the original's mutations as handlers. *@
+@page "/notifications"
+@authorize
+@import { Bell, CheckCheck, RefreshCw } from "lucide"
+@import { listNotifications, markAllNotificationsRead, markNotificationRead, type NotificationDto } from "@/api/notifications"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { RealtimeService } from "@/realtime/realtime-service"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import InboxRow from "./InboxRow.tsazor"
+@inject RealtimeService realtime
+
+<div class="space-y-8">
+    <EntityPageHeader icon="@Bell" title="Notifications" total="@items.length" unit="item"
+                      description="Events the system has surfaced for you. Live-updates as new notifications arrive — no refresh needed.">
+        <Button variant="outline" size="sm" disabled="@query.result.isFetching" onClick="@(() => query.refetch())" class="flex-1 sm:flex-none">
+            <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", query.result.isFetching && "animate-spin")" />
+            Refresh
+        </Button>
+        <Button variant="signal" size="sm" onClick="@markAll" disabled="@markingAll" class="flex-1 sm:flex-none">
+            <Icon icon="@CheckCheck" class="mr-1.5 h-3.5 w-3.5" />
+            @(markingAll ? "Marking…" : "Mark all read")
+        </Button>
+    </EntityPageHeader>
+
+    <FilterBar>
+        <FormSelect value="@filter" valueChanged="@((value: string) => filter = (value as "all" | "unread") || "all")" options="@filterOptions" class="min-w-[10rem]" />
+    </FilterBar>
+
+    @if (query.result.isError) {
+        <ErrorBand message="@(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load notifications.")" />
+    }
+
+    @if (query.result.isLoading) {
+        <LoadingRow label="Loading notifications" />
+    }
+
+    @if (!query.result.isLoading && items.length === 0 && !query.result.isError) {
+        <EmptyState icon="@Bell" kicker="// inbox zero" title="@(filter === "unread" ? "Nothing unread." : "No notifications yet.")"
+                    description="@(filter === "unread" ? "You're all caught up. Live updates will pop in here as they fire." : "Notifications from the system will appear here as they're generated.")" />
+    }
+
+    @if (items.length > 0) {
+        <ul class="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+            @foreach (const n of items) {
+                <InboxRow @key="n.id" notif="@n" onMarkRead="@(() => markOne(n.id))" />
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private filter: "all" | "unread" = "unread";
+    private markingAll = false;
+
+    private readonly filterOptions: SelectOption[] = [
+        { value: "unread", label: "Unread" },
+        { value: "all", label: "All" },
+    ];
+
+    private readonly query = new Query(() => {
+        const filter = this.filter;
+        return {
+            queryKey: ["notifications", "inbox", filter],
+            queryFn: () => listNotifications({ unreadOnly: filter === "unread", pageSize: 100 }),
+            staleTime: 15_000,
+        };
+    });
+
+    protected override onInitialized(): void {
+        this.observe(this.query);
+        // Live append on new notification.
+        this.observe(this.realtime.event("NotificationCreated"), () => {
+            void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        });
+    }
+
+    private get items(): NotificationDto[] {
+        return this.query.result.data ?? [];
+    }
+
+    /** The `markOne` mutation. */
+    private async markOne(id: string): Promise<void> {
+        try {
+            await markNotificationRead(id);
+            void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        } catch (err) {
+            toast.error("Mark read failed", { description: NotificationsInbox.describe(err) });
+        }
+    }
+
+    /** The `markAll` mutation. */
+    private async markAll(): Promise<void> {
+        this.markingAll = true;
+        try {
+            const data = await markAllNotificationsRead();
+            toast.success(`${data.updated} ${data.updated === 1 ? "notification" : "notifications"} marked read`);
+            void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        } catch (err) {
+            toast.error("Mark all failed", { description: NotificationsInbox.describe(err) });
+        } finally {
+            this.markingAll = false;
+        }
+    }
+
+    private static describe(err: unknown): string {
+        if (err instanceof ApiRequestError) return err.problem?.detail ?? err.problem?.title ?? err.message;
+        if (err instanceof Error) return err.message;
+        return String(err);
+    }
+}

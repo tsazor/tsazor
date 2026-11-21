@@ -1,0 +1,65 @@
+@* components/ui/dialog.tsx's SheetContent: the edge-anchored Dialog — the same behavior as DialogContent (focus in
+   and kept, no page scroll, Escape and a press outside close), sliding in from a side instead of centering. The
+   original's Sheet is Radix's Dialog.Root: here it is the Dialog component. *@
+@import { X } from "lucide"
+@import { createLayer, dismissible, focusableElements, focusTrap, scrollLock } from "@tsazor/ui"
+@import { cn } from "@/lib/cn"
+@import { topLayer, topLayerClass } from "@/lib/top-layer"
+@import Dialog from "./Dialog.tsazor"
+
+@if (dialog?.open) {
+    <div popover="manual" class="@topLayerClass" @attach="topLayer()">
+        <div data-slot="dialog-overlay" data-state="open" class="fixed inset-0 z-50 bg-[oklch(0_0_0_/_0.4)] backdrop-blur-[6px] data-[state=open]:animate-fsh-overlay-in" @attach="lock"></div>
+        <div role="dialog" aria-modal="true" aria-labelledby="@dialog.titleId" aria-describedby="@dialog.descriptionId" data-state="open" tabindex="-1"
+             @attributes="@this.attributes" @attach="trap" @attach:dismiss="dismiss">
+            @childContent
+            @if (showClose) {
+                <button type="button" aria-label="Close" class="@closeClass" @onclick="this.close"><Icon icon="@X" class="h-4 w-4" /></button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    @Parameter() side: "left" | "right" | "top" | "bottom" = "right";
+    /** Render the built-in close button. Defaults to true. */
+    @Parameter() showClose: boolean = true;
+    @CascadingParameter({ type: Dialog }) dialog?: Dialog;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly layer = createLayer();
+    // Radix focuses the element marked autofocus, else the first focusable one (the close button comes last).
+    private readonly trap = focusTrap({ layer: this.layer, initialFocus: (element) => element.querySelector<HTMLElement>("[autofocus]") ?? focusableElements(element)[0] ?? null });
+    private readonly lock = scrollLock();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close() });
+
+    private readonly closeClass = cn(
+        "absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-md",
+        "text-[var(--color-muted-foreground)] transition-colors",
+        "hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
+    );
+
+    private static readonly sides = {
+        left: "inset-y-0 left-0 h-full w-[min(20rem,85vw)] border-r data-[state=open]:animate-fsh-sheet-in-left",
+        right: "inset-y-0 right-0 h-full w-[min(20rem,85vw)] border-l data-[state=open]:animate-fsh-sheet-in-right",
+        top: "inset-x-0 top-0 w-full max-h-[85vh] border-b data-[state=open]:animate-fsh-sheet-in-top",
+        bottom: "inset-x-0 bottom-0 w-full max-h-[85vh] border-t data-[state=open]:animate-fsh-sheet-in-bottom",
+    };
+
+    private get attributes(): Record<string, unknown> {
+        return {
+            ...this.additionalAttributes,
+            class: cn(
+                "fixed z-50 flex flex-col bg-[var(--color-surface-1)] border-[var(--color-border)] shadow-[var(--shadow-lift)] outline-none",
+                SheetContent.sides[this.side],
+                this.additionalAttributes?.class as string | undefined,
+            ),
+        };
+    }
+
+    private close(): void {
+        this.dialog?.setOpen(false)?.catch((error) => this.dispatchExceptionAsync(error));
+    }
+}

@@ -1,0 +1,6 @@
+@* A yes/no field in the content list as Yes or No (FluentCMS's BooleanFieldDataTableYesNo). *@
+@inherits BaseFieldValueView<boolean, BooleanFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { BooleanFieldModel } from "../field-models"
+
+@(fieldValue.value ? "Yes" : "No")

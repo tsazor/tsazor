@@ -1,0 +1,10 @@
+@* A field of several files in the content list, each a link (FluentCMS's MultiFileFieldDataTableFiles). *@
+@inherits BaseFieldValueView<string[], MultiFileFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { MultiFileFieldModel } from "../field-models"
+
+<Stack direction="horizontal" gap="s">
+    @foreach (const fileId of fieldValue.value) {
+        <FileLink fileId="@fileId" @key="fileId" />
+    }
+</Stack>

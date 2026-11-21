@@ -1,0 +1,6 @@
+/* The field type: its icon and its name, as FluentCMS shows them (a Stack of Icon and Badge). */
+.field-type-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}

@@ -1,0 +1,182 @@
+@* Client/Shared/MainBody.razor(.cs): the signed-in frame — MudAppBar, MudDrawer and MudMainContent as AppLayout —
+   and the hub connection the pages share (a CascadingValue, as the original's). The account menu opens from the
+   avatar; the user card stays in the navigation column (inside a menu it would be no menu item, axe). *@
+@import type { HubConnection } from "@microsoft/signalr"
+@import { createHubConnection } from "../Extensions/HubExtensions"
+@import { getEmail, getFirstName, getLastName, getUserId } from "../Extensions/ClaimsPrincipalExtensions"
+@import { DialogService, Toaster } from "@tsazor/fluent"
+@import Logout from "./Dialogs/Logout.tsazor"
+@inject NavigationManager navigation
+@inject BlazorHeroStateProvider stateProvider
+@inject AuthenticationManager authenticationManager
+@inject AccountManager accountManager
+@inject UserManager userManager
+@inject RoleManager roleManager
+@inject ClientPreferenceManager preferences
+@inject Toaster toaster
+@inject DialogService dialogs
+
+<AppLayout @bind-navOpen="drawerOpen">
+    <Header>
+        <Icon value="@BlazorHeroLogo" size="32" />
+        <span class="bh-title">Blazor Hero</span>
+        <Button appearance="transparent" iconStart="@Icons.Navigation" ariaLabel="Menu" onClick="@drawerToggle" />
+        @* MudSpacer: the rest at the end of the bar (migration-practices.md, Toolbars). *@
+        <div class="bh-header-end">
+            <div class="bh-wide-only">
+                <Button intent="secondary" iconStart="@Icons.DrinkCoffee" href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" rel="noopener">@L("Buy Me A Coffee!")</Button>
+                <Menu label="@L("Support")" appearance="transparent">
+                    <MenuItem onSelect="@(() => open("https://www.facebook.com/codewithmukesh"))">@L("Facebook Page")</MenuItem>
+                    <MenuItem onSelect="@(() => open("https://www.linkedin.com/in/iammukeshm/"))">LinkedIn</MenuItem>
+                    <MenuItem onSelect="@(() => open("https://mudblazor.com/"))">@L("MudBlazor Documentation")</MenuItem>
+                    <MenuItem onSelect="@(() => open("https://codewithmukesh.com/blog/blazor-hero-quick-start-guide/"))">@L("Quick-Start Guide")</MenuItem>
+                </Menu>
+                <Tooltip text="@L("Toggle right-to-left/left-to-right")">
+                    <Button appearance="transparent" iconStart="@Icons.TextDirectionHorizontalRight" ariaLabel="@L("Toggle right-to-left/left-to-right")" onClick="@rightToLeftToggle" />
+                </Tooltip>
+            </div>
+            <LanguageSelector />
+            <Tooltip text="@L("Toggle Dark Mode")">
+                <Button appearance="transparent" iconStart="@Icons.WeatherMoon" ariaLabel="@L("Toggle Dark Mode")" onClick="@toggleDarkMode" />
+            </Tooltip>
+            <Menu appearance="transparent" placement="bottom-end" ariaLabel="@accountLabel">
+                <LabelContent>
+                    <Avatar name="@fullName" image="@imageDataUrl" size="32" />
+                </LabelContent>
+                <ChildContent>
+                    <MenuItem iconStart="@Icons.Person" onSelect="@(() => navigation.navigateTo("/account"))">@L("Account")</MenuItem>
+                    <MenuItem iconStart="@Icons.SignOut" onSelect="@logout">@L("Logout")</MenuItem>
+                </ChildContent>
+            </Menu>
+        </div>
+    </Header>
+    <Nav>
+        <UserCard firstName="@firstName" lastName="@lastName" email="@email" imageDataUrl="@imageDataUrl" />
+        <NavMenu />
+    </Nav>
+    <ChildContent>
+        <CascadingValue Value="@hubConnection">
+            @childContent
+        </CascadingValue>
+    </ChildContent>
+</AppLayout>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    @Parameter() onDarkModeToggle?: EventCallback;
+    @Parameter() onRightToLeftToggle?: EventCallback<boolean>;
+
+    private readonly L = localizerFor("MainLayout");
+    private drawerOpen = true;
+    private currentUserId = "";
+    private firstName = "";
+    private lastName = "";
+    private email = "";
+    private imageDataUrl: string | undefined;
+    private hubConnection?: HubConnection;
+
+    private get fullName(): string {
+        return `${this.firstName} ${this.lastName}`.trim();
+    }
+
+    private get accountLabel(): string {
+        return `${this.L("Account")}: ${this.fullName}`;
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.currentUserId = getUserId(user);
+        this.firstName = getFirstName(user);
+        this.lastName = getLastName(user);
+        this.email = getEmail(user);
+        await this.connectHub();
+        this.toaster.show({ message: this.L("Welcome {0}", { 0: this.firstName }), intent: "success" });
+        await this.loadData();
+    }
+
+    /** OnAfterRenderAsync's LoadDataAsync: the picture, and whether the token's user still exists. */
+    private async loadData(): Promise<void> {
+        const image = await this.accountManager.getProfilePictureAsync(this.currentUserId);
+        if (image.succeeded && image.data) this.imageDataUrl = image.data;
+        const current = await this.userManager.getAsync(this.currentUserId);
+        if (!current.succeeded || current.data === null) {
+            this.toaster.show({ message: this.L("You are logged out because the user with your Token has been deleted."), intent: "danger" });
+            this.authenticationManager.logout();
+        }
+    }
+
+    /**
+     * The hub: sign in to it, and what it tells the client (MainBody.razor.cs' OnInitializedAsync). The pages get it
+     * once it is connected, so they can send at once; a page rendered before that gets it as a new parameter value
+     * (the original's pages build a connection of their own then, TryInitialize — B31).
+     */
+    private async connectHub(): Promise<void> {
+        const hub = createHubConnection(this.navigation, this.stateProvider);
+        this.disposeSignal.addEventListener("abort", () => void hub.stop());
+        const signalR = ApplicationConstants.SignalR;
+        hub.on(signalR.ReceiveChatNotification, (message: string, receiverUserId: string, senderUserId: string) => {
+            if (this.currentUserId !== receiverUserId) return;
+            void (document.getElementById("notification") as HTMLAudioElement | null)?.play().catch(() => undefined);
+            this.toaster.show({
+                message,
+                intent: "info",
+                timeout: 10000,
+                action: { label: this.L("Chat?"), onClick: () => this.navigation.navigateTo(`chat/${senderUserId}`) },
+            });
+        });
+        hub.on(signalR.ReceiveRegenerateTokens, async () => {
+            const token = await this.authenticationManager.refreshToken().catch(() => undefined);
+            if (token === undefined) {
+                this.toaster.show({ message: this.L("You are Logged Out."), intent: "danger" });
+                this.authenticationManager.logout();
+                this.navigation.navigateTo("/");
+                return;
+            }
+            this.stateProvider.setToken(token);
+            this.toaster.show({ message: this.L("Refreshed Token."), intent: "success" });
+        });
+        hub.on(signalR.LogoutUsersByRole, async (userId: string, roleId: string) => {
+            if (this.currentUserId === userId) return;
+            const roles = await this.roleManager.getRolesAsync();
+            const role = roles.succeeded ? roles.data.find((candidate) => candidate.id === roleId) : undefined;
+            if (role === undefined) return;
+            const mine = await this.userManager.getRolesAsync(this.currentUserId);
+            if (mine.succeeded && mine.data.userRoles.some((userRole) => userRole.roleName === role.name && userRole.selected)) {
+                this.toaster.show({ message: this.L("You are logged out because the Permissions of one of your Roles have been updated."), intent: "danger" });
+                await hub.send(signalR.OnDisconnect, this.currentUserId);
+                this.authenticationManager.logout();
+                this.navigation.navigateTo("/login");
+            }
+        });
+        hub.on(signalR.PingRequest, async (userName: string) => {
+            await hub.send(signalR.PingResponse, this.currentUserId, userName);
+        });
+        await hub.start();
+        await hub.send(signalR.OnConnect, this.currentUserId);
+        this.hubConnection = hub;
+    }
+
+    private drawerToggle(): void {
+        this.drawerOpen = !this.drawerOpen;
+    }
+
+    private async rightToLeftToggle(): Promise<void> {
+        await this.onRightToLeftToggle?.invokeAsync(this.preferences.toggleLayoutDirection());
+    }
+
+    private async toggleDarkMode(): Promise<void> {
+        await this.onDarkModeToggle?.invokeAsync();
+    }
+
+    private open(url: string): void {
+        window.open(url, "_blank", "noopener");
+    }
+
+    private logout(): void {
+        this.dialogs.show(Logout, {
+            title: this.L("Logout"),
+            size: "small",
+            parameters: { contentText: this.L("Logout Confirmation"), buttonText: this.L("Logout"), intent: "danger", currentUserId: this.currentUserId, hubConnection: this.hubConnection },
+        });
+    }
+}

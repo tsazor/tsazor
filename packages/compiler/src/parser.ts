@@ -1,5 +1,7 @@
+import ts from "typescript";
 import type {
   AttributeNode,
+  CatchClause,
   CodeBlockNode,
   ConditionalBranch,
   DirectiveNode,
@@ -8,20 +10,47 @@ import type {
   ExpressionNode,
   IfNode,
   MarkupNode,
+  RawAttributeValue,
+  RazorTemplate,
   SwitchCase,
   SwitchNode,
   ForNode,
   SourceSpan,
-} from "./ast";
-import { EVENT_FLAGS } from "./ast";
-import { DiagnosticBag, type SourcePos } from "./diagnostics";
-import { TSScanner } from "./scanner";
+  TryNode,
+  WhileNode,
+} from "./ast.js";
+import { analyzeStatements, CodeScanner, type CodeToken } from "./code-scanner.js";
+import { DiagnosticBag, type SourcePos, type SourceRange } from "./diagnostics.js";
+import { TSScanner } from "./scanner.js";
 
-const DIRECTIVE_NAMES = new Set([
-  "page", "layout", "using", "inject", "inherits", "attribute", "typeparam", "authorize",
-]);
+/**
+ * Directive table. `supported` directives are handled by codegen; `ignored`
+ * ones are Blazor-only and have no Tsazor meaning (codegen may warn). All are
+ * only valid at document level. Any other `@word` is an implicit expression
+ * (Razor semantics) — whether it resolves is decided later.
+ */
+const DIRECTIVES: Record<string, "supported" | "ignored"> = {
+  page: "supported",
+  layout: "supported",
+  using: "supported",
+  import: "supported",
+  inject: "supported",
+  inherits: "supported",
+  attribute: "supported",
+  typeparam: "supported",
+  authorize: "supported",
+  allowAnonymous: "supported",
+  namespace: "ignored",
+  rendermode: "ignored",
+  preservewhitespace: "ignored",
+  implements: "ignored",
+};
 
-const CONTROL_KEYWORDS = new Set(["if", "else", "for", "foreach", "switch", "case", "default"]);
+/** Control statements parsed into their own nodes (in markup after `@`, in code bare). */
+const CONTROL_KEYWORDS = new Set(["if", "for", "foreach", "while", "do", "switch", "try"]);
+
+/** Continuation keywords that are only valid after their control statement. */
+const DANGLING_KEYWORDS = new Set(["else", "case", "default", "catch", "finally"]);
 
 const VOID_ELEMENTS = new Set([
   "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -30,15 +59,25 @@ const VOID_ELEMENTS = new Set([
 
 const isIdPart = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z0-9_$]/.test(ch);
 const isIdStart = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z_$]/.test(ch);
+const isAlnum = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z0-9]/.test(ch);
+const isTagStart = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z]/.test(ch);
 
 export function parseDocument(source: string, diagnostics: DiagnosticBag): DocumentNode {
   return new Parser(source, diagnostics).parseDocument();
 }
 
 interface ParseStop {
-  closeBrace?: boolean;
+  /** Element/`<text>` content: `}` is literal text, `</` returns to the caller. */
   closeTag?: string | null;
+  /** `@:` line: markup up to and including the line break. */
+  newline?: boolean;
 }
+
+/** How a code-context statement list ended. */
+type CodeEnd = "close" | "eof" | "case";
+
+/** Where a code-context statement list lives. `single` = braceless control body. */
+type CodeMode = "block" | "switch" | "single";
 
 /** One interpolated slice of an attribute value (`static text`, or `@(...)`
  *  / bare `@x` code), with the absolute index of its first character — for
@@ -49,13 +88,34 @@ interface ValuePart {
   start?: number;
 }
 
+/** A parsed control header `(…)`: trimmed code, its first character and the
+ *  position after the closing parenthesis. */
+interface Header {
+  code: string;
+  start?: SourcePos;
+  end?: SourcePos;
+}
+
+/**
+ * Razor-model parser. Markup contexts (the document, element content, `@:`
+ * lines, `<text>`) are scanned character-wise; code contexts (`@{ }`,
+ * control-block bodies) are code-first: TypeScript scanned with the TS lexer,
+ * switching to markup at a tag in statement position, `@:` and `<text>`.
+ * `@code` blocks and `(…)` headers are balanced with the TS lexer as well.
+ */
 class Parser {
   private readonly locator: (index: number) => SourcePos;
   private readonly ts: TSScanner;
+  private readonly code: CodeScanner;
   private i = 0;
+  /** While a component tag's attribute value is read: its stray `@`s (see RawAttributeValue.strayAt); null elsewhere. */
+  private strayAts: NonNullable<RawAttributeValue["strayAt"]> | null = null;
   /** Accumulated text between transitions. */
   private textStart = -1;
   private textParts: string[] = [];
+  /** Open elements and code bodies around the current position; directives
+   *  are only valid at document level (0). */
+  private nesting = 0;
 
   constructor(
     private readonly source: string,
@@ -77,6 +137,24 @@ class Parser {
       return { line: lo + 1, column: index - start };
     };
     this.ts = new TSScanner(source, this.locator);
+    this.code = new CodeScanner(source);
+  }
+
+  /** The source range [from, to) of a diagnostic. */
+  private range(from: number, to: number): SourceRange {
+    return { pos: this.locator(from), endPos: this.locator(Math.max(from, to)) };
+  }
+
+  /** From an already located start to the absolute index `to`. */
+  private rangeFrom(pos: SourcePos, to: number): SourceRange {
+    return { pos, endPos: this.locator(to) };
+  }
+
+  /** `to`, moved left over trailing whitespace down to `from` (a directive line without its `\r`). */
+  private trimmedEnd(from: number, to: number): number {
+    let end = to;
+    while (end > from && /\s/.test(this.source[end - 1]!)) end--;
+    return end;
   }
 
   parseDocument(): DocumentNode {
@@ -87,35 +165,44 @@ class Parser {
     return { directives, body: markup, codeBlocks: [] };
   }
 
-  /** Parses markup nodes until EOF, a `}` or the given closing tag. */
-  private parseNodes(out: MarkupNode[], stop: ParseStop, switchContent = false): void {
+  /* ------------------------------------------------------------------ */
+  /* Markup context                                                      */
+  /* ------------------------------------------------------------------ */
+
+  /** Parses markup nodes until EOF, the caller's closing tag or (for `@:`) the line end. */
+  private parseNodes(out: MarkupNode[], stop: ParseStop): void {
     const src = this.source;
+    const documentLevel = stop.closeTag === undefined && !stop.newline;
     this.textStart = -1;
     while (this.i < src.length) {
       const ch = src[this.i]!;
 
-      if (ch === "}") {
-        if (stop.closeBrace) {
-          this.i++;
-          this.flush(out);
-          this.skipOwnLine();
-          return;
-        }
-        if (stop.closeTag === null || stop.closeTag === undefined) {
-          this.flush(out);
-          this.diagnostics.error("TZS003", this.locator(this.i), "Unexpected '}' in markup.");
-          this.i++;
-          continue;
-        }
-        // Inside an element's content, braces are literal text (Razor:
-        // inline CSS/JSON in markup is fine) — fall through to the text
-        // accumulation at the bottom of the loop.
+      if (stop.newline && ch === "\n") {
+        // The line break belongs to the `@:` line's text (Razor).
+        this.accumulate(ch);
+        this.flush(out);
+        return;
       }
 
+      if (ch === "}" && documentLevel) {
+        this.flush(out);
+        this.diagnostics.error("TZS003", this.range(this.i, this.i + 1), "Unexpected '}' in markup.");
+        this.i++;
+        continue;
+      }
+      // Inside element content and `@:` lines braces are literal text
+      // (Razor: inline CSS/JSON in markup is fine).
+
       if (ch === "<") {
-        if (src[this.i + 1] === "/") {
+        const next = src[this.i + 1];
+        if (next === "/") {
+          if (stop.closeTag !== undefined && stop.closeTag !== null) {
+            this.flush(out);
+            return; // caller matches the closing tag
+          }
           this.flush(out);
-          return; // caller matches the closing tag
+          this.strayCloseTag();
+          continue;
         }
         if (src.startsWith("<!--", this.i)) {
           this.flush(out);
@@ -123,55 +210,46 @@ class Parser {
           this.i = end < 0 ? src.length : end + 3;
           continue;
         }
-        this.flush(out);
-        this.parseNode(out);
-        continue;
-      }
-
-      if (ch === "@" && !switchContent) {
-        this.flush(out);
-        this.parseTransition(out, switchContent);
-        continue;
-      }
-      if (ch === "@" && switchContent) {
-        const wordEnd = this.i + 2;
-        let e = wordEnd;
-        while (e < src.length && /[A-Za-z0-9_]/.test(src[e]!)) e++;
-        const word = src.slice(wordEnd, e);
-        if (word === "case" || word === "default") {
+        if (next === "!") {
+          // `<!DOCTYPE …>` and other declarations carry no render content.
           this.flush(out);
-          this.pendingSwitchWord = word;
-          this.i = e;
-          return; // caller (switch body loop) picks it up
+          const end = src.indexOf(">", this.i);
+          this.i = end < 0 ? src.length : end + 1;
+          continue;
         }
-        this.flush(out);
-        this.parseTransition(out, switchContent);
-        continue;
+        if (isTagStart(next)) {
+          this.flush(out);
+          this.parseNode(out);
+          continue;
+        }
+        // `a < b`: a `<` that starts no tag is text.
       }
 
-      // Inside a switch body: bare case/default labels and break statements.
-      if (switchContent && this.textStart < 0) {
-        const m = /^\s*(case\b|default\s*:|break\s*;)/.exec(src.slice(this.i, this.i + 32));
-        if (m) {
+      if (ch === "@") {
+        if (src[this.i + 1] === "*") {
+          // Razor comment: dropped without splitting the surrounding text.
+          this.skipRazorComment();
+          continue;
+        }
+        // Email rule (Razor): `@` right after an alphanumeric text character
+        // is literal — `info@example.com`.
+        const emailLike = this.textStart >= 0 && isAlnum(src[this.i - 1]) && isIdPart(src[this.i + 1]);
+        if (!emailLike) {
           this.flush(out);
-          const token = m[1]!;
-          if (token.startsWith("case")) this.pendingSwitchWord = "case";
-          else if (token.startsWith("default")) this.pendingSwitchWord = "default";
-          else {
-            // break: silently skipped (codegen emits break automatically).
-            this.i += m[0].length;
-            continue;
-          }
-          this.i += m[0].length;
-          return;
+          this.parseTransition(out, false);
+          continue;
         }
       }
 
-      if (this.textStart < 0) this.textStart = this.i;
-      this.textParts.push(ch);
+      this.accumulate(ch);
       this.i++;
     }
     this.flush(out);
+  }
+
+  private accumulate(ch: string): void {
+    if (this.textStart < 0) this.textStart = this.i;
+    this.textParts.push(ch);
   }
 
   private flush(out: MarkupNode[]): void {
@@ -182,11 +260,32 @@ class Parser {
     this.textParts = [];
   }
 
+  /** A closing tag nothing opened (at document level, in code or on an `@:` line). */
+  private strayCloseTag(): void {
+    const pos = this.locator(this.i);
+    const end = this.source.indexOf(">", this.i);
+    const tag = this.source.slice(this.i, end < 0 ? this.source.length : end + 1);
+    this.diagnostics.error("TZS002", this.rangeFrom(pos, this.i + tag.length), `Unexpected closing tag '${tag}'.`);
+    this.i = end < 0 ? this.source.length : end + 1;
+  }
+
+  private skipRazorComment(): void {
+    const end = this.source.indexOf("*@", this.i + 2);
+    if (end < 0) {
+      this.diagnostics.error("TZS006", this.range(this.i, this.i + 2), "Razor comment '@*' never closes.");
+      this.i = this.source.length;
+      return;
+    }
+    this.i = end + 2;
+  }
+
   /* ------------------------------------------------------------------ */
   /* @-transitions                                                       */
   /* ------------------------------------------------------------------ */
 
-  private parseTransition(out: MarkupNode[], switchContent: boolean): void {
+  /** Handles the `@` at this.i, in markup (`inCode` false) or in statement
+   *  position of a code context. */
+  private parseTransition(out: MarkupNode[], inCode: boolean): void {
     const src = this.source;
     const pos = this.locator(this.i);
     const next = src[this.i + 1];
@@ -198,19 +297,23 @@ class Parser {
     }
 
     if (next === ":") {
-      // @:line — rest of the line is literal text.
+      // @:line — the rest of the line is markup (with @ transitions).
       this.i += 2;
-      const nl = src.indexOf("\n", this.i);
-      const end = nl < 0 ? src.length : nl;
-      this.pushText(out, src.slice(this.i, end), pos);
-      this.i = end;
+      this.nesting++;
+      this.parseNodes(out, { newline: true });
+      this.nesting--;
+      return;
+    }
+
+    if (next === "*") {
+      this.skipRazorComment();
       return;
     }
 
     if (next === "(") {
-      const end = this.ts.scanBalanced(this.i + 1, "(", ")");
+      const end = this.code.scanBalanced(this.i + 1);
       if (end < 0) {
-        this.diagnostics.error("TZS003", pos, "Parenthesized expression never closes.");
+        this.diagnostics.error("TZS003", this.rangeFrom(pos, this.i + 2), "Parenthesized expression never closes.");
         this.i = src.length;
         return;
       }
@@ -226,13 +329,13 @@ class Parser {
     }
 
     if (next === "{") {
-      this.parseCodeBlock(out, pos, false);
+      this.parseInlineBlock(out, pos, inCode);
       return;
     }
 
     // Identifier transitions.
     if (!isIdStart(next)) {
-      this.diagnostics.error("TZS004", pos, "Unexpected character after '@'.");
+      this.diagnostics.error("TZS004", this.rangeFrom(pos, Math.min(this.i + 2, src.length)), "Unexpected character after '@'.");
       this.pushText(out, "@", pos);
       this.i++;
       return;
@@ -243,16 +346,76 @@ class Parser {
     const word = src.slice(idStart, idEnd);
 
     if (word === "code" || word === "functions") {
-      this.parseCodeBlock(out, pos, true, idEnd);
+      this.parseMemberBlock(out, pos, idEnd, word);
       return;
     }
 
     if (CONTROL_KEYWORDS.has(word)) {
-      this.parseControl(word, idEnd, out);
+      this.i = idEnd;
+      this.parseControlStatement(word, pos, out, inCode);
+      if (!inCode) this.skipOwnLine();
       return;
     }
 
-    if (DIRECTIVE_NAMES.has(word)) {
+    if (DANGLING_KEYWORDS.has(word)) {
+      if (inCode) {
+        // `@case`/`@else` in code: the `@` is redundant (lenient); the
+        // statement loop takes the bare keyword.
+        this.i++;
+        return;
+      }
+      this.diagnostics.error("TZS001", this.rangeFrom(pos, idEnd), `'@${word}' outside of its control context.`);
+      this.i = idEnd;
+      return;
+    }
+
+    if ((word === "using" || word === "lock") && this.nextNonSpace(idEnd) === "(") {
+      this.i = idEnd;
+      this.parseUnsupportedStatement(word, pos);
+      if (!inCode) this.skipOwnLine();
+      return;
+    }
+
+    if (word === "await") {
+      let end = idEnd;
+      while (src[end] === " " || src[end] === "\t") end++;
+      this.i = Math.max(this.ts.scanImplicitExpression(end), idEnd);
+      this.diagnostics.error(
+        "TZS012",
+        this.rangeFrom(pos, this.i),
+        "'@await' in markup is not supported: buildRenderTree is synchronous. Await in a lifecycle method (e.g. an async onInitialized) and render the stored result.",
+      );
+      return;
+    }
+
+    if (DIRECTIVES[word] !== undefined) {
+      // A value named like a directive (`@foreach (const layout of …) { @layout.name }`): Razor
+      // reads the directive too, so the error stays — with the way out, and parsing goes on.
+      // (`(` is not a sign: `@authorize({ … })` takes it; `@attribute[…]` takes `[`.)
+      if (".[?!".includes(src[idEnd] ?? " ") && !(word === "attribute" && src[idEnd] === "[")) {
+        const end = Math.max(this.ts.scanImplicitExpression(idStart), idEnd);
+        const expression = src.slice(idStart, end);
+        const range = this.rangeFrom(pos, end);
+        this.diagnostics.error(
+          "TZS013",
+          range,
+          `'@${word}' is a directive, so '@${expression}' doesn't read a value named '${word}'. Write '@(${expression})'.`,
+          { title: `Write '@(${expression})'`, edits: [{ ...range, text: `@(${expression})` }] },
+        );
+        this.i = end;
+        return;
+      }
+      if (this.nesting > 0) {
+        this.i = this.lineEnd(idEnd);
+        const range = this.rangeFrom(pos, this.trimmedEnd(idEnd, this.i));
+        this.diagnostics.error(
+          "TZS013",
+          range,
+          `'@${word}' is a directive and is only allowed at document level. To output a value named '${word}', write '@(${word})'.`,
+          { title: `Write '@(${word})'`, edits: [{ ...this.rangeFrom(pos, idEnd), text: `@(${word})` }] },
+        );
+        return;
+      }
       this.parseDirective(word, idEnd, pos, out);
       this.skipOwnLine();
       return;
@@ -264,7 +427,7 @@ class Parser {
   private parseImplicitExpression(idStart: number, idEnd: number, pos: SourcePos, out: MarkupNode[]): void {
     const end = this.ts.scanImplicitExpression(idStart);
     if (end <= idStart) {
-      this.diagnostics.error("TZS004", pos, "Empty implicit expression.");
+      this.diagnostics.error("TZS004", this.rangeFrom(pos, idEnd), "Empty implicit expression.");
       this.i = idEnd;
       return;
     }
@@ -272,17 +435,19 @@ class Parser {
     this.i = end;
   }
 
-  private parseCodeBlock(out: MarkupNode[], pos: SourcePos, member: boolean, from = this.i + 1): void {
+  /** `@code { … }` / `@functions { … }`: verbatim class members. */
+  private parseMemberBlock(out: MarkupNode[], pos: SourcePos, from: number, word: string): void {
     const src = this.source;
     const brace = this.findChar(from, "{");
-    if (brace < 0) {
-      this.diagnostics.error("TZS006", pos, member ? "@code block missing '{'." : "@{ block missing '{'.");
+    if (brace >= src.length) {
+      this.diagnostics.error("TZS006", this.rangeFrom(pos, from), "@code block missing '{'.");
       this.i = src.length;
       return;
     }
-    const close = this.ts.scanBalanced(brace, "{", "}");
+    const templates: RazorTemplate[] = [];
+    const close = this.scanMemberCode(brace, templates);
     if (close < 0) {
-      this.diagnostics.error("TZS006", pos, "Code block never closes.");
+      this.diagnostics.error("TZS006", this.rangeFrom(pos, brace + 1), "Code block never closes.");
       this.i = src.length;
       return;
     }
@@ -291,11 +456,252 @@ class Parser {
       code: src.slice(brace + 1, close - 1),
       pos,
       endPos: this.locator(close),
+      codeStart: this.locator(brace + 1),
+      member: true,
+      ...(templates.length > 0 ? { templates } : {}),
     };
-    if (member) node.member = true;
-    out.push(node);
+    if (this.nesting > 0) {
+      this.diagnostics.error("TZS013", this.rangeFrom(pos, close), `'@${word}' blocks are only allowed at document level.`);
+    } else {
+      out.push(node);
+    }
     this.i = close;
     this.skipOwnLine();
+  }
+
+  /**
+   * The balanced `{ … }` of an `@code` block (index after its `}`, or -1), reading each Razor template on the way —
+   * `@<tag>…</tag>`, an `@` right before a tag in TypeScript (a decorator is `@name`) — as one markup element.
+   * Markup may hold anything TypeScript can't scan (an apostrophe in text, a `{` in an attribute), so the template
+   * is parsed before the scan goes on after it.
+   */
+  private scanMemberCode(brace: number, templates: RazorTemplate[]): number {
+    const src = this.source;
+    // A scanner of its own: the markup parser uses this.code for the expressions inside the template.
+    const scanner = new CodeScanner(src);
+    scanner.reset(brace);
+    const first = scanner.next();
+    const opened = scanner.depth;
+    if (first.start !== brace || opened !== 1) return -1;
+    for (;;) {
+      const token = scanner.next();
+      if (token.kind === ts.SyntaxKind.EndOfFileToken) return -1;
+      if (token.kind === ts.SyntaxKind.AtToken && src[token.end] === "<" && isTagStart(src[token.end + 1])) {
+        scanner.resume(this.parseTemplate(token.start, brace + 1, templates));
+        continue;
+      }
+      if (scanner.depth === 0) return token.end;
+    }
+  }
+
+  /** One Razor template from its `@` (absolute `at`): the element as markup; returns the index after it. */
+  private parseTemplate(at: number, codeStart: number, templates: RazorTemplate[]): number {
+    const saved = this.i;
+    this.i = at + 1;
+    const children: MarkupNode[] = [];
+    this.nesting++;
+    this.parseNode(children);
+    this.nesting--;
+    const end = this.i;
+    this.i = saved;
+    templates.push({ start: at - codeStart, end: end - codeStart, children, pos: this.locator(at), endPos: this.locator(end) });
+    return end;
+  }
+
+  /** `@{ … }`: a code-first block without a scope of its own. */
+  private parseInlineBlock(out: MarkupNode[], pos: SourcePos, inCode: boolean): void {
+    const brace = this.i + 1;
+    this.i = brace + 1;
+    const children: MarkupNode[] = [];
+    this.nesting++;
+    const end = this.parseCodeStatements(children, "block", this.rangeFrom(pos, brace + 1));
+    this.nesting--;
+    out.push({
+      kind: "codeBlock",
+      code: this.source.slice(brace + 1, end === "close" ? this.i - 1 : this.i),
+      children,
+      pos,
+      endPos: this.locator(this.i),
+      codeStart: this.locator(brace + 1),
+    });
+    if (!inCode) this.skipOwnLine();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Code context                                                        */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Parses a code-first statement list: TypeScript statements, control
+   * statements, markup in statement position (`<tag`, `<text>`, `@:`) and
+   * `@` expressions. Consumes the closing `}` in "block"/"switch" mode;
+   * returns "case" (label unconsumed) when a switch label starts. `opener`
+   * is the construct an unclosed list is reported on (`{`, `@{`, the header).
+   */
+  private parseCodeStatements(out: MarkupNode[], mode: CodeMode, opener?: SourceRange): CodeEnd {
+    const src = this.source;
+    for (;;) {
+      this.skipCodeTrivia();
+      if (this.i >= src.length) {
+        const at = opener ?? this.range(this.i, this.i);
+        if (mode !== "single") {
+          this.diagnostics.error("TZS006", at, "Code block never closes.");
+        } else {
+          this.diagnostics.error("TZS006", at, "Expected a statement after the control header.");
+        }
+        return "eof";
+      }
+      const ch = src[this.i]!;
+      const before = this.i;
+
+      if (ch === "}") {
+        if (mode === "single") {
+          this.diagnostics.error("TZS006", this.range(this.i, this.i + 1), "Expected a statement after the control header.");
+          return "close";
+        }
+        this.i++;
+        return "close";
+      }
+
+      if (ch === "<" && src.startsWith("<!--", this.i)) {
+        const end = src.indexOf("-->", this.i + 4);
+        this.i = end < 0 ? src.length : end + 3;
+        continue;
+      }
+      if (ch === "<" && src[this.i + 1] === "/") {
+        this.strayCloseTag();
+        continue;
+      }
+      if (ch === "<" && isTagStart(src[this.i + 1])) {
+        this.parseNode(out);
+      } else if (ch === "@") {
+        this.parseTransition(out, true);
+        if (this.i === before + 1 && DANGLING_KEYWORDS.has(this.sliceWord(this.i))) continue; // lenient `@case`
+      } else if (ch === "{") {
+        const pos = this.locator(this.i);
+        this.i++;
+        const children: MarkupNode[] = [];
+        this.nesting++;
+        this.parseCodeStatements(children, "block", this.rangeFrom(pos, this.i));
+        this.nesting--;
+        out.push({ kind: "block", children, pos, endPos: this.locator(this.i) });
+      } else if (isIdStart(ch) && this.parseCodeKeyword(out, mode)) {
+        if (this.pendingCase) {
+          this.pendingCase = false;
+          return "case";
+        }
+      } else {
+        this.parseStatementRun(out, mode);
+      }
+      if (mode === "single") return "close";
+    }
+  }
+
+  /** Set by parseCodeKeyword when a switch label starts. */
+  private pendingCase = false;
+
+  /** Handles a keyword in statement position; false = not a keyword statement. */
+  private parseCodeKeyword(out: MarkupNode[], mode: CodeMode): boolean {
+    const word = this.sliceWord(this.i);
+    const pos = this.locator(this.i);
+    const after = this.i + word.length;
+    if (CONTROL_KEYWORDS.has(word)) {
+      this.i = after;
+      this.parseControlStatement(word, pos, out, true);
+      return true;
+    }
+    if (word === "case" || (word === "default" && this.nextNonSpace(after) === ":")) {
+      if (mode === "switch") {
+        this.pendingCase = true;
+        return true;
+      }
+      this.diagnostics.error("TZS001", this.rangeFrom(pos, after), `'${word}' label outside of a switch.`);
+      this.i = after;
+      return true;
+    }
+    if ((word === "using" || word === "lock") && this.nextNonSpace(after) === "(") {
+      this.i = after;
+      this.parseUnsupportedStatement(word, pos);
+      return true;
+    }
+    if (word === "else" || word === "catch" || word === "finally") {
+      this.diagnostics.error("TZS001", this.rangeFrom(pos, after), `'${word}' without a matching '${word === "else" ? "if" : "try"}'.`);
+      this.i = after;
+      return true;
+    }
+    return false;
+  }
+
+  /** A run of plain TS statements up to the next boundary (markup, control
+   *  statement, block or the closing brace). */
+  private parseStatementRun(out: MarkupNode[], mode: CodeMode): void {
+    const src = this.source;
+    const start = this.i;
+    const end = this.code.scanStatements(start, (token) => this.isStatementBoundary(token), mode === "single");
+    if (end <= start) {
+      this.diagnostics.error("TZS003", this.range(start, start + 1), `Unexpected '${src[start]}' in code.`);
+      this.i = start + 1;
+      return;
+    }
+    const code = src.slice(start, end);
+    const info = analyzeStatements(code);
+    const first = info.errors[0];
+    if (first) {
+      // A Razor template (`@<tag>`) is a value of member code; TypeScript stops at its `@` or `<`.
+      const at = start + first.offset;
+      const template = (src[at] === "@" && src[at + 1] === "<") || (src[at - 1] === "@" && src[at] === "<");
+      this.diagnostics.error(
+        "TZS015",
+        this.range(start + first.offset, start + first.offset + first.length),
+        template
+          ? `${first.message} (a Razor template '@<…>' is a value in @code: declare it there, e.g. 'private readonly row: RenderFragment = @<li>…</li>;').`
+          : `${first.message} (markup inside code must start with a tag, '@:' or '<text>').`,
+      );
+    }
+    out.push({ kind: "statement", code, declares: info.declares, readonly: info.readonly, pos: this.locator(start), endPos: this.locator(end) });
+    this.i = end;
+  }
+
+  /** Whether a token at statement start ends the current statement run. */
+  private isStatementBoundary(token: CodeToken): boolean {
+    const kind = token.kind;
+    if (kind === ts.SyntaxKind.AtToken || kind === ts.SyntaxKind.OpenBraceToken) return true;
+    if (kind === ts.SyntaxKind.LessThanToken) {
+      const next = this.source[token.end];
+      return isTagStart(next) || next === "/" || next === "!";
+    }
+    const text = this.source.slice(token.start, token.end);
+    if (!/^[A-Za-z_$]/.test(text)) return false;
+    if (CONTROL_KEYWORDS.has(text) || text === "case" || text === "else" || text === "catch" || text === "finally") return true;
+    if (text === "default") return this.nextNonSpace(token.end) === ":";
+    if (text === "using" || text === "lock") return this.nextNonSpace(token.end) === "(";
+    return false;
+  }
+
+  /** Skips whitespace, `//` and `/* *\/` comments and Razor comments in code. */
+  private skipCodeTrivia(): void {
+    const src = this.source;
+    while (this.i < src.length) {
+      const ch = src[this.i]!;
+      if (/\s/.test(ch)) {
+        this.i++;
+      } else if (ch === "/" && src[this.i + 1] === "/") {
+        this.i = this.lineEnd(this.i);
+      } else if (ch === "/" && src[this.i + 1] === "*") {
+        const end = src.indexOf("*/", this.i + 2);
+        this.i = end < 0 ? src.length : end + 2;
+      } else if (ch === "@" && src[this.i + 1] === "*") {
+        this.skipRazorComment();
+      } else {
+        return;
+      }
+    }
+  }
+
+  /** Gap between the parts of a control statement (`} else {`). */
+  private skipGap(inCode: boolean): void {
+    if (inCode) this.skipCodeTrivia();
+    else this.skipWhitespace();
   }
 
   /* ------------------------------------------------------------------ */
@@ -303,10 +709,85 @@ class Parser {
   /* ------------------------------------------------------------------ */
 
   private parseDirective(word: string, afterWord: number, pos: SourcePos, out: MarkupNode[]): void {
-    let end = this.lineEnd(afterWord);
-    const raw = this.source.slice(afterWord, end).trim();
-    out.push({ kind: "directive", name: word, value: raw.trim(), pos, endPos: this.locator(end) });
+    if (word === "import") {
+      const end = this.importDirectiveEnd(afterWord);
+      const slice = this.source.slice(afterWord, end);
+      const lead = slice.length - slice.trimStart().length;
+      out.push({
+        kind: "directive",
+        name: word,
+        value: slice.trim(),
+        valueStart: this.locator(afterWord + lead),
+        pos,
+        endPos: this.locator(end),
+      });
+      this.i = end;
+      return;
+    }
+    // `@authorize({ … })` may span lines: its value runs to the closing parenthesis.
+    const end = word === "authorize" ? this.parenDirectiveEnd(afterWord) : this.lineEnd(afterWord);
+    const slice = this.source.slice(afterWord, end);
+    const raw = slice.trim();
+    const valueStart = this.locator(afterWord + slice.length - slice.trimStart().length);
+    out.push({ kind: "directive", name: word, value: raw, valueStart, pos, endPos: this.locator(end) });
     this.i = end;
+  }
+
+  /**
+   * End of an `@import` value. TS import-declaration syntax may span lines
+   * (`@import {⏎ A,⏎ B⏎} from "./x"`), so the value runs to the module
+   * specifier string, plus an optional `with { … }` clause and `;`. A line
+   * break outside braces ends the value — codegen reports invalid forms.
+   */
+  private importDirectiveEnd(from: number): number {
+    const SK = ts.SyntaxKind;
+    const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.Standard, this.source);
+    scanner.resetTokenState(from);
+    let depth = 0;
+    let end = this.lineEnd(from);
+    let afterSpecifier = false;
+    for (;;) {
+      const kind = scanner.scan();
+      if (kind === SK.EndOfFileToken) return end;
+      if (kind === SK.WhitespaceTrivia || kind === SK.SingleLineCommentTrivia || kind === SK.MultiLineCommentTrivia) continue;
+      if (kind === SK.NewLineTrivia) {
+        if (depth === 0) return end;
+        continue;
+      }
+      if (afterSpecifier && depth === 0 && kind !== SK.WithKeyword && kind !== SK.AssertKeyword && kind !== SK.SemicolonToken) {
+        // Only an import-attributes clause or `;` may follow; anything else on
+        // the line stays in the value so codegen reports it.
+        return Math.max(end, this.lineEnd(scanner.getTokenStart()));
+      }
+      if (kind === SK.OpenBraceToken) {
+        depth++;
+      } else if (kind === SK.CloseBraceToken) {
+        depth = Math.max(0, depth - 1);
+      } else if (kind === SK.StringLiteral && depth === 0 && !afterSpecifier) {
+        afterSpecifier = true;
+      }
+      end = Math.max(end, scanner.getTokenEnd());
+    }
+  }
+
+  /**
+   * End of a directive value that may be a parenthesized TS argument
+   * (`@authorize({⏎ roles: […]⏎})`): the line, extended to the parenthesis
+   * closing one that opens it. Unbalanced ⇒ the line (codegen reports it).
+   */
+  private parenDirectiveEnd(from: number): number {
+    const SK = ts.SyntaxKind;
+    const lineEnd = this.lineEnd(from);
+    const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, this.source);
+    scanner.resetTokenState(from);
+    if (scanner.scan() !== SK.OpenParenToken || scanner.getTokenStart() >= lineEnd) return lineEnd;
+    let depth = 1;
+    for (;;) {
+      const kind = scanner.scan();
+      if (kind === SK.EndOfFileToken) return lineEnd;
+      if (kind === SK.OpenParenToken) depth++;
+      else if (kind === SK.CloseParenToken && --depth === 0) return Math.max(lineEnd, scanner.getTokenEnd());
+    }
   }
 
   private lineEnd(from: number): number {
@@ -318,125 +799,206 @@ class Parser {
   /* Control structures                                                  */
   /* ------------------------------------------------------------------ */
 
-  private parseControl(word: string, afterWord: number, out: MarkupNode[]): void {
-    const pos = this.locator(this.i);
-    this.i = afterWord;
-
-    if (word === "if") {
-      const condition = this.parseParens(pos);
-      const branches: ConditionalBranch[] = [{ condition, children: this.parseBraceMarkupBlock(false) }];
-      for (;;) {
-        this.skipWhitespace();
-        // Razor: `else` follows the block without an @ transition.
-        const wordStart = this.i;
-        let w = wordStart;
-        while (isIdPart(this.source[w])) w++;
-        if (this.source.slice(wordStart, w) !== "else") break;
-        const elsePos = this.locator(this.i);
-        this.i = w;
-        this.skipWhitespace();
-        let isElseIf = false;
-        let condition2: string | null = null;
-        if (this.sliceWord(this.i) === "if") {
-          isElseIf = true;
-          this.i += 2;
-          condition2 = this.parseParens(elsePos);
+  /** Parses a control statement; this.i is right after its keyword. */
+  private parseControlStatement(word: string, pos: SourcePos, out: MarkupNode[], inCode: boolean): void {
+    const keyword = this.rangeFrom(pos, this.i);
+    switch (word) {
+      case "if":
+        out.push(this.parseIf(pos, inCode));
+        return;
+      case "for":
+      case "foreach": {
+        const header = this.parseHeader(pos, word);
+        const children = this.parseBody(pos);
+        const node: ForNode = {
+          kind: "for", code: header.code, codeStart: header.start, headerEnd: header.end, isForEach: word === "foreach", children, pos, endPos: this.locator(this.i),
+        };
+        out.push(node);
+        return;
+      }
+      case "while": {
+        const header = this.parseHeader(pos, word);
+        const children = this.parseBody(pos);
+        out.push({
+          kind: "while", condition: header.code, conditionStart: header.start, isDoWhile: false, children, pos, endPos: this.locator(this.i),
+        } satisfies WhileNode);
+        return;
+      }
+      case "do": {
+        const children = this.parseBody(pos);
+        this.skipGap(inCode);
+        let header: Header = { code: "" };
+        if (this.sliceWord(this.i) === "while") {
+          this.i += "while".length;
+          header = this.parseHeader(pos, "while");
+          let k = this.i;
+          while (this.source[k] === " " || this.source[k] === "\t") k++;
+          if (this.source[k] === ";") this.i = k + 1;
+        } else {
+          this.diagnostics.error("TZS003", keyword, "'do' block requires a trailing 'while (…)'.");
         }
-        const children = this.parseBraceMarkupBlock(false);
-        branches.push({ condition: isElseIf ? condition2 : null, children, span: { pos: elsePos, endPos: this.locator(this.i) } });
-      }
-      const node: IfNode = { kind: "if", branches, pos, endPos: this.locator(this.i) };
-      out.push(node);
-      return;
-    }
-
-    if (word === "for" || word === "foreach") {
-      const code = this.parseParens(pos);
-      const children = this.parseBraceMarkupBlock(false);
-      const node: ForNode = { kind: "for", code, isForEach: word === "foreach", children, pos, endPos: this.locator(this.i) };
-      out.push(node);
-      return;
-    }
-
-    if (word === "switch") {
-      const code = this.parseParens(pos);
-      this.skipWhitespace();
-      if (this.source[this.i] !== "{") {
-        this.diagnostics.error("TZS006", pos, "@switch requires a '{' block.");
-        this.i = this.source.length;
+        out.push({
+          kind: "while", condition: header.code, conditionStart: header.start, isDoWhile: true, children, pos, endPos: this.locator(this.i),
+        } satisfies WhileNode);
         return;
       }
-      const close = this.ts.scanBalanced(this.i, "{", "}", false);
-      if (close < 0) {
-        this.diagnostics.error("TZS006", pos, "@switch block never closes.");
-        this.i = this.source.length;
+      case "switch":
+        this.parseSwitch(pos, out, inCode);
         return;
-      }
-      this.i++;
-      const cases = this.parseSwitchBody(pos, close);
-      out.push({ kind: "switch", code, cases, pos, endPos: this.locator(this.i) } satisfies SwitchNode);
-      return;
+      case "try":
+        out.push(this.parseTry(pos, keyword, inCode));
+        return;
     }
-
-    this.diagnostics.error("TZS001", pos, `'@${word}' outside of its control context.`);
   }
 
-  private pendingSwitchWord: string | null = null;
-
-  private parseSwitchBody(startPos: SourcePos, closeBrace: number): SwitchCase[] {
-    const cases: SwitchCase[] = [];
-    let current: SwitchCase | null = null;
-    const src = this.source;
-    while (this.i < src.length && this.i < closeBrace) {
-      const word = this.pendingSwitchWord;
-      if (word !== null) {
-        this.pendingSwitchWord = null;
-        if (word === "default") {
-          this.skipWhitespace();
-          if (src[this.i] === ":") this.i++;
-          current = { code: null, children: [], span: { pos: startPos, endPos: this.locator(this.i) } };
-          cases.push(current);
-          continue;
-        }
-        // case
-        this.skipWhitespace();
-        const code = this.parseCaseExpression();
-        this.skipWhitespace();
-        if (src[this.i] === ":") this.i++;
-        current = { code, children: [], span: { pos: startPos, endPos: this.locator(this.i) } };
-        cases.push(current);
+  private parseIf(pos: SourcePos, inCode: boolean): IfNode {
+    const header = this.parseHeader(pos, "if");
+    const branches: ConditionalBranch[] = [{ condition: header.code, conditionStart: header.start, children: this.parseBody(pos) }];
+    for (;;) {
+      const save = this.i;
+      // Razor: `else` follows the block without an @ transition.
+      this.skipGap(inCode);
+      if (this.sliceWord(this.i) !== "else") {
+        // In markup the whitespace stays consumed (it only separates blocks).
+        if (inCode) this.i = save;
+        break;
+      }
+      const elsePos = this.locator(this.i);
+      this.i += "else".length;
+      this.skipGap(inCode);
+      if (this.sliceWord(this.i) === "if") {
+        this.i += 2;
+        const elseIf = this.parseHeader(elsePos, "else if");
+        const children = this.parseBody(elsePos);
+        branches.push({ condition: elseIf.code, conditionStart: elseIf.start, children, span: { pos: elsePos, endPos: this.locator(this.i) } });
         continue;
       }
-      const children: MarkupNode[] = [];
-      this.parseNodes(children, { closeBrace: true }, true);
-      // parseNodes stopped on '}' (consumed) or a case transition; append children.
-      const meaningful = children.some((c) => c.kind !== "text" || c.content.trim().length > 0);
-      if (current) current.children.push(...children);
-      else if (meaningful) cases.push({ code: null, children, span: { pos: startPos, endPos: this.locator(this.i) } });
-      if (this.pendingSwitchWord === null) break; // closed the brace
+      const children = this.parseBody(elsePos);
+      branches.push({ condition: null, children, span: { pos: elsePos, endPos: this.locator(this.i) } });
+      if (!inCode) this.skipWhitespace();
+      break;
     }
-    return cases;
+    return { kind: "if", branches, pos, endPos: this.locator(this.i) };
   }
 
-  private parseCaseExpression(): string {
+  private parseTry(pos: SourcePos, keyword: SourceRange, inCode: boolean): TryNode {
+    const node: TryNode = { kind: "try", children: [], pos, endPos: pos };
+    this.skipGap(inCode);
+    if (this.source[this.i] !== "{") {
+      this.diagnostics.error("TZS006", keyword, "'try' requires a '{' block.");
+    }
+    node.children = this.parseBody(pos);
+    let save = this.i;
+    this.skipGap(inCode);
+    if (this.sliceWord(this.i) === "catch") {
+      const catchPos = this.locator(this.i);
+      this.i += "catch".length;
+      this.skipGap(inCode);
+      let param: string | null = null;
+      let paramName: string | null = null;
+      if (this.source[this.i] === "(") {
+        param = this.parseHeader(catchPos, "catch").code;
+        // C# `catch (Exception e)` binds `e`; TS `catch (e)` / `catch (e: unknown)`.
+        const typed = /^[A-Za-z_$][\w$.]*\s+([A-Za-z_$][\w$]*)$/.exec(param);
+        if (typed) param = typed[1]!;
+        paramName = /^[A-Za-z_$][\w$]*/.exec(param)?.[0] ?? null;
+      }
+      const children = this.parseBody(catchPos);
+      const clause: CatchClause = { param, paramName, children, span: { pos: catchPos, endPos: this.locator(this.i) } };
+      node.catchClause = clause;
+      save = this.i;
+      this.skipGap(inCode);
+    }
+    if (this.sliceWord(this.i) === "finally") {
+      const finallyPos = this.locator(this.i);
+      this.i += "finally".length;
+      node.finallyChildren = this.parseBody(finallyPos);
+    } else {
+      if (inCode) this.i = save;
+      if (!node.catchClause) this.diagnostics.error("TZS003", keyword, "'try' requires a 'catch' or 'finally' block.");
+    }
+    node.endPos = this.locator(this.i);
+    return node;
+  }
+
+  private parseSwitch(pos: SourcePos, out: MarkupNode[], inCode: boolean): void {
+    const header = this.parseHeader(pos, "switch");
+    const headerRange = this.rangeFrom(pos, this.i);
+    this.skipGap(inCode);
+    if (this.source[this.i] !== "{") {
+      this.diagnostics.error("TZS006", headerRange, "@switch requires a '{' block.");
+      this.i = this.source.length;
+      return;
+    }
+    const brace = this.range(this.i, this.i + 1);
+    this.i++;
+    const cases: SwitchCase[] = [];
+    const preamble: MarkupNode[] = [];
+    this.nesting++;
+    for (;;) {
+      const target = cases.length > 0 ? cases[cases.length - 1]!.children : preamble;
+      if (this.parseCodeStatements(target, "switch", brace) !== "case") break;
+      cases.push(this.parseCaseLabel());
+    }
+    this.nesting--;
+    if (preamble.length > 0) {
+      const range = { pos: preamble[0]!.pos, endPos: preamble[preamble.length - 1]!.endPos };
+      this.diagnostics.error("TZS001", range, "Statements in a switch must follow a 'case' or 'default' label.");
+    }
+    out.push({ kind: "switch", code: header.code, codeStart: header.start, cases, pos, endPos: this.locator(this.i) } satisfies SwitchNode);
+  }
+
+  /** `case <expr>:` or `default:` at this.i. */
+  private parseCaseLabel(): SwitchCase {
     const src = this.source;
-    const ch = src[this.i];
-    if (ch === '"' || ch === "'") {
-      const end = this.ts.skipStringFor(this.i, ch!);
-      const code = src.slice(this.i, end);
-      this.i = end;
-      return code;
+    const labelStart = this.i;
+    const labelPos = this.locator(labelStart);
+    if (this.sliceWord(this.i) === "default") {
+      this.i += "default".length;
+      this.skipWhitespace();
+      if (src[this.i] === ":") this.i++;
+      return { code: null, children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
     }
-    if (ch === "(") {
-      const end = this.ts.scanBalanced(this.i, "(", ")");
-      const code = src.slice(this.i + 1, end - 1);
-      this.i = end;
-      return code;
-    }
+    this.i += "case".length;
+    this.skipWhitespace();
     const start = this.i;
-    const end = this.ts.scanImplicitExpression(this.i);
-    this.i = Math.max(end, start + 1);
-    return src.slice(start, this.i);
+    // The label ends at the first `:` outside brackets and ternaries.
+    this.code.reset(start);
+    let ternaries = 0;
+    let colon: CodeToken | null = null;
+    for (;;) {
+      const depth = this.code.depth;
+      const token = this.code.next();
+      if (token.kind === ts.SyntaxKind.EndOfFileToken) break;
+      if (depth !== 0) continue;
+      if (token.kind === ts.SyntaxKind.QuestionToken) ternaries++;
+      else if (token.kind === ts.SyntaxKind.ColonToken) {
+        if (ternaries === 0) {
+          colon = token;
+          break;
+        }
+        ternaries--;
+      }
+    }
+    if (!colon) {
+      this.diagnostics.error("TZS003", this.range(labelStart, labelStart + "case".length), "'case' label without ':'.");
+      this.i = src.length;
+      return { code: src.slice(start).trim(), children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
+    }
+    const code = src.slice(start, colon.start).trim();
+    this.i = colon.end;
+    return { code, codeStart: this.locator(start), children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
+  }
+
+  /** C# statements without a TS equivalent: reported, header and body skipped. */
+  private parseUnsupportedStatement(word: string, pos: SourcePos): void {
+    const message = word === "using"
+      ? "The C# 'using (…) { }' statement has no TypeScript equivalent — use try/finally or a 'using' declaration."
+      : "The C# 'lock (…) { }' statement has no TypeScript equivalent (JavaScript is single-threaded).";
+    const keywordEnd = this.i;
+    this.parseHeader(pos, word);
+    this.diagnostics.error("TZS012", this.rangeFrom(pos, this.i < this.source.length ? this.i : keywordEnd), message);
+    this.parseBody(pos);
   }
 
   /* ------------------------------------------------------------------ */
@@ -450,9 +1012,12 @@ class Parser {
 
     if (src.startsWith("text>", this.i)) {
       this.i += 5;
+      const startTag = this.rangeFrom(pos, this.i);
       const children: MarkupNode[] = [];
+      this.nesting++;
       this.parseNodes(children, { closeTag: "text" });
-      this.expectCloseTag("text");
+      this.nesting--;
+      this.expectCloseTag("text", startTag);
       out.push({ kind: "textTag", children, pos, endPos: this.locator(this.i) });
       return;
     }
@@ -461,25 +1026,33 @@ class Parser {
     while (this.i < src.length && /[A-Za-z0-9_.-]/.test(src[this.i]!)) this.i++;
     const tagName = src.slice(nameStart, this.i);
     if (!tagName) {
-      this.diagnostics.error("TZS002", pos, "Expected a tag name after '<'.");
+      this.diagnostics.error("TZS002", this.rangeFrom(pos, this.i), "Expected a tag name after '<'.");
       this.i++;
       return;
     }
+    // `<tagName`: unclosed-tag diagnostics cover the start tag's name.
+    const startTag = this.rangeFrom(pos, this.i);
 
     const isComponent = /^[A-Z]/.test(tagName) || tagName.includes(".");
-    const attributes = this.parseTagAttributes(pos, tagName);
+    const attributes = this.parseTagAttributes(startTag, tagName);
 
     let selfClosing = false;
+    let isVoid = false;
     if (src[this.i] === "/" && src[this.i + 1] === ">") {
       selfClosing = true;
       this.i += 2;
     } else if (src[this.i] === ">") {
       this.i++;
-      if (!isComponent && VOID_ELEMENTS.has(tagName.toLowerCase())) selfClosing = true;
+      if (!isComponent && VOID_ELEMENTS.has(tagName.toLowerCase())) {
+        selfClosing = true;
+        isVoid = true;
+      }
     } else {
-      this.diagnostics.error("TZS002", pos, `Unclosed start tag '<${tagName}'.`);
+      this.diagnostics.error("TZS002", startTag, `Unclosed start tag '<${tagName}'.`);
       this.i = src.length;
     }
+    // A void element may still be closed explicitly (`<input></input>`).
+    if (isVoid) this.skipVoidCloseTag(tagName);
 
     const node: ElementNode = {
       kind: "element",
@@ -495,20 +1068,24 @@ class Parser {
     if (!selfClosing) {
       const stopTag = isComponent ? tagName : tagName.toLowerCase();
       const children: MarkupNode[] = [];
-      if (isComponent) {
-        this.parseNodes(children, {});
-        this.expectCloseTag(stopTag);
-      } else {
-        this.parseNodes(children, { closeTag: stopTag });
-        this.expectCloseTag(stopTag);
-      }
+      // Element and component content alike: braces are literal text.
+      this.nesting++;
+      this.parseNodes(children, { closeTag: stopTag });
+      this.nesting--;
+      this.expectCloseTag(stopTag, startTag);
       node.children = children;
     }
     node.endPos = this.locator(this.i);
     out.push(node);
   }
 
-  private expectCloseTag(tagName: string): void {
+  private skipVoidCloseTag(tagName: string): void {
+    const match = /^\s*<\/([A-Za-z0-9_.-]+)\s*>/.exec(this.source.slice(this.i, this.i + tagName.length + 64));
+    if (match && match[1]!.toLowerCase() === tagName.toLowerCase()) this.i += match[0].length;
+  }
+
+  /** Consumes `</tagName>`; a missing one is reported on the start tag. */
+  private expectCloseTag(tagName: string, startTag: SourceRange): void {
     const src = this.source;
     const save = this.i;
     this.skipWhitespace();
@@ -518,61 +1095,71 @@ class Parser {
       while (end < src.length && /[A-Za-z0-9_.-]/.test(src[end]!)) end++;
       const closeName = src.slice(after, end);
       if (closeName.toLowerCase() === tagName.toLowerCase()) {
+        const closeStart = this.i;
         this.i = end;
         while (end < src.length && src[end] !== ">") end++;
         if (src[end] === ">") this.i = end + 1;
-        else this.diagnostics.error("TZS002", this.locator(end), `Missing '>' on closing tag of <${tagName}>.`);
+        else this.diagnostics.error("TZS002", this.range(closeStart, after + closeName.length), `Missing '>' on closing tag of <${tagName}>.`);
         return;
       }
     }
     this.i = save;
-    this.diagnostics.error("TZS002", this.locator(this.i), `Missing closing tag </${tagName}>.`);
+    this.diagnostics.error("TZS002", startTag, `Missing closing tag </${tagName}>.`);
   }
 
-  private parseTagAttributes(tagPos: SourcePos, tagName: string): AttributeNode[] {
+  private parseTagAttributes(startTag: SourceRange, tagName: string): AttributeNode[] {
     const src = this.source;
     const attributes: AttributeNode[] = [];
     for (;;) {
       this.skipWhitespace();
       const ch = src[this.i];
       if (ch === undefined) {
-        this.diagnostics.error("TZS002", tagPos, `Start tag <${tagName} is never closed.`);
+        this.diagnostics.error("TZS002", startTag, `Start tag <${tagName} is never closed.`);
         return attributes;
       }
       if (ch === ">" || (ch === "/" && src[this.i + 1] === ">")) return attributes;
-      const attr = this.parseAttribute();
+      if (ch === "@" && src[this.i + 1] === "*") {
+        this.skipRazorComment();
+        continue;
+      }
+      const attr = this.parseAttribute(/^[A-Z]/.test(tagName) || tagName.includes("."));
       if (!attr) continue;
-      // Fold a valueless modifier attribute (@onclick:preventDefault) into the
-      // preceding handler, like Blazor does.
-      if (attr.kind === "eventHandler" && attr.code === "" && attr.name !== "") {
-        const base = attr.name.toLowerCase();
-        const previous = [...attributes].reverse().find((a) => a.kind === "eventHandler" && a.name.toLowerCase() === base);
-        if (previous && previous.kind === "eventHandler" && previous.code !== "") {
-          previous.flags |= attr.flags;
+      // Event modifiers are attributes of their own (Blazor), also without a
+      // handler; each at most once per event.
+      if (attr.kind === "eventModifier") {
+        const duplicate = attributes.some((a) =>
+          a.kind === "eventModifier" && a.modifier === attr.modifier && a.name.toLowerCase() === attr.name.toLowerCase());
+        if (duplicate) {
+          this.diagnostics.error("TZS008", attr, `Duplicate modifier '@${attr.name}:${attr.modifier}'.`);
           continue;
         }
-        if (attr.flags !== 0) {
-          this.diagnostics.error("TZS008", attr.pos, `Modifier attribute for '@${attr.name}' has no matching handler.`);
-          continue;
-        }
+      }
+      // F2: each attachment name at most once per element.
+      if (attr.kind === "attach" && attributes.some((a) => a.kind === "attach" && a.attachName === attr.attachName)) {
+        const label = attr.attachName === "" ? "@attach" : `@attach:${attr.attachName}`;
+        this.diagnostics.error("TZS008", attr, `Duplicate attachment '${label}' — use '@attach:<name>' for several attachments on one element.`);
+        continue;
       }
       // Fold @bind modifiers (@bind:event, @bind:format, @bind:get, …) into the
       // preceding bind attribute; @bind-Target modifiers fold onto that target.
       // A modifier with no host is kept as a latent host: Blazor allows
       // @bind:get="x" @bind:set="y" without a base @bind.
       if (attr.kind === "bind" && attr.expression === undefined) {
-        const modifier = (["event", "format", "get", "set", "after"] as const).find((k) => attr[k] !== undefined);
+        const modifier = (["event", "format", "culture", "get", "set", "after"] as const).find((k) => attr[k] !== undefined);
         const host = [...attributes].reverse().find((a) => {
           if (a.kind !== "bind") return false;
           return (a as Extract<AttributeNode, { kind: "bind" }>).bindTarget === attr.bindTarget;
         }) as (Extract<AttributeNode, { kind: "bind" }> & Record<string, unknown>) | undefined;
         if (host && modifier && host[modifier] !== undefined) {
           const label = attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}:${modifier}` : `@bind:${modifier}`;
-          this.diagnostics.error("TZS008", attr.pos, `Duplicate bind modifier '${label}'.`);
+          this.diagnostics.error("TZS008", attr, `Duplicate bind modifier '${label}'.`);
           continue;
         }
         if (host && modifier) {
           host[modifier] = attr[modifier];
+          if (attr.formatLiteral) host.formatLiteral = true;
+          host.modifierSpans = { ...host.modifierSpans, ...attr.modifierSpans };
+          host.codeStarts = { ...host.codeStarts, ...attr.codeStarts };
           continue;
         }
         // No host (or unknown modifier): keep the node; codegen reports a
@@ -580,18 +1167,31 @@ class Parser {
         attributes.push(attr);
         continue;
       }
+      // A base bind after its modifiers (`@bind:after="f" @bind="x"`) joins
+      // their latent host — attribute order does not matter in Razor.
+      if (attr.kind === "bind") {
+        const latent = attributes.find((a) => a.kind === "bind" && a.expression === undefined && a.bindTarget === attr.bindTarget);
+        if (latent && latent.kind === "bind") {
+          // The joined bind reports on the base attribute; the modifiers keep their own spans.
+          latent.expression = attr.expression;
+          latent.codeStarts = { ...latent.codeStarts, ...attr.codeStarts };
+          latent.pos = attr.pos;
+          latent.endPos = attr.endPos;
+          continue;
+        }
+      }
       attributes.push(attr);
     }
   }
 
-  private parseAttribute(): AttributeNode | null {
+  private parseAttribute(onComponent = false): AttributeNode | null {
     const src = this.source;
     const pos = this.locator(this.i);
     const nameStart = this.i;
     while (this.i < src.length && /[A-Za-z0-9_@:.-]/.test(src[this.i]!)) this.i++;
     const name = src.slice(nameStart, this.i);
     if (!name) {
-      this.diagnostics.error("TZS009", pos, "Invalid attribute name.");
+      this.diagnostics.error("TZS009", this.range(this.i, this.i + 1), "Invalid attribute name.");
       this.i++;
       return null;
     }
@@ -602,25 +1202,41 @@ class Parser {
       return this.parseDirectiveAttribute(name, pos);
     }
     if (!hasValue) {
-      return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      return { kind: "static", name, value: "", minimized: true, pos, endPos: this.locator(this.i) };
     }
     this.i++; // '='
 
+    const valueAt = this.i;
+    this.strayAts = onComponent ? [] : null;
     const value = this.parseAttributeValue();
+    const strayAt = this.strayAts;
+    this.strayAts = null;
     if (value === null) return null;
 
     const codePos = (start: number | undefined): SourceSpan["pos"] | undefined =>
       start === undefined ? undefined : this.locator(start);
 
     if (value.kind === "parts") {
+      // The value as written (quotes stripped): a TS expression where the
+      // target is a non-string component parameter (2.2).
+      const quoted = src[valueAt] === '"' || src[valueAt] === "'";
+      const raw: RawAttributeValue = {
+        text: quoted ? src.slice(valueAt + 1, this.i - 1) : src.slice(valueAt, this.i),
+        start: this.locator(quoted ? valueAt + 1 : valueAt),
+        ...(strayAt !== null && strayAt.length > 0 ? { strayAt } : {}),
+      };
       const parts = value.parts.map((p) => (p.code !== undefined ? { code: p.code, codeStart: codePos(p.start) } : { text: p.text }));
       if (parts.length === 1 && parts[0]!.code !== undefined) {
         return { kind: "expression", name, code: parts[0]!.code!, codeStart: parts[0]!.codeStart, pos, endPos: this.locator(this.i) };
       }
       if (parts.length === 1 && parts[0]!.text !== undefined) {
-        return { kind: "static", name, value: parts[0]!.text!, pos, endPos: this.locator(this.i) };
+        return { kind: "static", name, value: parts[0]!.text!, raw, pos, endPos: this.locator(this.i) };
       }
-      return { kind: "mixedValue", name, parts, pos, endPos: this.locator(this.i) };
+      return { kind: "mixedValue", name, parts, raw, pos, endPos: this.locator(this.i) };
+    }
+    // An empty quoted value (`href=""`) is the empty string, not an empty expression.
+    if (value.code === "" && value.start === undefined) {
+      return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
     }
     return { kind: "expression", name, code: value.code, codeStart: codePos(value.start), pos, endPos: this.locator(this.i) };
   }
@@ -646,37 +1262,89 @@ class Parser {
       return { kind, code: code.code, codeStart, pos, endPos: this.locator(this.i) } as AttributeNode;
     }
 
-    // Event handler: @onclick / @onchange with optional :modifier parts.
+    // F2: `@attach="…"` and `@attach:<name>="…"` (Razor's directive-attribute
+    // parameter syntax, as `@bind:event`); the name only tells several apart.
+    if (body === "attach" || body.startsWith("attach:")) {
+      const attachName = body.slice("attach:".length);
+      if (body !== "attach" && !/^[A-Za-z0-9_.-]+$/.test(attachName)) {
+        if (src[this.i] === "=") this.i++;
+        this.parseAttributeValue();
+        this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), `'@${body}' needs a name after the colon (letters, digits, '_', '.', '-'), e.g. '@attach:tooltip'.`);
+        return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      }
+      const code = this.parseRequiredExpression(body, pos);
+      if (code === null) return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+      return { kind: "attach", attachName, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
+    }
+
+    // F4/F5: `@transition`, `@in`, `@out`, `@animate` with a value, and the
+    // valueless `global` modifier of a transition (Razor's
+    // `@onclick:preventDefault` form): `@in:global`.
+    const motion = /^(transition|in|out|animate)(?::(.*))?$/.exec(body);
+    if (motion !== null) {
+      const directive = motion[1] as "transition" | "in" | "out" | "animate";
+      const modifier = motion[2];
+      if (modifier !== undefined) {
+        const hasValue = src[this.i] === "=";
+        if (hasValue) {
+          this.i++;
+          this.parseAttributeValue();
+        }
+        if (modifier === "global" && directive !== "animate" && !hasValue) {
+          return { kind: "motionGlobal", directive, pos, endPos: this.locator(this.i) };
+        }
+        const message =
+          modifier === "global" && directive !== "animate"
+            ? `'@${body}' takes no value — write it on its own: '@${directive}="…" @${directive}:global'.`
+            : directive === "animate"
+              ? `'@animate' has no modifiers.`
+              : `Unknown modifier ':${modifier}' on '@${directive}' (expected ':global').`;
+        this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), message);
+        return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      }
+      const code = this.parseRequiredExpression(body, pos);
+      if (code === null) return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+      return { kind: "motion", directive, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
+    }
+
+    // Event handler `@onclick="…"`, or one of its modifiers
+    // `@onclick:preventDefault[="bool"]` / `@onclick:stopPropagation[="bool"]`.
     if (/^on[A-Za-z]/i.test(body)) {
       const [base, ...modifiers] = body.split(":");
-      let flags = 0;
-      let modifierOnly = false;
-      for (const mod of modifiers) {
-        if (mod.toLowerCase() === "preventdefault") { flags |= EVENT_FLAGS.preventDefault; modifierOnly = true; }
-        else if (mod.toLowerCase() === "stoppropagation") { flags |= EVENT_FLAGS.stopPropagation; modifierOnly = true; }
-        else this.diagnostics.error("TZS008", pos, `Unknown event modifier ':${mod}'.`);
-      }
       const hasValue = src[this.i] === "=";
-      if (!hasValue) {
-        if (modifierOnly) {
-          return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
+      if (modifiers.length > 0) {
+        const lower = modifiers.join(":").toLowerCase();
+        const modifier = lower === "preventdefault" ? "preventDefault" : lower === "stoppropagation" ? "stopPropagation" : null;
+        if (modifier === null) {
+          if (hasValue) this.parseRequiredExpression(body, pos);
+          this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), `Unknown event modifier ':${modifiers.join(":")}' (expected ':preventDefault' or ':stopPropagation').`);
+          return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
         }
-        this.diagnostics.error("TZS008", pos, `'@${base}' without a handler value.`);
-        return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
+        // Valueless form = true (Blazor).
+        if (!hasValue) return { kind: "eventModifier", name: base!, modifier, pos, endPos: this.locator(this.i) };
+        const code = this.parseRequiredExpression(body, pos);
+        if (code === null) return { kind: "eventModifier", name: base!, modifier, pos, endPos: this.locator(this.i) };
+        const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+        return { kind: "eventModifier", name: base!, modifier, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
       }
-      this.i++;
+      if (!hasValue) {
+        this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), `'@${base}' without a handler value.`);
+        return { kind: "eventHandler", name: base!, code: "", pos, endPos: this.locator(this.i) };
+      }
       const code = this.parseRequiredExpression(base!, pos);
-      if (code === null) return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
-      return { kind: "eventHandler", name: base!, code: code.code, codeStart: code.start === undefined ? undefined : this.locator(code.start), flags, pos, endPos: this.locator(this.i) };
+      if (code === null) return { kind: "eventHandler", name: base!, code: "", pos, endPos: this.locator(this.i) };
+      return { kind: "eventHandler", name: base!, code: code.code, codeStart: code.start === undefined ? undefined : this.locator(code.start), pos, endPos: this.locator(this.i) };
     }
 
     if (body.startsWith("bind")) {
       return this.parseBindAttribute(body, name, pos);
     }
 
-    this.diagnostics.error("TZS001", pos, `Unknown directive attribute '@${body}'.`);
     if (src[this.i] === "=") this.i++;
     this.parseAttributeValue();
+    this.diagnostics.error("TZS001", this.rangeFrom(pos, this.i), `Unknown directive attribute '@${body}'.`);
     return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
   }
 
@@ -690,68 +1358,79 @@ class Parser {
     const src = this.source;
     const rest = body.slice(4); // after "bind"
     const end = (): SourceSpan => ({ pos, endPos: this.locator(this.i) });
+    // Where a bind's code starts (syntax errors are reported there).
+    const codeStarts = (key: string, value: { start?: number } | null) =>
+      (value?.start === undefined ? {} : { codeStarts: { [key]: this.locator(value.start) } });
 
     // @bind="expr"
     if (rest === "") {
       const expression = this.parseRequiredExpression("bind", pos);
-      return { kind: "bind", expression: expression?.code ?? "", ...end() };
+      return { kind: "bind", expression: expression?.code ?? "", ...codeStarts("expression", expression), ...end() };
     }
 
-    // @bind-<Target>[:event|:format] — component parameter binding.
+    // @bind-<Target>[:event|:format|:get|:set|:after] — a component parameter,
+    // or on an element the attribute <Target> (codegen decides).
     if (rest.startsWith("-")) {
       const target = rest.slice(1);
       const colon = target.indexOf(":");
       const targetName = colon >= 0 ? target.slice(0, colon) : target;
       const modifier = colon >= 0 ? target.slice(colon + 1).toLowerCase() : undefined;
       if (targetName.length === 0) {
-        this.diagnostics.error("TZS008", pos, "'@bind-' requires a parameter name (e.g. '@bind-Value').");
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
+        this.diagnostics.error("TZS008", end(), "'@bind-' requires a parameter name (e.g. '@bind-Value').");
         return { kind: "bind", ...end() };
       }
       if (modifier === undefined) {
         const expression = this.parseRequiredExpression(`bind-${targetName}`, pos);
-        return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...end() };
+        return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...codeStarts("expression", expression), ...end() };
       }
-      if (modifier === "event" || modifier === "format") {
-        const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos)?.code ?? "";
-        return { kind: "bind", bindTarget: targetName, [modifier]: value, ...end() };
+      if (modifier === "event" || modifier === "format" || modifier === "culture" || modifier === "get" || modifier === "set" || modifier === "after") {
+        const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos);
+        // A plain-text :format value is a string literal (Razor: @bind:format="yyyy-MM-dd"); @expressions are code.
+        const formatLiteral = modifier === "format" && value?.isText === true ? true : undefined;
+        return {
+          kind: "bind", bindTarget: targetName, [modifier]: value?.code ?? "", modifierSpans: { [modifier]: end() }, ...codeStarts(modifier, value), formatLiteral, ...end(),
+        };
       }
-      this.diagnostics.error("TZS008", pos, `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
       if (src[this.i] === "=") this.i++;
       this.parseAttributeValue();
+      this.diagnostics.error("TZS008", end(), `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
       return { kind: "bind", ...end() };
     }
 
-    // @bind:event / @bind:format / @bind:get / @bind:set / @bind:after
+    // @bind:event / @bind:format / @bind:culture / @bind:get / @bind:set / @bind:after
     if (rest.startsWith(":")) {
       const modifier = rest.slice(1);
-      const known = ["event", "format", "get", "set", "after"];
+      const known = ["event", "format", "culture", "get", "set", "after"];
       if (!known.includes(modifier.toLowerCase())) {
-        this.diagnostics.error("TZS008", pos, `Unknown bind modifier '@bind:${modifier}'.`);
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
+        this.diagnostics.error("TZS008", end(), `Unknown bind modifier '@bind:${modifier}'.`);
         return { kind: "bind", ...end() };
       }
-      const value = this.parseRequiredExpression(`bind:${modifier}`, pos)?.code ?? "";
-      return { kind: "bind", [modifier.toLowerCase()]: value, ...end() } as AttributeNode;
+      const value = this.parseRequiredExpression(`bind:${modifier}`, pos);
+      const key = modifier.toLowerCase();
+      // A plain-text :format value is a string literal (Razor: @bind:format="yyyy-MM-dd"); @expressions are code.
+      const formatLiteral = key === "format" && value?.isText === true ? true : undefined;
+      return { kind: "bind", [key]: value?.code ?? "", modifierSpans: { [key]: end() }, ...codeStarts(key, value), formatLiteral, ...end() } as AttributeNode;
     }
 
-    this.diagnostics.error("TZS008", pos, `Invalid '@${name}' attribute.`);
     if (src[this.i] === "=") this.i++;
     this.parseAttributeValue();
+    this.diagnostics.error("TZS008", end(), `Invalid '@${name}' attribute.`);
     return { kind: "bind", ...end() };
   }
 
   /** Parses an attribute's required expression value. `start` is the absolute
    *  index of the code's first character (undefined for quoted plain values
    *  that double as expression source — `@onclick="Increment"`). */
-  private parseRequiredExpression(attrName: string, pos: SourcePos): { code: string; start?: number } | null {
+  private parseRequiredExpression(attrName: string, pos: SourcePos): { code: string; start?: number; isText?: boolean } | null {
     const src = this.source;
-    if (src[this.i] === "=") this.i++;
-    const value = this.parseAttributeValue();
+    // Without '=' there is no value to parse (reported once, on the attribute).
+    const value = src[this.i] === "=" ? (this.i++, this.parseAttributeValue()) : null;
     if (value === null) {
-      this.diagnostics.error("TZS009", pos, `Attribute '@${attrName}' requires a value.`);
+      this.diagnostics.error("TZS009", this.rangeFrom(pos, this.i), `Attribute '@${attrName}' requires a value.`);
       return null;
     }
     // Directive attributes take expressions: a quoted plain value is the
@@ -760,20 +1439,65 @@ class Parser {
     if (value.kind === "parts" && value.parts.length === 1) {
       const part = value.parts[0]!;
       if (part.code !== undefined) return { code: part.code, start: part.start };
-      if (part.text !== undefined) return { code: part.text, start: part.start };
+      if (part.text !== undefined) return { code: part.text, start: part.start, isText: true };
     }
-    this.diagnostics.error("TZS009", pos, `Attribute '@${attrName}' requires a single expression value.`);
+    this.diagnostics.error("TZS009", this.rangeFrom(pos, this.i), `Attribute '@${attrName}' requires a single expression value.`);
     return null;
+  }
+
+  /**
+   * TZS004 for an `@` in an attribute value that no expression follows. A template literal after it gets the fix
+   * that makes it one: ``@`…` `` ⇒ ``@(`…`)``.
+   */
+  private reportAtInAttributeValue(at: number): void {
+    const src = this.source;
+    const templateEnd = src[at + 1] === "`" ? this.ts.scanTemplateLiteral(at + 1) : -1;
+    const stray: NonNullable<RawAttributeValue["strayAt"]>[number] =
+      templateEnd > 0
+        ? {
+            ...this.range(at, templateEnd),
+            detail: "Unexpected character after '@'. A template literal in an attribute value is an expression: write '@(`…`)'.",
+            fix: { title: "Write it as '@(`…`)'", edits: [{ ...this.range(at, templateEnd), text: `@(${src.slice(at + 1, templateEnd)})` }] },
+          }
+        : {
+            ...this.range(at, Math.min(at + 2, src.length)),
+            detail: "Unexpected character after '@'. An attribute value takes '@name' or '@(expression)'; a literal '@' is '@@'.",
+          };
+    // A component's attribute: the code generator reports it where the value is read as text.
+    if (this.strayAts !== null) this.strayAts.push(stray);
+    else this.diagnostics.error("TZS004", stray, stray.detail, stray.fix);
+  }
+
+  /** One parenthesized expression value `@(...)`: `code` is the text between
+   *  the parens, `start` its absolute index. `at` is on the `@`. Unbalanced
+   *  parens are TZS003, parsing resumes at the end of the file. */
+  private parseParenthesizedValue(at: number): { kind: "code"; code: string; start: number } | null {
+    const src = this.source;
+    const end = this.ts.scanBalanced(at + 1, "(", ")");
+    if (end < 0) {
+      this.diagnostics.error("TZS003", this.range(at, at + 2), "Parenthesized attribute expression never closes.");
+      this.i = src.length;
+      return null;
+    }
+    const code = src.slice(at + 2, end - 1);
+    this.i = end;
+    return { kind: "code", code, start: at + 2 };
   }
 
   private parseAttributeValue(): { kind: "code"; code: string; start?: number } | { kind: "parts"; parts: ValuePart[] } | null {
     const src = this.source;
     if (src[this.i] === "@") {
+      // Unquoted expression value, directly parenthesized `@(...)`: the value is
+      // one parenthesized TS expression (Roslyn binds `@(` regardless of markup;
+      // the string scan must skip literals, which scanBalanced does).
+      if (src[this.i + 1] === "(") {
+        return this.parseParenthesizedValue(this.i);
+      }
       // Unquoted expression value.
       const at = this.i;
       const end = this.ts.scanImplicitExpression(this.i + 1);
-      if (end <= this.i + 1 && src[this.i + 1] !== "(") {
-        this.diagnostics.error("TZS009", this.locator(this.i), "Expected an expression value.");
+      if (end <= this.i + 1) {
+        this.diagnostics.error("TZS009", this.range(this.i, Math.max(end, this.i + 1)), "Expected an expression value.");
         return null;
       }
       const code = src.slice(this.i + 1, end);
@@ -785,9 +1509,18 @@ class Parser {
     }
     const quote = src[this.i];
     if (quote !== '"' && quote !== "'") {
-      this.diagnostics.error("TZS009", this.locator(this.i), "Expected a quoted attribute value.");
-      return null;
+      // Unquoted value (HTML): runs up to whitespace or the end of the tag.
+      const start = this.i;
+      while (this.i < src.length && !/[\s>]/.test(src[this.i]!) && !(src[this.i] === "/" && src[this.i + 1] === ">")) this.i++;
+      if (this.i === start) {
+        // On the `=` that announced the value (or where it was expected).
+        const at = src[this.i - 1] === "=" ? this.i - 1 : this.i;
+        this.diagnostics.error("TZS009", this.range(at, at + 1), "Expected an attribute value.");
+        return null;
+      }
+      return { kind: "parts", parts: [{ text: src.slice(start, this.i), start }] };
     }
+    const quoteAt = this.i;
     this.i++;
     const parts: ValuePart[] = [];
     let textBuf = "";
@@ -808,18 +1541,15 @@ class Parser {
           continue;
         }
         if (src[this.i + 1] === "(") {
-          const end = this.ts.scanBalanced(this.i + 1, "(", ")");
-          if (end < 0) {
-            this.diagnostics.error("TZS003", this.locator(this.i), "Parenthesized attribute expression never closes.");
-            this.i = src.length;
-            return null;
-          }
           pushText();
-          parts.push({ code: src.slice(this.i + 2, end - 1), start: this.i + 2 });
-          this.i = end;
+          const value = this.parseParenthesizedValue(this.i);
+          if (value === null) return null;
+          parts.push({ code: value.code, start: value.start ?? this.i + 2 });
           continue;
         }
-        if (isIdStart(src[this.i + 1])) {
+        // Email rule: `@` right after an alphanumeric text character is literal.
+        const emailLike = textPartsBuffer.length > 0 && isAlnum(src[this.i - 1]);
+        if (isIdStart(src[this.i + 1]) && !emailLike) {
           const idStart = this.i + 1;
           const end = this.ts.scanImplicitExpression(idStart);
           pushText();
@@ -827,69 +1557,119 @@ class Parser {
           this.i = end;
           continue;
         }
+        // Anything else after `@` is no expression (Razor's RZ1005) — as in element content, not silently text:
+        // ``transform="@`translate(${x}px)`"`` rendered its own source.
+        if (!emailLike && src[this.i + 1] !== "*") this.reportAtInAttributeValue(this.i);
       }
       textPartsBuffer.push(ch);
       if (partTextStart === undefined) partTextStart = this.i;
       this.i++;
     }
     if (src[this.i] !== quote) {
-      this.diagnostics.error("TZS009", this.locator(this.i), "Attribute value is never closed.");
+      this.diagnostics.error("TZS009", this.range(quoteAt, quoteAt + 1), "Attribute value is never closed.");
       this.i = src.length;
       return null;
     }
+    const cut = this.cutAttributeValue(quoteAt, this.i, quote);
+    if (cut !== null) return cut;
     this.i++;
     pushText();
     if (parts.length === 0) return { kind: "code", code: "" };
     return { kind: "parts", parts };
   }
 
+  /**
+   * F23: a quote inside an expression ends the attribute's value, as in Razor:
+   * `onClick="() => go(id, "x")"` ends after `go(id, `. When the value stops with a bracket
+   * still open and text follows the quote, that is the cause of everything after it: one
+   * error with the way out (single quotes around the attribute, or `@(…)`), and parsing goes
+   * on after the value that was meant. Returns null for a value that ends normally.
+   */
+  private cutAttributeValue(open: number, close: number, quote: string): { kind: "parts"; parts: ValuePart[] } | null {
+    const src = this.source;
+    const after = src[close + 1];
+    if (after === undefined || /[\s>]/.test(after) || (after === "/" && src[close + 2] === ">")) return null;
+    // The outermost bracket the value leaves open.
+    const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+    const openers: number[] = [];
+    for (let i = open + 1; i < close; i++) {
+      const ch = src[i]!;
+      if (pairs[ch] !== undefined) openers.push(i);
+      else if (")]}".includes(ch)) openers.pop();
+    }
+    const outermost = openers[0];
+    if (outermost === undefined) return null;
+    const balanced = this.ts.scanBalanced(outermost, src[outermost]!, pairs[src[outermost]!]!);
+    const end = balanced < 0 ? -1 : src.indexOf(quote, balanced);
+    if (end < 0) return null;
+    const value = src.slice(open + 1, end);
+    const other = quote === '"' ? "'" : '"';
+    const fix = value.includes(other)
+      ? { title: "Write the value as '@(…)'", edits: [{ ...this.range(open + 1, end), text: `@(${value})` }] }
+      : {
+          title: `Put the attribute in ${other === "'" ? "single" : "double"} quotes`,
+          edits: [
+            { ...this.range(open, open + 1), text: other },
+            { ...this.range(end, end + 1), text: other },
+          ],
+        };
+    this.diagnostics.error(
+      "TZS024",
+      this.range(close, close + 1),
+      `This ${quote} ends the attribute's value inside its expression (as in Razor). Put the attribute in ${other === "'" ? "single" : "double"} quotes, or write the value as '@(…)'.`,
+      fix,
+    );
+    this.i = end + 1;
+    return { kind: "parts", parts: [{ text: value, start: open + 1 }] };
+  }
+
   /* ------------------------------------------------------------------ */
   /* Helpers                                                             */
   /* ------------------------------------------------------------------ */
 
-  private parseParens(pos: SourcePos): string {
+  /** Parses a control header `(…)` (TS-balanced) at the next non-space. */
+  private parseHeader(pos: SourcePos, word: string): Header {
+    const keywordEnd = this.i;
     this.skipWhitespace();
     if (this.source[this.i] !== "(") {
-      this.diagnostics.error("TZS003", pos, "Expected '(' after control keyword.");
+      this.diagnostics.error("TZS003", this.rangeFrom(pos, keywordEnd), `Expected '(' after '${word}'.`);
       this.i = this.source.length;
-      return "";
+      return { code: "" };
     }
-    const end = this.ts.scanBalanced(this.i, "(", ")");
+    const end = this.code.scanBalanced(this.i);
     if (end < 0) {
-      this.diagnostics.error("TZS003", pos, "Control condition never closes.");
+      this.diagnostics.error("TZS003", this.rangeFrom(pos, this.i + 1), "Control condition never closes.");
       this.i = this.source.length;
-      return "";
+      return { code: "" };
     }
-    const code = this.source.slice(this.i + 1, end - 1);
+    const raw = this.source.slice(this.i + 1, end - 1);
+    const lead = raw.length - raw.trimStart().length;
+    const start = this.locator(this.i + 1 + lead);
     this.i = end;
-    return code.trim();
+    return { code: raw.trim(), start, end: this.locator(end) };
   }
 
-  private parseBraceMarkupBlock(switchContent: boolean): MarkupNode[] {
-    this.skipWhitespace();
-    if (this.source[this.i] === "{") {
-      const close = this.ts.scanBalanced(this.i, "{", "}", false);
-      if (close < 0) {
-        this.diagnostics.error("TZS006", this.locator(this.i), "Control statement braces never close.");
-        this.i = this.source.length;
-        return [];
-      }
-      const children: MarkupNode[] = [];
-      this.i++;
-      this.parseNodes(children, { closeBrace: true }, switchContent);
-      return children;
-    }
-    // Single-node body without braces.
-    const save = this.i;
+  /** A control body: a `{ … }` block or a single statement (both code-first). */
+  private parseBody(pos: SourcePos): MarkupNode[] {
+    // A missing statement is reported on the keyword and header before it.
+    const header = this.rangeFrom(pos, this.i);
+    this.skipCodeTrivia();
     const children: MarkupNode[] = [];
-    if (this.source[this.i] === "<") {
-      this.parseNode(children);
-      if (children.length > 0) return children;
+    this.nesting++;
+    if (this.source[this.i] === "{") {
+      this.i++;
+      this.parseCodeStatements(children, "block", this.range(this.i - 1, this.i));
+    } else {
+      this.parseCodeStatements(children, "single", header);
     }
-    this.i = save;
-    this.diagnostics.error("TZS006", this.locator(this.i), "Expected '{' after control statement.");
-    this.i = this.source.length;
-    return [];
+    this.nesting--;
+    return children;
+  }
+
+  private nextNonSpace(from: number): string | undefined {
+    let k = from;
+    while (k < this.source.length && /\s/.test(this.source[k]!)) k++;
+    return this.source[k];
   }
 
   private skipWhitespace(): void {
@@ -914,10 +1694,6 @@ class Parser {
     let end = at;
     while (isIdPart(this.source[end])) end++;
     return this.source.slice(at, end);
-  }
-
-  private startsWithAt(from: number, needle: string): boolean {
-    return this.source.startsWith(needle, from);
   }
 
   private findChar(from: number, ch: string): number {

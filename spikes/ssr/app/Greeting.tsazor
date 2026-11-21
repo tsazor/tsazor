@@ -1,0 +1,9 @@
+<section class="greeting">
+    <h2>Hello, @name!</h2>
+    @childContent
+</section>
+
+@code {
+    @Parameter() name = "";
+    @Parameter() childContent?: RenderFragment;
+}

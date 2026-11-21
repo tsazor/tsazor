@@ -1,0 +1,115 @@
+@page "/content"
+@import { Markdown } from "@tsazor/markdown"
+@import * as Icons from "@tsazor/fluent-icons"
+
+<h1>Content &amp; people</h1>
+<p class="intro">
+    Wave A of the library: avatars for the people in an app and Markdown for its text (an agent's answer, a comment),
+    always sanitized.
+</p>
+
+<section class="demo">
+    <h2>Avatar</h2>
+    <div class="demo-row avatar-row">
+        @foreach (const person of this.people) {
+            <Avatar name="@person" color="colorful" tooltip="@person" />
+        }
+    </div>
+    <div class="demo-row avatar-row">
+        <Avatar name="Ada Lovelace" size="24" />
+        <Avatar name="Ada Lovelace" size="32" color="brand" />
+        <Avatar name="Ada Lovelace" size="48" color="teal" active="true" />
+        <Avatar name="Ada Lovelace" size="64" color="lavender" shape="square" />
+        <Avatar name="Away" size="48" active="false" color="steel" />
+        <Avatar size="48" />
+        <Avatar name="Robot" size="48" icon="@Icons.Regular.Size24.Bot" color="dark-green" />
+        <Avatar name="Grace Hopper" size="48" color="colorful" onClick="@this.greet" />
+    </div>
+    <p class="greeting" aria-live="polite">@this.greeting</p>
+</section>
+
+<section class="demo">
+    <h2>Chip</h2>
+    <ChipSet TValue="string" selectionMode="multiple" checkMark="true" ariaLabel="Filters" @bind-selectedValues="this.filters">
+        <Chip text="Open" icon="@Icons.Regular.Size16.Circle" />
+        <Chip text="Mine" icon="@Icons.Regular.Size16.Person" />
+        <Chip text="Due today" icon="@Icons.Regular.Size16.Calendar" />
+    </ChipSet>
+    <ChipSet TValue="string" selectionMode="none" allClosable="true" ariaLabel="Labels" onClose="@this.removeLabel" class="chip-gap">
+        @foreach (const label of this.labels) {
+            <Chip @key="label" text="@label" intent="primary" />
+        }
+    </ChipSet>
+    <div class="demo-row chip-gap">
+        <Chip TValue="string" text="Ada Lovelace">
+            <AvatarContent><Avatar name="Ada Lovelace" size="20" /></AvatarContent>
+        </Chip>
+        <Chip TValue="string" text="Solid" appearance="solid" intent="success" />
+        <Chip TValue="string" text="Outline" appearance="outline" />
+        <Chip TValue="string" text="Small" size="small" intent="warning" />
+        <Chip TValue="string" text="Docs" href="https://example.com" target="_blank" icon="@Icons.Regular.Size16.Open" />
+    </div>
+</section>
+
+<section class="demo">
+    <h2>Timeline</h2>
+    <div class="timeline-demos">
+        <Timeline position="end" aria-label="Decisions">
+            @foreach (const step of this.decisions) {
+                <TimelineItem intent="@step.intent" appearance="@step.appearance" icon="@step.icon" size="medium">
+                    <ItemOpposite>@step.when</ItemOpposite>
+                    <ItemContent><strong>@step.title</strong><br />@step.text</ItemContent>
+                </TimelineItem>
+            }
+        </Timeline>
+        <Timeline aria-label="Order 1042">
+            <TimelineItem intent="success" appearance="solid"><ItemOpposite>06:10</ItemOpposite><ItemContent>Baked</ItemContent></TimelineItem>
+            <TimelineItem intent="primary"><ItemOpposite>07:30</ItemOpposite><ItemContent>Packed</ItemContent></TimelineItem>
+            <TimelineItem><ItemOpposite>12:00</ItemOpposite><ItemContent>Picked up</ItemContent></TimelineItem>
+        </Timeline>
+    </div>
+    <Timeline orientation="horizontal" position="end" align="center" aria-label="Release">
+        <TimelineItem intent="success" appearance="solid"><ItemOpposite>Mon</ItemOpposite><ItemContent>Plan</ItemContent></TimelineItem>
+        <TimelineItem intent="success" appearance="solid"><ItemOpposite>Tue</ItemOpposite><ItemContent>Build</ItemContent></TimelineItem>
+        <TimelineItem intent="primary"><ItemOpposite>Wed</ItemOpposite><ItemContent>Test</ItemContent></TimelineItem>
+        <TimelineItem><ItemOpposite>Thu</ItemOpposite><ItemContent>Ship</ItemContent></TimelineItem>
+    </Timeline>
+</section>
+
+<section class="demo">
+    <h2>Markdown</h2>
+    <div class="markdown-box">
+        <Markdown Value="@this.answer" Breaks="true" />
+    </div>
+</section>
+
+@code {
+    private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra", "Barbara Liskov", "Linus Torvalds", "Margaret Hamilton"];
+
+    private readonly answer = [
+        "### Order 1042",
+        "The **rye** is baked; the pretzels follow at *noon*.",
+        "",
+        "- [x] baked",
+        "- [ ] picked up",
+        "",
+        "Call `bakery.pickup(1042)` or see [the hours](https://example.com/hours).",
+    ].join("\n");
+
+    private greeting = "";
+    private readonly decisions = [
+        { when: "Oct 9", title: "Waves A and B before 1.0", text: "The library is complete before the release.", intent: "primary" as const, appearance: "solid" as const, icon: Icons.Regular.Size16.Checkmark },
+        { when: "Oct 9", title: "Parity with Blazor 11", text: "Virtualize measures rows.", intent: "success" as const, appearance: "solid" as const, icon: Icons.Regular.Size16.Checkmark },
+        { when: "Oct 10", title: "Icons from the sets", text: "Fluent System Icons, Bootstrap Icons.", intent: "info" as const, appearance: "outline" as const, icon: Icons.Regular.Size16.Star },
+    ];
+    private filters: string[] = ["Open"];
+    private labels = ["bakery", "orders", "q4"];
+    private removeLabel(label: string): void {
+        this.labels = this.labels.filter((item) => item !== label);
+    }
+
+
+    private greet(): void {
+        this.greeting = "Hello, Grace.";
+    }
+}

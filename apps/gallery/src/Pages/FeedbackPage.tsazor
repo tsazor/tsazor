@@ -2,20 +2,20 @@
 
 <h1>Feedback</h1>
 <p class="intro">
-    <code>ToastProvider</code> is a cascading service — any child grabs it and calls
-    <code>show()</code>. Toasts auto-dismiss after their timeout; error toasts use
-    <code>role="alert"</code>. ToastPanel below is a real nested component using the cascade.
+    Toasts come from the <code>Toaster</code> service: any component injects it and calls
+    <code>show()</code>; one <code>ToastRegion</code> shows them. Toasts auto-dismiss after their
+    timeout (paused while the pointer is over them); one with an action stays until closed; danger toasts use <code>role="alert"</code>.
+    ToastPanel below is a real nested component injecting the service.
 </p>
 
-<ToastProvider position="top-right">
     <div class="demo">
         <h2>Badges</h2>
         <div class="demo-row">
             <Badge>Filled</Badge>
             <Badge appearance="subtle">Subtle</Badge>
-            <Badge color="success">Success</Badge>
-            <Badge color="warning">Warning</Badge>
-            <Badge color="error">Error</Badge>
+            <Badge intent="success">Success</Badge>
+            <Badge intent="warning">Warning</Badge>
+            <Badge intent="danger">Error</Badge>
             <Badge size="small">Small</Badge>
         </div>
     </div>
@@ -34,11 +34,28 @@
                 <Divider appearance="subtle" />
                 <div class="demo-row">
                     <Button appearance="subtle">Later</Button>
-                    <Button appearance="primary">Do it</Button>
+                    <Button intent="primary">Do it</Button>
                 </div>
             </CardFooter>
         </Card>
     </div>
 
-    <ToastPanel />
-</ToastProvider>
+    <div class="demo">
+        <h2>Overlay</h2>
+        <Card class="overlay-card" style="position: relative">
+            <CardHeader>Order 101</CardHeader>
+            Three loaves of rye, for pickup at noon.
+            <CardFooter>
+                <Button OnClick="@(() => this.busy = true)">Refresh</Button>
+            </CardFooter>
+            <Overlay @bind-Visible="busy" CloseMode="outside" />
+        </Card>
+        <p class="echo overlay-state">@(busy ? "Refreshing (click the overlay's background to stop)." : "Up to date.")</p>
+    </div>
+
+<ToastPanel />
+<ToastRegion position="top-end" />
+
+@code {
+    private busy = false;
+}

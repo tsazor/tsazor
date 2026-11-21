@@ -1,16 +1,28 @@
-<div class="fui-tabs">
-    <div class="fui-tabs__list" role="tablist" @onkeydown="this.handleKeydown" @ref="listElement">
+@** A Fluent UI 2 tab list (role="tablist") with one panel per Tab child; put Tab components inside.
+    The first tab starts active; clicking a tab or using ArrowLeft/ArrowRight/Home/End selects
+    and focuses it (roving tabindex) and raises onSelected. *@
+@import { withAttributes } from "./attributes"
+@import { rovingFocus, uniqueId, type IconValue, type Intent } from "@tsazor/ui"
+
+<div @attributes="@this.tabsAttributes">
+    <div class="fui-tabs__list" role="tablist" aria-label="@ariaLabel" @attach="keys">
         @for (let i = 0; i < this.tabs.length; i++) {
-            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabIdFor(i)" aria-selected="@this.selectedText(i)" aria-controls="@this.panelIdFor(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@this.tabs[i]!.title</button>
+            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabIdFor(i)" aria-selected="@this.selectedText(i)" aria-controls="@this.panelIdFor(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@if (this.tabs[i]!.iconStart) {<Icon value="@this.tabs[i]!.iconStart" class="fui-tab__icon" />}@this.tabs[i]!.title@if (this.tabs[i]!.badge) {<Badge intent="@(this.tabs[i]!.badgeIntent ?? "neutral")" size="small" class="fui-tab__badge">@this.tabs[i]!.badge</Badge>}</button>
         }
     </div>
     <div class="fui-tabs__panels">@childContent</div>
 </div>
 
 @code {
+    /** Base for the tab and panel ids (`<id>-tab-<i>`, `<id>-panel-<i>`) behind aria-controls / aria-labelledby; generated when omitted. */
     @Parameter() id?: string;
+    /** Names the tab list for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Invoked after the selected tab changes (for stateful hosts). */
     @Parameter() onSelected?: EventCallback<number>;
+    /** The Tab children. */
     @Parameter() childContent?: RenderFragment;
 
     readonly isCascadingValueSupplier = true;
@@ -22,47 +34,51 @@
         return this;
     }
 
-    private tabs: { title: string; setIndex(index: number): void }[] = [];
+    private get tabsAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-tabs" }, this.additionalAttributes);
+    }
+
+    private tabs: { title: string; iconStart?: IconValue; badge?: string; badgeIntent?: Intent; setIndex(index: number): void }[] = [];
     private activeIndexInternal = 0;
-    private listElement?: HTMLElement;
+    private readonly generatedId = uniqueId("fui-tabs");
+    /** Arrow keys, Home and End move the selection; only the active tab is a Tab stop (roving tabindex). */
+    private readonly keys = rovingFocus({ items: "[role=tab]", onMove: (index) => void this.select(index)?.catch((error) => this.dispatchExceptionAsync(error)) });
 
     get activeIndex(): number {
         return this.activeIndexInternal;
     }
 
     /** @internal Called by Tab during its initialization. */
-    registerTab(tab: { title: string; setIndex(index: number): void }): void {
+    registerTab(tab: { title: string; iconStart?: IconValue; setIndex(index: number): void }): void {
         if (this.tabs.includes(tab)) return;
         tab.setIndex(this.tabs.length);
         this.tabs.push(tab);
         // The tab list only exists after the children have registered, so the
         // nav needs one more render pass than the initial one.
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
+    }
+
+    /** @internal Called by a Tab that goes: the ones after it move up, the active one stays where it can. */
+    unregisterTab(tab: object): void {
+        const at = this.tabs.findIndex((candidate) => candidate === tab);
+        if (at < 0) return;
+        this.tabs.splice(at, 1);
+        this.tabs.forEach((remaining, index) => remaining.setIndex(index));
+        if (this.activeIndexInternal > at || this.activeIndexInternal >= this.tabs.length) this.activeIndexInternal = Math.max(0, this.activeIndexInternal - 1);
+        this.stateHasChanged();
+    }
+
+    /** @internal A Tab's title, icon or badge changed: the tab list shows it. */
+    tabChanged(): void {
+        this.stateHasChanged();
     }
 
     /** @internal Switches the active tab (no-op out of range or same index). */
-    select(index: number): void {
-        if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return;
+    select(index: number): Promise<void> | undefined {
+        if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return undefined;
         this.activeIndexInternal = index;
-        this.stateHasChangedInternal();
-        this.onSelected?.invokeAsync(index);
-    }
-
-    private handleKeydown(e: KeyboardEvent): void {
-        let next = -1;
-        if (e.key === "ArrowRight") {
-            next = (this.activeIndexInternal + 1) % this.tabs.length;
-        } else if (e.key === "ArrowLeft") {
-            next = (this.activeIndexInternal - 1 + this.tabs.length) % this.tabs.length;
-        } else if (e.key === "Home") {
-            next = 0;
-        } else if (e.key === "End") {
-            next = this.tabs.length - 1;
-        }
-        if (next < 0) return;
-        e.preventDefault();
-        this.select(next);
-        this.listElement?.querySelectorAll("button")[next]?.focus();
+        this.stateHasChanged();
+        return this.onSelected?.invokeAsync(index);
     }
 
     /** aria-selected as a literal attribute text value. */
@@ -79,11 +95,13 @@
         return this.activeIndexInternal === index ? "0" : "-1";
     }
 
-    private tabIdFor(index: number): string | null {
-        return this.id ? `${this.id}-tab-${index}` : null;
+    /** @internal The id of tab `index`'s button. */
+    tabIdFor(index: number): string {
+        return `${this.id ?? this.generatedId}-tab-${index}`;
     }
 
-    private panelIdFor(index: number): string | null {
-        return this.id ? `${this.id}-panel-${index}` : null;
+    /** @internal The id of tab `index`'s panel. */
+    panelIdFor(index: number): string {
+        return `${this.id ?? this.generatedId}-panel-${index}`;
     }
 }

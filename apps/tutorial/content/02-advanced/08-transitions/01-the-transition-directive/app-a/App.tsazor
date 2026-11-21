@@ -1,0 +1,12 @@
+<label>
+    <input type="checkbox" @bind="visible" />
+    visible
+</label>
+
+@if (visible) {
+    <p>Fades in and out</p>
+}
+
+@code {
+    visible = true;
+}

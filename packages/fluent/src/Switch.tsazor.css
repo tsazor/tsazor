@@ -46,7 +46,7 @@
 
 /* Checked: input before the track in source order — CSS selector order. */
 .fui-switch .fui-switch__native:checked + .fui-switch__track {
-  background: var(--fui-accent);
+  background: var(--fui-brand-background);
   border-color: transparent;
 }
 
@@ -79,4 +79,9 @@
   .fui-switch__track::before {
     transition: none;
   }
+}
+
+/* The validation message on a line of its own under the switch. */
+.fui-switch__message {
+  display: block;
 }

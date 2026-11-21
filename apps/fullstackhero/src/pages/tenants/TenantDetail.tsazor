@@ -1,0 +1,276 @@
+@* pages/tenants/detail.tsx: one tenant — the overview card (identity, status badges, the operator actions: impersonate,
+   renew / change plan, adjust validity, (de)activate), the active impersonations, the branding editor, the details
+   and the provisioning pipeline (polled every 2s while it runs; a 404 means the tenant never went through it). *@
+@page "/tenants/{id}"
+@authorize({ policy: "Permissions.Tenants.View" })
+@import { ArrowLeft, Building2, CalendarClock, CalendarCog, ClipboardList, CreditCard, Info, KeyRound, Mail, UserCog } from "lucide"
+@import { changeTenantActivation, getTenantProvisioningStatus, getTenantStatus, retryTenantProvisioning } from "@/api/tenants"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { IdentityPermissions, MultitenancyPermissions } from "@/lib/permissions"
+@import { queryClient } from "@/lib/query-client"
+@import { Query } from "@/lib/query"
+@import { toast } from "@/lib/toast"
+@import type { BadgeVariant } from "@/components/ui/variants"
+@import { describe, formatDate } from "@/components/tenants/format"
+@import ActiveGrantsCard from "@/components/impersonation/ActiveGrantsCard.tsazor"
+@import ImpersonateDialog from "@/components/impersonation/ImpersonateDialog.tsazor"
+@import AdjustValidityDialog from "@/components/tenants/AdjustValidityDialog.tsazor"
+@import RenewTenantDialog from "@/components/tenants/RenewTenantDialog.tsazor"
+@import TenantBrandingCard from "@/components/tenants/TenantBrandingCard.tsazor"
+@import ProvisioningPanel from "./ProvisioningPanel.tsazor"
+@import TenantInfoRow from "./TenantInfoRow.tsazor"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+<div class="space-y-8">
+    <EntityPageHeader icon="@Building2" title="@(tenant?.name ?? "Tenant")" tone="info" description="@(tenant?.adminEmail)">
+        <Button variant="ghost" size="sm" onClick="@(() => navigation.navigateTo("/tenants"))">
+            <Icon icon="@ArrowLeft" class="mr-1 h-3.5 w-3.5" /> Registry
+        </Button>
+    </EntityPageHeader>
+
+    @if (tenantQuery.result.isError) {
+        <ErrorBand message="@(describe(tenantQuery.result.error))" />
+    }
+
+    @if (tenantQuery.result.isLoading && !tenant) {
+        <LoadingRow label="Loading tenant" />
+    }
+
+    @if (tenant) {
+        const current = tenant;
+
+        @* ── Hero identity card ─────────────────────────────────────── *@
+        <SettingsSection title="Overview" icon="@Building2">
+            <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                @* Left: monogram + name + meta + badges *@
+                <div class="flex items-start gap-4">
+                    <Monogram seed="@current.id" fallback="@current.name" size="lg" />
+                    <div class="min-w-0">
+                        <h2 class="font-display text-2xl font-semibold tracking-tight md:text-3xl">@current.name</h2>
+                        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span class="inline-flex items-center gap-1.5 text-[12px] text-[var(--color-muted-foreground)]">
+                                <Icon icon="@Mail" class="h-3 w-3 shrink-0" />
+                                @current.adminEmail
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--color-muted-foreground)]">
+                                <Icon icon="@KeyRound" class="h-3 w-3 shrink-0" />
+                                <code>@current.id</code>
+                            </span>
+                        </div>
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <Badge variant="@(current.isActive ? "success" : "muted")">@(current.isActive ? "Active" : "Inactive")</Badge>
+                            @if (current.expiryState && current.expiryState !== "Active") {
+                                <Badge variant="@expiryVariant(current.expiryState)">@(current.expiryState === "InGrace" ? "In grace" : "Expired")</Badge>
+                            }
+                            @if (current.plan) {
+                                <Badge variant="outline">
+                                    <Icon icon="@CreditCard" class="h-3 w-3" />
+                                    @current.plan
+                                </Badge>
+                            }
+                            <Badge variant="outline">
+                                <Icon icon="@CalendarClock" class="h-3 w-3" />
+                                Valid until @formatDate(current.validUpto)
+                            </Badge>
+                            @if (current.issuer) {
+                                <Badge variant="outline" class="font-mono text-[10.5px]">iss · @current.issuer</Badge>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* Right: action buttons *@
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    @if (canImpersonate && current.isActive) {
+                        <Button variant="signal" onClick="@(() => impersonateOpen = true)" class="shrink-0" title="Sign in as a user inside this tenant">
+                            <Icon icon="@UserCog" class="mr-1.5 h-3.5 w-3.5" />
+                            Impersonate user
+                        </Button>
+                    }
+                    @if (canManageSubscription) {
+                        <Button variant="outline" onClick="@(() => renewOpen = true)" class="shrink-0" title="Extend validity by one plan term, or switch plans">
+                            <Icon icon="@CalendarClock" class="mr-1.5 h-3.5 w-3.5" />
+                            Renew / change plan
+                        </Button>
+                    }
+                    @if (canManageSubscription) {
+                        <Button variant="outline" onClick="@(() => adjustOpen = true)" class="shrink-0" title="Set the expiry date directly with no invoice (operator override)">
+                            <Icon icon="@CalendarCog" class="mr-1.5 h-3.5 w-3.5" />
+                            Adjust validity
+                        </Button>
+                    }
+                    @if (canUpdateTenant) {
+                        <Button variant="@(current.isActive ? "outline" : "default")" onClick="@(() => activationConfirmOpen = true)" disabled="@activationPending" class="shrink-0">
+                            @(activationPending ? "Updating…" : current.isActive ? "Deactivate tenant" : "Activate tenant")
+                        </Button>
+                    }
+                </div>
+            </div>
+        </SettingsSection>
+
+        <ImpersonateDialog @bind-open="impersonateOpen" tenantId="@current.id" tenantName="@current.name" />
+
+        @if (canManageSubscription) {
+            <RenewTenantDialog @bind-open="renewOpen" tenantId="@current.id" currentPlanKey="@current.plan" validUpto="@current.validUpto" />
+        }
+
+        @if (canManageSubscription) {
+            <AdjustValidityDialog @bind-open="adjustOpen" tenantId="@current.id" validUpto="@current.validUpto" />
+        }
+
+        @if (canUpdateTenant) {
+            <ConfirmDialog @bind-open="activationConfirmOpen" destructive="@current.isActive" title="@(current.isActive ? "Deactivate tenant?" : "Activate tenant?")"
+                           confirmLabel="@(current.isActive ? "Deactivate" : "Activate")" pending="@activationPending" onConfirm="@(() => changeActivation(!current.isActive))">
+                <DescriptionContent>
+                    @if (current.isActive) {
+                        <text>Users of <strong class="text-[var(--color-foreground)]">@current.name</strong> will be blocked from signing in and all their API requests will be rejected until you reactivate the tenant.</text>
+                    } else {
+                        <text><strong class="text-[var(--color-foreground)]">@current.name</strong>'s users will be able to sign in and use the platform again.</text>
+                    }
+                </DescriptionContent>
+            </ConfirmDialog>
+        }
+
+        <ActiveGrantsCard tenantId="@current.id" />
+
+        <TenantBrandingCard tenantId="@current.id" />
+
+        @* ── Details section ────────────────────────────────────────── *@
+        <SettingsSection title="Details" icon="@Info" description="The tenant's identity, contact, and subscription window. Identifiers are immutable; the issuer scopes JWTs to this tenant.">
+            <div class="space-y-0">
+                <TenantInfoRow label="Identifier" mono>@current.id</TenantInfoRow>
+                <TenantInfoRow label="Name">@current.name</TenantInfoRow>
+                <TenantInfoRow label="Admin email" mono>@current.adminEmail</TenantInfoRow>
+                <TenantInfoRow label="JWT issuer" mono>@(current.issuer ?? "—")</TenantInfoRow>
+                <TenantInfoRow label="Plan">@(current.plan ?? "—")</TenantInfoRow>
+                <TenantInfoRow label="Valid until">
+                    <span class="flex items-center gap-1.5">
+                        <Icon icon="@CalendarClock" class="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+                        @formatDate(current.validUpto)
+                        @if (current.expiryState && current.expiryState !== "Active") {
+                            <Badge variant="@expiryVariant(current.expiryState)">@(current.expiryState === "InGrace" ? "In grace" : "Expired")</Badge>
+                        }
+                    </span>
+                </TenantInfoRow>
+                <TenantInfoRow label="Status" isLast>
+                    <Badge variant="@(current.isActive ? "success" : "muted")">@(current.isActive ? "Active" : "Inactive")</Badge>
+                </TenantInfoRow>
+            </div>
+        </SettingsSection>
+
+        @* ── Provisioning section ───────────────────────────────────── *@
+        <SettingsSection title="Provisioning" icon="@ClipboardList" description="Live status of the background pipeline that seeds the tenant database, default roles, and admin user. Polls every 2 seconds while running.">
+            @* A 404 isn't an error to surface — the tenant was just never run through the pipeline: the neutral state. *@
+            <ProvisioningPanel steps="@(provisioning?.steps ?? [])" status="@provisioning?.status" currentStep="@(provisioning?.currentStep ?? undefined)"
+                               errorBody="@(provisioning?.error ?? undefined)" loading="@provisioningQuery.result.isLoading"
+                               error="@(provisioningNotTracked ? undefined : provisioningQuery.result.error)" notTracked="@provisioningNotTracked"
+                               onRetry="@retryProvisioning" retryPending="@retryPending" canRetry="@canUpdateTenant" />
+        </SettingsSection>
+    }
+</div>
+
+@code {
+    @Parameter() id: string = "";
+
+    private impersonateOpen = false;
+    private renewOpen = false;
+    private adjustOpen = false;
+    private activationConfirmOpen = false;
+    private activationPending = false;
+    private retryPending = false;
+
+    private readonly tenantQuery = new Query(() => ({
+        queryKey: ["tenant", this.id],
+        queryFn: () => getTenantStatus(this.id),
+        enabled: !!this.id,
+    }));
+
+    private readonly provisioningQuery = new Query(() => ({
+        queryKey: ["tenant", this.id, "provisioning"],
+        queryFn: () => getTenantProvisioningStatus(this.id),
+        enabled: !!this.id,
+        // A 404 means this tenant was never run through the provisioning pipeline
+        // (e.g. demo/directly-created tenants) — a terminal "not tracked" state,
+        // not a transient failure. Don't retry or poll it.
+        retry: (failureCount, err) => !(err instanceof ApiRequestError && err.status === 404) && failureCount < 3,
+        // Poll while provisioning is in flight; stop once terminal (or not tracked).
+        refetchInterval: (query) => {
+            if (query.state.error instanceof ApiRequestError && query.state.error.status === 404) return false;
+            const status = query.state.data?.status;
+            if (status === "Completed" || status === "Failed") return false;
+            return 2000;
+        },
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.tenantQuery);
+        this.observe(this.provisioningQuery);
+    }
+
+    private get permissions(): string[] {
+        return this.auth.user?.permissions ?? [];
+    }
+
+    private get canImpersonate(): boolean {
+        return this.permissions.includes(IdentityPermissions.Users.Impersonate);
+    }
+
+    /** Renew / change plan + adjust validity are root-operator subscription actions. */
+    private get canManageSubscription(): boolean {
+        return this.permissions.includes(MultitenancyPermissions.Tenants.UpgradeSubscription);
+    }
+
+    /** Activation toggle + retry-provisioning are tenant-update operations. */
+    private get canUpdateTenant(): boolean {
+        return this.permissions.includes(MultitenancyPermissions.Tenants.Update);
+    }
+
+    private get tenant() {
+        return this.tenantQuery.result.data;
+    }
+
+    private get provisioning() {
+        return this.provisioningQuery.result.data;
+    }
+
+    private get provisioningNotTracked(): boolean {
+        const error = this.provisioningQuery.result.error;
+        return error instanceof ApiRequestError && error.status === 404;
+    }
+
+    private expiryVariant(state: string): BadgeVariant {
+        return state === "Expired" ? "danger" : state === "InGrace" ? "warning" : "outline";
+    }
+
+    private async changeActivation(isActive: boolean): Promise<void> {
+        const id = this.id;
+        this.activationPending = true;
+        try {
+            const result = await changeTenantActivation(id, isActive);
+            toast.success(result.isActive ? "Tenant activated" : "Tenant deactivated");
+            this.activationConfirmOpen = false;
+            void queryClient.invalidateQueries({ queryKey: ["tenant", id] });
+            void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+        } catch (err) {
+            toast.error("Activation change failed", { description: describe(err) });
+        } finally {
+            this.activationPending = false;
+        }
+    }
+
+    private async retryProvisioning(): Promise<void> {
+        const id = this.id;
+        this.retryPending = true;
+        try {
+            await retryTenantProvisioning(id);
+            toast.success("Provisioning re-queued");
+            void queryClient.invalidateQueries({ queryKey: ["tenant", id, "provisioning"] });
+        } catch (err) {
+            toast.error("Retry failed", { description: describe(err) });
+        } finally {
+            this.retryPending = false;
+        }
+    }
+}

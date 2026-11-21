@@ -1,0 +1,8 @@
+node_modules
+dist
+*.local
+# The FluentCMS clone, its database and the API token (scripts/backend.mjs).
+.backend
+bff/bin
+bff/obj
+.tmp

@@ -1,0 +1,33 @@
+header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+button {
+    padding: 0.45rem 1rem;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 24rem;
+}
+
+input {
+    flex: 1;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+}
+
+.hint {
+    flex-basis: 100%;
+    margin: 0;
+    color: #57606a;
+}

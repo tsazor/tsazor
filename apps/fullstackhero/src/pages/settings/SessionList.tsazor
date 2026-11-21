@@ -1,0 +1,21 @@
+@* pages/settings/sessions.tsx's section body — the empty note or the session rows. *@
+@import type { UserSessionDto } from "@/api/sessions"
+@import SessionRow from "./SessionRow.tsazor"
+
+@if (sessions.length === 0) {
+    <p class="text-sm text-[var(--color-muted-foreground)]">
+        No active sessions found. (Including this one? That would be a bug — please refresh.)
+    </p>
+} else {
+    <ul class="divide-y divide-[var(--color-border)]">
+        @foreach (const s of sessions) {
+            <SessionRow @key="s.id" session="@s" busy="@busyIds.has(s.id)" onRevoke="@(() => onRevoke?.invokeAsync(s.id))" />
+        }
+    </ul>
+}
+
+@code {
+    @Parameter() sessions: UserSessionDto[] = [];
+    @Parameter() busyIds: ReadonlySet<string> = new Set();
+    @Parameter() onRevoke?: EventCallback<string>;
+}

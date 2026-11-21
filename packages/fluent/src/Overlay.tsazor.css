@@ -1,0 +1,52 @@
+/* Overlay — a busy state over its container (position: relative) or, full screen, over the page. */
+
+.fui-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fui-spacing-l);
+  background: var(--fui-overlay-background);
+  /* Over a card, the card's rounded corners. */
+  border-radius: inherit;
+  outline: none;
+  animation: fui-overlay-enter var(--fui-duration-normal) var(--fui-ease-standard);
+}
+
+.fui-overlay--full-screen {
+  position: fixed;
+  /* Over a dialog, under the toasts. */
+  z-index: calc(var(--fui-z-dialog) + 10);
+}
+
+/* Interactive: the background lets presses through, the content takes its own. */
+.fui-overlay--interactive {
+  pointer-events: none;
+}
+
+.fui-overlay--interactive > .fui-overlay__content {
+  pointer-events: auto;
+}
+
+.fui-overlay__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+  max-width: 100%;
+  color: var(--fui-foreground-1);
+}
+
+@keyframes fui-overlay-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-overlay {
+    animation: none;
+  }
+}

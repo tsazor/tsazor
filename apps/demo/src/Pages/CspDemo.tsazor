@@ -1,0 +1,18 @@
+@page "/csp"
+@import { MarkupString } from "@tsazor/runtime"
+
+<h1>Strict CSP</h1>
+<p>This page runs under the Content Security Policy that <code>scripts/verify-csp.mjs</code> serves the build with.</p>
+
+<p class="static-style" style="color: rgb(0, 128, 0)">A static style attribute.</p>
+<div class="bound-style" style="width: @(width)px; height: 8px; background: rgb(13, 110, 253)"></div>
+<p class="markup">@(new MarkupString("<strong>Trusted</strong> markup"))</p>
+<button class="btn grow" @onclick="grow">Grow</button>
+
+@code {
+    width = 100;
+
+    grow() {
+        this.width += 50;
+    }
+}

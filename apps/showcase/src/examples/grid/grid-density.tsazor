@@ -1,0 +1,18 @@
+@** The same grid at two densities: comfortable (the normal row height) and compact (the dense
+    table, more rows in view). `small` is the older spelling of compact. *@
+@import { orders, type Order } from "./orders"
+
+<Typography Variant="h4">Comfortable</Typography>
+<DataGrid Items="@orders" AriaLabel="Orders, comfortable">
+    <PropertyColumn Property="(o) => o.customer" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" />
+</DataGrid>
+
+<Typography Variant="h4">Compact</Typography>
+<DataGrid Items="@orders" Density="compact" AriaLabel="Orders, compact">
+    <PropertyColumn Property="(o) => o.customer" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" />
+</DataGrid>
+
+@code {
+}

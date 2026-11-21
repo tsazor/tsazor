@@ -1,0 +1,68 @@
+h1 {
+    margin: 0 0 0.75rem;
+    font-size: 2rem;
+}
+
+.lead {
+    max-width: 44rem;
+    line-height: 1.6;
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--bg-sunken);
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--fg);
+    text-decoration: none;
+}
+
+.card:hover {
+    border-color: var(--accent);
+}
+
+.card h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--accent-strong);
+}
+
+.card p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--fg-muted);
+    flex: 1;
+}
+
+.meta {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+}
+
+.kind {
+    margin-left: 0.3rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+    color: var(--fg-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    vertical-align: middle;
+}

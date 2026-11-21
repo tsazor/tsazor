@@ -1,0 +1,80 @@
+@** A rating display (Fluent UI Blazor's FluentRatingDisplay; Bootstrap has none): a value shown as stars, halves too —
+    `value` of `max` — with the value written next to them and the number of ratings (`count`, with the locale's
+    thousands separator). `compact` shows one star and the numbers. A screen reader reads it as one image, "Rated 3.5
+    out of 5, 1,234 ratings" (`labels`). `shape` is the star's icon; `size` and `color` as the Rating's — the same
+    parameters as the Fluent skin's RatingDisplay. *@
+@import type { IconValue } from "@tsazor/ui"
+@import { type RatingLabels } from "@tsazor/ui"
+@import { formatRatingCount, formatRatingValue, ratingFill } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+@import { StarFill } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+@import { ratingLabelsFrom } from "@tsazor/ui/kit"
+
+<div role="img" aria-label="@this.label" @attributes="@withClass(this.rootClass, this.additionalAttributes)">
+    @if (this.compact) {
+        <span class="tz-rating-display__item" style="--tz-rating-fill: 100%" aria-hidden="true">
+            <Icon value="@this.shape" class="tz-rating-display__empty" />
+            <Icon value="@this.shape" class="tz-rating-display__full" />
+        </span>
+    } else {
+        @for (let i = 1; i <= this.max; i++) {
+            <span class="tz-rating-display__item" style="@(`--tz-rating-fill: ${ratingFill(i, this.value) * 100}%`)" aria-hidden="true">
+                <Icon value="@this.shape" class="tz-rating-display__empty" />
+                <Icon value="@this.shape" class="tz-rating-display__full" />
+            </span>
+        }
+    }
+    <span class="tz-rating-display__value fw-semibold" aria-hidden="true">@this.valueText</span>
+    @if (this.count !== undefined) {
+        <span class="tz-rating-display__count text-body-secondary" aria-hidden="true">@this.countText</span>
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The value, 0 to `max`; halves and other fractions fill part of a star. */
+    @Parameter() value: number = 0;
+    /** The number of stars. */
+    @Parameter() max: number = 5;
+    /** The number of ratings behind the value, written after it. */
+    @Parameter() count?: number;
+    /** One star and the numbers instead of the row. */
+    @Parameter() compact: boolean = false;
+    /** The star's icon (`Shape`). */
+    @Parameter() shape: IconValue = StarFill;
+    /** small | medium (default) | large. */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** The stars' color: neutral (default), brand (primary) or marigold (warning). */
+    @Parameter() color: "neutral" | "brand" | "marigold" = "neutral";
+    /** The locale of the numbers ("de-DE"). Default: the CultureService's culture, else the page's lang, else the browser's. */
+    @Parameter() locale?: string;
+    /** The text alternative ("Rated 3.5 out of 5, 1,234 ratings"; English by default). */
+    @Parameter() labels?: Partial<RatingLabels>;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get locales(): string {
+        return this.locale ?? this.t.locale;
+    }
+
+    private get valueText(): string {
+        return formatRatingValue(this.value, this.locales);
+    }
+
+    private get countText(): string | undefined {
+        return this.count === undefined ? undefined : formatRatingCount(this.count, this.locales);
+    }
+
+    private get label(): string {
+        return (this.labels?.display ?? ratingLabelsFrom(this.t).display)(this.valueText, this.max, this.countText);
+    }
+
+    private get rootClass(): string {
+        let cls = `tz-rating-display tz-rating--${this.color}`;
+        if (this.size !== "medium") cls += ` tz-rating--${this.size}`;
+        if (this.compact) cls += " tz-rating-display--compact";
+        return cls;
+    }
+}

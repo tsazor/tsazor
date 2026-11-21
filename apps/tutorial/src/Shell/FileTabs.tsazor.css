@@ -1,0 +1,43 @@
+.tabs {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tab:hover {
+    color: var(--fg);
+}
+
+.tab--active {
+    color: var(--fg);
+    border-bottom-color: var(--accent);
+    background: var(--editor-bg);
+}
+
+.badge {
+    min-width: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #fff;
+    font-family: system-ui, sans-serif;
+    font-size: 0.7rem;
+    line-height: 1.1rem;
+    text-align: center;
+}

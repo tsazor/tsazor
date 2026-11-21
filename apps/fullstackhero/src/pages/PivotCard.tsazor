@@ -1,0 +1,24 @@
+@* pages/dashboard.tsx's PivotCard: an entry point into the app — a tone tile, the title and a line, a link. *@
+@import { ArrowRight, type IconNode } from "lucide"
+@import type { ToneIconTileTone } from "@/components/list/tone"
+
+<a href="@to" class="group block focus:outline-none">
+    <div class="flex h-full flex-col gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-xs transition-colors duration-200 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-accent)]">
+        <div class="flex items-start justify-between">
+            <ToneIconTile icon="@icon" tone="@tone" size="md" />
+            <Icon icon="@ArrowRight" class="size-3.5 text-[var(--color-muted-foreground)] opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
+        </div>
+        <div>
+            <div class="font-display text-[14px] font-semibold tracking-tight text-[var(--color-foreground)]">@title</div>
+            <p class="mt-0.5 text-[12px] leading-snug text-[var(--color-muted-foreground)]">@description</p>
+        </div>
+    </div>
+</a>
+
+@code {
+    @Parameter() to!: string;
+    @Parameter() icon!: IconNode;
+    @Parameter() tone: ToneIconTileTone = "primary";
+    @Parameter() title!: string;
+    @Parameter() description!: string;
+}

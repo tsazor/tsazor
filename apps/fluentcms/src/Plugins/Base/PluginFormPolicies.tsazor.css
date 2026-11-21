@@ -1,0 +1,11 @@
+.plugin-form-policies {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.plugin-form-policies-title {
+    margin: 8px 0;
+    font-size: var(--fui-font-size-subtitle);
+    font-weight: var(--fui-font-weight-semibold);
+}

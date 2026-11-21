@@ -1,17 +1,18 @@
 @page "/primitives"
+@import * as Icons from "@tsazor/fluent-icons"
 
 <h1>Layout &amp; Primitives</h1>
 <p class="intro">
     The W1 components: layout primitives driven purely by <code>--fui-*</code> tokens,
-    the inline SVG icon set, status chips, alerts, breadcrumb and a controlled pagination.
+    the Fluent System Icons, status chips, alerts, breadcrumb and a controlled pagination.
 </p>
 
 <div class="demo">
     <h2>Stack</h2>
     <Stack gap="m" align="center">
-        <Button appearance="primary">One</Button>
+        <Button intent="primary">One</Button>
         <Button appearance="subtle">Two</Button>
-        <Badge color="success">Live</Badge>
+        <Badge intent="success">Live</Badge>
     </Stack>
 </div>
 
@@ -36,55 +37,55 @@
 </div>
 
 <div class="demo">
-    <h2>Icons (inline SVG set)</h2>
+    <h2>Icons (Fluent System Icons, <code>@@tsazor/fluent-icons</code>)</h2>
     <div class="demo-row">
-        <Icon name="search" size="20" />
-        <Icon name="check" size="20" />
-        <Icon name="close" size="20" />
-        <Icon name="add" size="20" />
-        <Icon name="chevron-left" size="20" />
-        <Icon name="chevron-right" size="20" />
-        <Icon name="arrow-left" size="20" />
-        <Icon name="arrow-right" size="20" />
+        <Icon value="@Icons.Regular.Size20.Search" />
+        <Icon value="@Icons.Regular.Size20.Checkmark" />
+        <Icon value="@Icons.Regular.Size20.Dismiss" />
+        <Icon value="@Icons.Regular.Size20.Add" />
+        <Icon value="@Icons.Regular.Size20.ChevronLeft" />
+        <Icon value="@Icons.Regular.Size20.ChevronRight" />
+        <Icon value="@Icons.Filled.Size20.Heart" color="var(--fui-color-red-1)" title="Liked" />
+        <Icon value="@Icons.Regular.Size24.Settings" />
     </div>
 </div>
 
 <div class="demo">
     <h2>Indicators</h2>
     <Stack direction="vertical" gap="s">
-        <Indicator color="success">Operational</Indicator>
-        <Indicator color="danger">Incident</Indicator>
-        <Indicator color="warning">Degraded</Indicator>
-        <Indicator visible="@false" color="neutral">Never rendered</Indicator>
+        <Indicator intent="success">Operational</Indicator>
+        <Indicator intent="danger">Incident</Indicator>
+        <Indicator intent="warning">Degraded</Indicator>
+        <Indicator visible="@false" intent="neutral">Never rendered</Indicator>
     </Stack>
 </div>
 
 <div class="demo">
     <h2>Alerts</h2>
     <Stack direction="vertical" gap="s">
-        <Alert variant="success" dismissible="true" onDismissed="@this.dismissed">Saved successfully.</Alert>
-        <Alert variant="warning" dismissible="true" onDismissed="@this.dismissed">Careful with this setting.</Alert>
-        <Alert variant="info" dismissible="true" onDismissed="@this.dismissed">Release notes are available.</Alert>
+        <Alert intent="success" dismissible="true" onDismissed="@this.dismissed">Saved successfully.</Alert>
+        <Alert intent="warning" dismissible="true" onDismissed="@this.dismissed">Careful with this setting.</Alert>
+        <Alert intent="info" dismissible="true" onDismissed="@this.dismissed">Release notes are available.</Alert>
     </Stack>
 </div>
 
 <div class="demo">
     <h2>Breadcrumb</h2>
     <Breadcrumb>
-        <BreadcrumbItem href="/primitives" childContent="Home" />
-        <BreadcrumbItem href="/primitives" childContent="Layout" />
-        <BreadcrumbItem active="true" childContent="Detail" />
+        <BreadcrumbItem href="/primitives">Home</BreadcrumbItem>
+        <BreadcrumbItem href="/primitives">Layout</BreadcrumbItem>
+        <BreadcrumbItem active="true">Detail</BreadcrumbItem>
     </Breadcrumb>
 </div>
 
 <div class="demo">
     <h2>Pagination (controlled)</h2>
-    <Pagination page="@this.page" totalPages="12" onPageChange="@((p: number) => this.setPage(p))" />
+    <Pagination page="@this.page" pageCount="12" onPageChanged="@((p: number) => this.setPage(p))" />
     <Spacer size="s" />
     <Typography variant="caption">Page @this.page of 12</Typography>
     <Stack gap="m">
         <Button appearance="subtle" onClick="@(() => this.setPage(this.page - 1))">Back</Button>
-        <Button appearance="primary" onClick="@(() => this.setPage(this.page + 1))">Forward</Button>
+        <Button intent="primary" onClick="@(() => this.setPage(this.page + 1))">Forward</Button>
     </Stack>
 </div>
 
@@ -98,6 +99,6 @@
     private async setPage(next: number): Promise<void> {
         if (next < 1 || next > 12 || next === this.page) return;
         this.page = next;
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 }

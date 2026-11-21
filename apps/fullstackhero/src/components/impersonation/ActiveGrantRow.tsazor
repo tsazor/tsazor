@@ -1,0 +1,58 @@
+@* active-grants-card.tsx's GrantRow (with its RowActions): one active impersonation session — a live pulse, actor →
+   impersonated user, the start, the expiry and the reason, then Re-open and Revoke as the caller may (view-only
+   otherwise). *@
+@import { ShieldOff, UserCog } from "lucide"
+@import type { ImpersonationGrantDto } from "@/api/impersonation-grants"
+
+<li class="grid grid-cols-[auto_1fr_auto] items-center gap-4 py-3 first:pt-0 last:pb-0">
+    @* Live-session pulse dot *@
+    <span aria-hidden="true" class="pulse-dot" title="Active session"></span>
+
+    @* Session detail *@
+    <div class="min-w-0">
+        <div class="flex flex-wrap items-baseline gap-2">
+            <span class="text-[13px]">
+                <span class="font-medium text-[var(--color-foreground)]">@(grant.actorUserName ?? grant.actorUserId)</span>
+                <span class="mx-1.5 text-[var(--color-muted-foreground)]">→</span>
+                <span class="font-medium text-[var(--color-foreground)]">@(grant.impersonatedUserName ?? grant.impersonatedUserId)</span>
+            </span>
+            <Badge variant="brand" class="font-mono uppercase tracking-[0.14em]">Active</Badge>
+        </div>
+        <div class="mt-0.5 truncate font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
+            started @(new Date(grant.startedAtUtc).toLocaleTimeString()) · expires @(new Date(grant.expiresAtUtc).toLocaleTimeString())@if (grant.reason) {<text> · @truncate(grant.reason, 80)</text>}
+        </div>
+    </div>
+
+    @* Row actions. Re-open: the operator's own grant, still Active, with the start permission — the closed-browser
+       recovery path: it issues a fresh token and leaves the original grant alive until expiry or revoke. *@
+    @if (!canRevoke && !canReopen) {
+        <Badge variant="muted" class="font-mono uppercase tracking-[0.14em]">
+            <Icon icon="@UserCog" class="h-3 w-3" /> view-only
+        </Badge>
+    } else {
+        <div class="flex shrink-0 items-center gap-2">
+            @if (canReopen) {
+                <Button variant="outline" size="sm" onClick="@(() => onReopen?.invokeAsync())" title="Issue a fresh impersonation token — use when you lost the original dashboard tab.">
+                    <Icon icon="@UserCog" class="mr-1 h-3.5 w-3.5" /> Re-open
+                </Button>
+            }
+            @if (canRevoke) {
+                <Button variant="outline" size="sm" onClick="@(() => onRevoke?.invokeAsync())">
+                    <Icon icon="@ShieldOff" class="mr-1 h-3.5 w-3.5" /> Revoke
+                </Button>
+            }
+        </div>
+    }
+</li>
+
+@code {
+    @Parameter() grant!: ImpersonationGrantDto;
+    @Parameter() canRevoke: boolean = false;
+    @Parameter() canReopen: boolean = false;
+    @Parameter() onRevoke?: EventCallback;
+    @Parameter() onReopen?: EventCallback;
+
+    private truncate(s: string, n: number): string {
+        return s.length > n ? `${s.slice(0, n - 1)}…` : s;
+    }
+}

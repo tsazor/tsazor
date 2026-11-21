@@ -1,0 +1,21 @@
+.greeting {
+    display: inline-block;
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    font-size: 1.3rem;
+}
+
+.light {
+    background: #f7f8fa;
+    color: #1f2328;
+}
+
+.dark {
+    background: #1f2328;
+    color: #f7f8fa;
+}
+
+small {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}

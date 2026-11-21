@@ -1,0 +1,11 @@
+@** Renders Bootstrap's `.card-footer`, the bottom bar of a Card. Place it inside a Card, after
+    the CardBody. *@
+@import { withClass } from "./attributes"
+<div @attributes="@withClass("card-footer", additionalAttributes)">@childContent</div>
+
+@code {
+    /** The footer content. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

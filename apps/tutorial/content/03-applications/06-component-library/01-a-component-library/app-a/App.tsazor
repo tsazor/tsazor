@@ -1,0 +1,19 @@
+<article class="order">
+    <h2>Order 101</h2>
+    <p>Two sourdough loaves and one rye, for Marta, tomorrow at 7.</p>
+    <button class="save" @onclick="save">Save</button>
+    <button class="cancel" @onclick="cancel">Cancel</button>
+    <p class="status">@status</p>
+</article>
+
+@code {
+    status = "Not saved yet.";
+
+    save() {
+        this.status = "Saved.";
+    }
+
+    cancel() {
+        this.status = "Changes dropped.";
+    }
+}

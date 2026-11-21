@@ -1,0 +1,69 @@
+@import type { ContentDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { BaseContentPlugin } from "./BaseContentPlugin"
+@import { fieldValueOf } from "./field-values"
+@import { dataTableView } from "./field-types"
+@import type { AnyFieldModel } from "./field-models"
+@inherits BaseContentPlugin
+
+@if (this.contentType !== undefined) {
+    <PluginBody title="@(this.contentType.title ?? "")">
+        <ActionsFragment>
+            <ActionButton iconName="@IconName.ArrowLeft" label="Back" @onclick="() => this.navigateBack()" />
+            <ActionButtonCreate href="@this.getUrl("Create Content", { slug: this.contentTypeSlug ?? "" })" label="New Content" />
+        </ActionsFragment>
+        <ChildContent>
+            <DataGrid items="@this.contents" itemKey="(content) => content.id" ariaLabel="Contents">
+                @foreach (const field of this.listFields) {
+                    <TemplateColumn title="@field.label" Context="content">
+                        @{ const view = dataTableView(field, fieldValueOf(field, content.data)); }
+                        <DynamicComponent Type="@view.type" Parameters="@view.parameters" />
+                    </TemplateColumn>
+                }
+                <TemplateColumn title="Actions" Context="content">
+                <ActionButtons>
+                        <ActionButtonEdit href="@this.getUrl("Update Content", { slug: this.contentTypeSlug ?? "", id: content.id })" aria-label="@(`Edit ${this.labelOf(content)}`)" />
+                        <ActionButtonDelete aria-label="@(`Delete ${this.labelOf(content)}`)" @onclick="() => this.selected = content" />
+                        </ActionButtons>
+            </TemplateColumn>
+            </DataGrid>
+        </ChildContent>
+    </PluginBody>
+
+    <Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+        Are you sure to delete this content?
+    </Confirm>
+}
+
+@code {
+    private contents: ContentDetailResponse[] = [];
+    private selected?: ContentDetailResponse;
+
+    /** The fields the list shows, in their column order (FluentCMS's GetVisibleFields). */
+    private get listFields(): AnyFieldModel[] {
+        return this.fields.filter((field) => field.dataTableVisible).sort((a, b) => a.dataTableColumnOrder - b.dataTableColumnOrder);
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        await super.onInitialized();
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        if (!this.contentTypeSlug) return;
+        this.contents = ensureOk(await this.api.contentGetAll(this.contentTypeSlug, { siteId: this.viewState.site.id })) ?? [];
+    }
+
+    /** A content's name for its buttons: its first text value. */
+    private labelOf(content: ContentDetailResponse): string {
+        const text = this.fields.map((field) => content.data[field.name]).find((value) => typeof value === "string" && value.length > 0);
+        return typeof text === "string" ? text : "content";
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.contentDelete(this.contentTypeSlug ?? "", this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

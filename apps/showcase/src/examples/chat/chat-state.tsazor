@@ -1,0 +1,28 @@
+@** A chat with a local provider: the host holds the ChatState; the prompt's send appends the
+    question and streams a canned answer in pieces (an app feeds its own fetch/SDK here, and
+    aborts it with its own AbortSignal). The Chat renders the roles, the Markdown in the
+    assistant's lines, and stays pinned to the bottom while the answer grows. *@
+@import { PromptInput } from "@tsazor/bootstrap"
+@import { ChatState, type ChatMessage } from "@tsazor/ui"
+
+<div class="sz-chat-demo">
+    <Chat State="@state" AriaLabel="A chat" />
+    <PromptInput OnSend="@this.send" Placeholder="Ask…" />
+</div>
+
+@code {
+    private readonly state = new ChatState<ChatMessage>(() => this.stateHasChanged());
+
+    /** The prompt's send: the user's question in, a canned answer streamed in pieces. */
+    private async send(prompt: string): Promise<void> {
+        this.state.append({ role: "user", text: prompt });
+        await new Promise((resolve) => setTimeout(resolve, 400)); // the model's latency
+        const stream = this.state.beginStream();
+        const answer = ["For a **chat**, hold a ", "ChatState", " and stream its answer: the deltas arrive as you feed them."];
+        for (const delta of answer) {
+            stream.append(delta);
+            await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        stream.done();
+    }
+}

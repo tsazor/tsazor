@@ -1,22 +1,36 @@
-<div class="@this.stackClass" style="@this.stackStyle">@childContent</div>
+@** A flexbox layout (div) that lines up its children horizontally or vertically, with a gap from
+    the token spacing scale and optional align, justify and wrap. *@
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.stackAttributes">@childContent</div>
 
 @code {
     /** Layout axis: horizontal (default) | vertical. */
-    @Parameter() direction: string = "horizontal";
-    /** Gap between children: xs | s | m (default) | l | xl. */
-    @Parameter() gap?: string;
-    /** flex align-items (start | center | end | stretch | baseline). */
-    @Parameter() align?: string;
-    /** flex justify-content (start | center | end | space-between | space-between…). */
-    @Parameter() justify?: string;
+    @Parameter() direction: "horizontal" | "vertical" = "horizontal";
+    /** Gap between children: xs | s | m | l | xl; no gap when omitted. */
+    @Parameter() gap?: "xs" | "s" | "m" | "l" | "xl";
+    /** flex align-items. */
+    @Parameter() align?: "start" | "center" | "end" | "stretch" | "baseline";
+    /** flex justify-content. */
+    @Parameter() justify?: "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly";
     /** Wraps on overflow. */
     @Parameter() wrap: boolean = false;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The items to lay out. */
     @Parameter() childContent?: RenderFragment;
 
     private get stackClass(): string {
         let cls = `fui-stack fui-stack--${this.direction === "vertical" ? "vertical" : "horizontal"}`;
         if (this.wrap) cls += " fui-stack--wrap";
         return cls;
+    }
+
+    private get stackAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.stackClass,
+            style: this.stackStyle,
+        }, this.additionalAttributes);
     }
 
     /** Dynamic flex values ride inline; everything visual lives in the tokens. */

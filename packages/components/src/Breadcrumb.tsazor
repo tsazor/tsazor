@@ -1,7 +1,0 @@
-<nav>
-    <ol class="breadcrumb">@childContent</ol>
-</nav>
-
-@code {
-    @Parameter() childContent?: RenderFragment;
-}

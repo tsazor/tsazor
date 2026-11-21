@@ -1,0 +1,48 @@
+@* components/list/field.tsx: the form-field shell — the label with an optional required dot, the control, then the
+   error line (role="alert") or the hint. React's Field clones its child to add aria-describedby and aria-invalid;
+   Tsazor can't clone a child, so the error comes from the form: `for` names the model field, and Field shows that
+   field's first message from the cascading EditContext (the StandardSchemaValidator's — react-hook-form's
+   `errors.x?.message`), while the runtime's inputs mark themselves aria-invalid. Outside a form, `error` is the text. *@
+@import { EditContext } from "@tsazor/runtime"
+
+<div class="@cn("space-y-1.5", additionalAttributes?.class as string)">
+    <Label for="@id" class="flex items-center gap-1.5">
+        <span>@label</span>
+        @if (required) {
+            <span class="text-[var(--color-destructive)]" aria-hidden="true">·</span>
+        }
+    </Label>
+    @childContent
+    @if (message) {
+        <p id="@(id)-error" class="text-[11.5px] leading-relaxed text-[var(--color-destructive)]" role="alert">@message</p>
+    } else if (hintContent || hint) {
+        <p id="@(id)-hint" class="text-[11.5px] leading-relaxed text-[var(--color-muted-foreground)]/85">
+            @if (hintContent) { @hintContent } else { @hint }
+        </p>
+    }
+</div>
+
+@code {
+    @Parameter() id!: string;
+    @Parameter() label!: string;
+    @Parameter() hint?: string;
+    @Parameter() hintContent?: RenderFragment;
+    /** The error text (outside a form, or to override the form's). */
+    @Parameter() error?: string;
+    /** The model field whose validation message shows (inside an EditForm). */
+    @Parameter() for?: string;
+    @Parameter() required: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+    @CascadingParameter({ type: EditContext }) editContext?: EditContext;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    protected override onInitialized(): void {
+        if (this.editContext) this.observe(this.editContext.onValidationStateChanged);
+    }
+
+    private get message(): string | undefined {
+        if (this.error) return this.error;
+        if (!this.for || !this.editContext) return undefined;
+        return this.editContext.getValidationMessages(this.for)[0];
+    }
+}

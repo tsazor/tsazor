@@ -1,0 +1,14 @@
+@** A paged grid: create a PaginationState, pass it to the DataGrid and to a Paginator; the
+    shared state drives both (QuickGrid's PaginationState). RowsPerPageOptions offers the sizes. *@
+@import { PaginationState } from "@tsazor/bootstrap"
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" Pagination="@pagination" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" />
+</DataGrid>
+<Paginator State="@pagination" PageSizeOptions="[3, 4, 6]" />
+
+@code {
+    private readonly pagination = new PaginationState();
+}

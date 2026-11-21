@@ -1,0 +1,34 @@
+@* pages/audits/detail.tsx's CorrelationBand: 2. the trace, span, correlation and request ids as copyable chips. *@
+@import { Fingerprint } from "lucide"
+@import type { AuditDetailDto } from "@/api/audits"
+@import CorrelationChip from "./CorrelationChip.tsazor"
+
+<div class="px-6 py-4">
+    <div class="mb-2 flex items-center gap-1.5">
+        <Icon icon="@Fingerprint" class="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+        <span class="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+            Correlation
+        </span>
+        <span class="ml-1 text-[10.5px] text-[var(--color-muted-foreground)]">
+            — paste into your observability stack
+        </span>
+    </div>
+    <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        @foreach (const slot of slots) {
+            <CorrelationChip @key="slot.label" label="@slot.label" value="@(slot.value ?? null)" />
+        }
+    </div>
+</div>
+
+@code {
+    @Parameter() event!: AuditDetailDto;
+
+    private get slots(): Array<{ label: string; value: string | null | undefined }> {
+        return [
+            { label: "Trace id", value: this.event.traceId },
+            { label: "Span id", value: this.event.spanId },
+            { label: "Correlation id", value: this.event.correlationId },
+            { label: "Request id", value: this.event.requestId },
+        ];
+    }
+}

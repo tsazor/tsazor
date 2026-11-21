@@ -1,0 +1,50 @@
+@** One entry of a ListGroup: plain content, a link when `href` is set, or a button that raises onClick
+    when a handler is given. Always an `<li>`; a link or button inside it makes the row keyboard
+    reachable. *@
+@if (href) {
+    <li class="@itemClass">
+        <a class="fui-list__action" href="@(disabled ? null : href)" aria-current="@ariaCurrent" aria-disabled="@ariaDisabled">@childContent</a>
+    </li>
+} else if (onClick) {
+    <li class="@itemClass">
+        <button type="button" class="fui-list__action" disabled="@disabled" aria-current="@ariaCurrent" @onclick="handleClick">@childContent</button>
+    </li>
+} else {
+    <li class="@itemClass" aria-current="@ariaCurrent" aria-disabled="@ariaDisabled">@childContent</li>
+}
+
+@code {
+    /** Marks the item active, the current one (aria-current, on the item's link, button or itself). */
+    @Parameter() active: boolean = false;
+    /**
+     * Renders the disabled look and says so (aria-disabled); a button item's button is disabled and onClick suppressed,
+     * a link item's link goes nowhere (no href).
+     */
+    @Parameter() disabled: boolean = false;
+    /** Makes the item a link. */
+    @Parameter() href?: string;
+    /** Makes the item a button that fires on click, Enter or Space. */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The item's content. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get itemClass(): string {
+        const parts = ["fui-list__item"];
+        if (this.href || this.onClick) parts.push("fui-list__item--action");
+        if (this.active) parts.push("fui-list__item--active");
+        if (this.disabled) parts.push("fui-list__item--disabled");
+        return parts.join(" ");
+    }
+
+    private get ariaDisabled(): string | null {
+        return this.disabled ? "true" : null;
+    }
+
+    private get ariaCurrent(): string | null {
+        return this.active ? "true" : null;
+    }
+
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        return this.disabled ? undefined : this.onClick?.invokeAsync(e);
+    }
+}

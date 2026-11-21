@@ -1,0 +1,117 @@
+@** A Fluent UI 2 avatar (Fluent UI Blazor's FluentAvatar): a person's `image`, else the initials of `name` (or
+    `initials`), else an icon (a person by default). `color` is neutral (the default), brand, colorful (picked by the
+    name, the same one every time) or one of Fluent's named colors (dark-red … anchor); `shape` circular | square;
+    `size` in px (16–128). `active` rings it (or shadows it, `activeAppearance`) for someone present; `active="false"`
+    dims it. With onClick it is a button (Enter and Space click it). `name` is its accessible name and, with `tooltip`,
+    its tooltip. A badge (presence, a count) goes in its content and joins the name ("Ada Lovelace Available": the image's
+    children are presentational, so aria-labelledby names it by itself and the badge, as Fluent UI React does). *@
+@import { type AvatarColor, type IconValue, uniqueId } from "@tsazor/ui"
+@import { avatarColorFor, avatarIconSize, avatarInitials } from "@tsazor/ui/kit"
+@import { Person20Regular } from "./core-icons"
+@import { withAttributes } from "./attributes"
+@import { tooltip as tooltipAttachment } from "./tooltip-attachment"
+
+<span @attributes="@this.rootAttributes" @onclick="handleClick" @onkeydown="handleKeydown" @attach="@this.tooltipAttach">
+    @if (image) {
+        <img class="fui-avatar__image" src="@image" alt="" />
+    } else if (this.text !== "") {
+        <span class="fui-avatar__initials" aria-hidden="true">@this.text</span>
+    } else {
+        <Icon value="@(icon ?? Person20Regular)" size="@avatarIconSize(size)" class="fui-avatar__icon" />
+    }
+    @if (childContent) {
+        <span id="@this.badgeId" style="display: contents">@childContent</span>
+    }
+</span>
+
+@code {
+    /** The person's name: the initials come from it, and it is the avatar's accessible name. */
+    @Parameter() name?: string;
+    /** Initials of your own ("JD"), instead of the name's. */
+    @Parameter() initials?: string;
+    /** An image of the person; it wins over the initials. */
+    @Parameter() image?: string;
+    /** The icon without an image and initials; a person by default. */
+    @Parameter() icon?: IconValue;
+    /** neutral (default), brand, colorful (picked by the name) or a named color (dark-red, teal, …). */
+    @Parameter() color: AvatarColor = "neutral";
+    /** What `colorful` hashes instead of the name (a user id: the color stays when the name changes). */
+    @Parameter() colorId?: string;
+    /** circular (default) | square. */
+    @Parameter() shape: "circular" | "square" = "circular";
+    /** The size in px: 16, 20, 24, 28, 32 (default), 36, 40, 48, 56, 64, 72, 96, 120 or 128. */
+    @Parameter() size: number = 32;
+    /** true rings the avatar (someone present), false dims it; unset, neither. */
+    @Parameter() active?: boolean;
+    /** How `active` shows: ring (default), shadow or ring-shadow. */
+    @Parameter() activeAppearance: "ring" | "shadow" | "ring-shadow" = "ring";
+    /** A tooltip on the avatar (Fluent UI Blazor's `Tooltip`); its name is a good one. */
+    @Parameter() tooltip?: string;
+    /** Makes the avatar a button. */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** A badge over the avatar (presence, a count). */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get text(): string {
+        return this.initials ?? avatarInitials(this.name);
+    }
+
+    private get clickable(): boolean {
+        return this.onClick !== undefined;
+    }
+
+    private get tooltipAttach() {
+        return this.tooltip ? tooltipAttachment(this.tooltip) : null;
+    }
+
+    private get avatarClass(): string {
+        let cls = `fui-avatar fui-avatar--${avatarColorFor(this.color, this.name, this.colorId)}`;
+        if (this.shape === "square") cls += " fui-avatar--square";
+        if (this.active === true) cls += ` fui-avatar--active-${this.activeAppearance}`;
+        if (this.active === false) cls += " fui-avatar--inactive";
+        return cls;
+    }
+
+    /** The badge's wrapper id: the named avatar's aria-labelledby takes it after its own name. */
+    private readonly badgeId = uniqueId("fui-avatar-badge");
+
+    /** The root's id: its own (from the attributes) or one made for the aria-labelledby that points back at it. */
+    private readonly ownId = uniqueId("fui-avatar");
+
+    /**
+     * A named avatar is an image (or a button) with the name; one without a name is decoration — unless it has a badge,
+     * which stays readable. A badge joins a name: the image's (the button's) children are presentational, so the root
+     * names itself by aria-labelledby, itself (its aria-label) and the badge.
+     */
+    private get rootAttributes(): Record<string, unknown> {
+        const named = this.name !== undefined && this.name !== "";
+        return withAttributes({
+            class: this.avatarClass,
+            style: `--fui-avatar-size: ${this.size}px`,
+            role: this.clickable ? "button" : named ? "img" : null,
+            "aria-label": named ? this.name : null,
+            "aria-hidden": !named && !this.clickable && this.childContent === undefined ? "true" : null,
+            "aria-labelledby": named && this.childContent !== undefined ? `${this.rootId} ${this.badgeId}` : null,
+            id: named && this.childContent !== undefined ? this.rootId : null,
+            tabindex: this.clickable ? 0 : null,
+        }, this.additionalAttributes);
+    }
+
+    private get rootId(): string {
+        const own = this.additionalAttributes?.id;
+        return typeof own === "string" && own !== "" ? own : this.ownId;
+    }
+
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        return this.onClick?.invokeAsync(e);
+    }
+
+    /** Enter and Space click a button avatar, as they click a button. */
+    private handleKeydown(e: KeyboardEvent): Promise<void> | undefined {
+        if (!this.clickable || (e.key !== "Enter" && e.key !== " ")) return undefined;
+        e.preventDefault();
+        return this.onClick?.invokeAsync(new MouseEvent("click"));
+    }
+}

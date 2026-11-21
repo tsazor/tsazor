@@ -1,0 +1,30 @@
+@* pages/webhooks/detail.tsx's DeliveryRow: one delivery attempt — success or failure, the time, the event, the error,
+   the HTTP status and the attempt number. *@
+@import { CheckCircle2, XCircle } from "lucide"
+@import type { WebhookDeliveryDto } from "@/api/webhooks"
+@import { formatTimestamp } from "./webhook-format"
+
+<li class="grid grid-cols-[auto_8rem_auto_1fr_auto_auto] items-center gap-3 px-5 py-2.5">
+    <Icon icon="@(delivery.success ? CheckCircle2 : XCircle)" class="@cn("h-4 w-4", tone)" />
+    <span class="font-mono text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
+        @formatTimestamp(delivery.attemptedAtUtc)
+    </span>
+    <code class="code-chip">@delivery.eventType</code>
+    <span class="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+        @(delivery.errorMessage ?? (delivery.success ? "OK" : "Failed"))
+    </span>
+    <Badge variant="@(delivery.success ? "success" : "danger")" class="font-mono uppercase tracking-[0.14em]">
+        HTTP @(delivery.httpStatusCode || "—")
+    </Badge>
+    <span class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+        try @delivery.attemptCount
+    </span>
+</li>
+
+@code {
+    @Parameter() delivery!: WebhookDeliveryDto;
+
+    private get tone(): string {
+        return this.delivery.success ? "text-[var(--color-success)]" : "text-[var(--color-destructive)]";
+    }
+}

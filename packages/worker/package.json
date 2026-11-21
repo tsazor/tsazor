@@ -1,0 +1,40 @@
+{
+  "name": "@tsazor/worker",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/worker"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/worker#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Heavy work off the main thread: typed calls into Web Workers with callbacks, cancellation (AbortSignal), transfer, errors, pools and an in-process test double — Tsazor's answer to Task.Run.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

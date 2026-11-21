@@ -1,0 +1,69 @@
+@* Uploads files into the open folder (FluentCMS's FileUploadModal): choosing files checks them against the
+   site's limits and uploads them; Submit tries again. *@
+@import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+@import type { FileUploadConfig } from "../../../api/models"
+@import { DEFAULT_UPLOAD_CONFIG, humanizeFileSize, uploadProblem } from "../../Base/assets"
+
+<Dialog isOpen="@visible" title="Upload File" onClosed="@this.cancel">
+    <ChildContent>
+        <div class="upload">
+            <FileInput label="Files" multiple accept="@this.accept" help="@this.help" onChange="@this.filesChanged" />
+            @if (this.error !== undefined) {
+                <Alert intent="danger">@this.error</Alert>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        <Button intent="primary" disabled="@(this.files.length === 0)" onClick="@this.submit">Submit</Button>
+        <Button onClick="@this.cancel">Cancel</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @Parameter() visible = false;
+    @Parameter() config: FileUploadConfig = DEFAULT_UPLOAD_CONFIG;
+    @Parameter() onSubmit?: EventCallback<File[]>;
+    @Parameter() onCancel?: EventCallback;
+
+    private files: File[] = [];
+    private error?: string;
+
+    /** FluentCMS's allowed extensions as the input's filter; "*" is any file. */
+    private get accept(): string | undefined {
+        const allowed = this.config.allowedExtensions;
+        return allowed && allowed !== "*" ? allowed : undefined;
+    }
+
+    private get help(): string {
+        return `Up to ${this.config.maxCount} files of up to ${humanizeFileSize(this.config.maxSize)} each.`;
+    }
+
+    private async filesChanged(args: InputFileChangeEventArgs): Promise<void> {
+        try {
+            // Blazor's GetMultipleFiles throws on more than maxCount, with its own message.
+            this.files = [...args.getMultipleFiles(this.config.maxCount)];
+        } catch (error) {
+            this.files = [];
+            this.error = error instanceof Error ? error.message : String(error);
+            return;
+        }
+        await this.submit();
+    }
+
+    private async submit(): Promise<void> {
+        this.error = uploadProblem(this.files, this.config);
+        if (this.error !== undefined) return;
+        try {
+            await this.onSubmit?.invokeAsync(this.files);
+            this.files = [];
+        } catch (error) {
+            this.error = error instanceof Error ? error.message : String(error);
+        }
+    }
+
+    private cancel(): Promise<void> | undefined {
+        this.files = [];
+        this.error = undefined;
+        return this.onCancel?.invokeAsync();
+    }
+}

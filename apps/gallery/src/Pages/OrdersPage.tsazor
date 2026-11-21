@@ -15,7 +15,16 @@
             <Button appearance="subtle" onClick="@(() => this.setSort("total"))">Sort total</Button>
         </div>
 
-        <Table items="@this.rows" headerContent="@this.header" rowContent="@this.rowFor" hover="true" colSpan="4" />
+        <Table items="@this.rows" hover="true" colSpan="4">
+            <HeaderContent>
+                <tr><th>Order</th><th>Customer</th><th>Total (€)</th><th>Status</th></tr>
+            </HeaderContent>
+            <RowContent Context="row">
+                <tr class="orders-row" @onclick="() => this.openDetail(row)">
+                    <td>#@row.id</td><td>@row.customer</td><td>@row.total</td><td>@row.status</td>
+                </tr>
+            </RowContent>
+        </Table>
 
         <div class="pager">
             <Button appearance="subtle" onClick="@(() => this.page(0))">&lt; Prev</Button>
@@ -45,42 +54,6 @@
     private pageIndex = 0;
     private pageSize = 3;
     private open = false;
-
-    private header: RenderFragment = (b) => {
-        b.openElement(0, "tr");
-        b.openElement(1, "th");
-        b.addContent(2, "Order");
-        b.closeElement();
-        b.openElement(3, "th");
-        b.addContent(4, "Customer");
-        b.closeElement();
-        b.openElement(5, "th");
-        b.addContent(6, "Total (€)");
-        b.closeElement();
-        b.openElement(7, "th");
-        b.addContent(8, "Status");
-        b.closeElement();
-        b.closeElement();
-    };
-
-    private rowFor = (row: { id: number; customer: string; total: number; status: string }): RenderFragment => (b) => {
-        b.openElement(0, "tr");
-        b.addEventHandler(1, "onclick", EventCallback.bind(this, () => this.openDetail(row)));
-        b.addAttribute(2, "class", "orders-row");
-        b.openElement(3, "td");
-        b.addContent(4, "#" + row.id);
-        b.closeElement();
-        b.openElement(5, "td");
-        b.addContent(6, row.customer);
-        b.closeElement();
-        b.openElement(7, "td");
-        b.addContent(8, String(row.total));
-        b.closeElement();
-        b.openElement(9, "td");
-        b.addContent(10, row.status);
-        b.closeElement();
-        b.closeElement();
-    };
 
     private selected?: { id: number; customer: string; total: number; status: string };
 

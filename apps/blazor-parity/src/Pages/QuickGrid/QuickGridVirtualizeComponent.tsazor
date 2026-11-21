@@ -1,0 +1,32 @@
+@page "/quickgrid/virtualize"
+@import type { GridItemsProvider, GridItemsProviderResult } from "@tsazor/fluent"
+@import type { Person } from "./models"
+
+<p id="items-provider-call-count">@itemsProviderCallCount</p>
+
+<div id="grid" style="height: 200px; overflow: auto">
+    <DataGrid ItemsProvider="@itemsProvider" Virtualize="@true" ItemSize="50">
+        <PropertyColumn Property="(p) => p.id" />
+        <PropertyColumn Property="(p) => p.name" />
+    </DataGrid>
+</div>
+
+@code {
+    private itemsProvider!: GridItemsProvider<Person>;
+
+    private itemsProviderCallCount = 0;
+
+    protected override onInitialized(): void {
+        this.itemsProvider = () => this.getItems();
+    }
+
+    private async getItems(): Promise<GridItemsProviderResult<Person>> {
+        // Blazor awaits Task.CompletedTask: the rest runs synchronously in the same task.
+        this.itemsProviderCallCount++;
+        this.stateHasChanged();
+        return {
+            items: range(1, 100).map((i) => ({ id: i, name: `Person ${i}` })),
+            totalItemCount: 100,
+        };
+    }
+}

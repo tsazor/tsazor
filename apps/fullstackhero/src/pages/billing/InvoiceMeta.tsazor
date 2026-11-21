@@ -1,0 +1,37 @@
+@* pages/billing/invoice-detail.tsx's hero description: the invoice number, status and purpose badges, and the mono
+   line with tenant, period and the dates of its life cycle. The original writes it inline as EntityPageHeader's
+   `description`; it is a component here because the hero renders in two branches (with and without the Download
+   action: React's children `{canManageBilling && <Button/>}` may be `false`, a Tsazor child content can't be absent
+   by condition). *@
+@import type { InvoiceDto } from "@/api/billing"
+@import { formatDateLong, formatPeriod, invoiceStatusVariant } from "@/components/billing/billing-format"
+
+<span class="flex flex-wrap items-center gap-2">
+    <code class="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-tight">@invoice.invoiceNumber</code>
+    <Badge variant="@invoiceStatusVariant(invoice.status)">@invoice.status</Badge>
+    @if (invoice.purpose) {
+        <Badge variant="outline">@(invoice.purpose === "Subscription" ? "Subscription" : "Usage")</Badge>
+    }
+    <span class="font-mono text-[11px] text-[var(--color-muted-foreground)]">
+        tenant @invoice.tenantId · period @formatPeriod(invoice.periodYear, invoice.periodMonth) · created @formatDateLong(invoice.createdAtUtc)
+        @if (invoice.periodStartUtc && invoice.periodEndUtc) {
+            <text> · term @formatDateLong(invoice.periodStartUtc) – @formatDateLong(invoice.periodEndUtc)</text>
+        }
+        @if (invoice.issuedAtUtc) {
+            <text> · issued @formatDateLong(invoice.issuedAtUtc)</text>
+        }
+        @if (invoice.dueAtUtc && invoice.status === "Issued") {
+            <span class="text-[var(--color-warning)]"> · due @formatDateLong(invoice.dueAtUtc)</span>
+        }
+        @if (invoice.paidAtUtc) {
+            <span class="text-[var(--color-success)]"> · paid @formatDateLong(invoice.paidAtUtc)</span>
+        }
+        @if (invoice.voidedAtUtc) {
+            <span class="text-[var(--color-destructive)]"> · voided @formatDateLong(invoice.voidedAtUtc)</span>
+        }
+    </span>
+</span>
+
+@code {
+    @Parameter() invoice!: InvoiceDto;
+}

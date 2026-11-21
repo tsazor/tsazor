@@ -1,0 +1,11 @@
+@* pages/users/create.tsx: creating a user is a dialog on the list page now; a bookmarked /users/new goes to /users
+   (React Router's `<Navigate to="/users" replace />`). Signed-in only, as ProtectedRoute around it. *@
+@page "/users/new"
+@authorize
+@inject NavigationManager navigation
+
+@code {
+    protected override onInitialized(): void {
+        this.navigation.navigateTo("/users", { replaceHistoryEntry: true });
+    }
+}

@@ -1,14 +1,27 @@
-<span class="fui-spacer" style="@this.spacerStyle"></span>
+@** An empty span that adds a fixed amount of space from the token spacing scale: height for
+    direction vertical, width for horizontal. Use it between items in a Stack. *@
+@import { withAttributes } from "./attributes"
+
+<span @attributes="@this.spacerAttributes"></span>
 
 @code {
     /** Axis the fixed thickness applies to: vertical (default) | horizontal. */
-    @Parameter() direction: string = "vertical";
-    /** Thickness from the token spacing scale: xs | s | m | l | xl. */
-    @Parameter() size: string = "m";
+    @Parameter() direction: "vertical" | "horizontal" = "vertical";
+    /** Thickness from the token spacing scale: xs | s | m (default) | l | xl. */
+    @Parameter() size: "xs" | "s" | "m" | "l" | "xl" = "m";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     /** Axis-dependent: vertical stacks stretch across, so only the height is fixed. */
     private get spacerStyle(): string {
         const axis = this.direction === "horizontal" ? "width" : "height";
         return `${axis}: var(--fui-spacing-${this.size})`;
+    }
+
+    private get spacerAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: "fui-spacer",
+            style: this.spacerStyle,
+        }, this.additionalAttributes);
     }
 }

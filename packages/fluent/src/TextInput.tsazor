@@ -1,9 +1,35 @@
-@inherits InputBase
+@** A Fluent UI 2 single-line text field (input type text | password | email, InputBase; bind it
+    with @bind) with an optional label; the value updates on change. `mask` shapes the text as it is typed
+    (MudBlazor's `Mask`: a PatternMask, "(000) 000-0000"). `contentBefore` and `contentAfter` put an icon or a
+    button inside the field (MudBlazor's adornments). Inside a FluentForm it shows the field's first
+    validation message (role="alert", aria-describedby) once a submit was attempted; aria-invalid as soon as it shows invalid. *@
+@import { withAttributes } from "./attributes"
+@import { uniqueId, type PatternMask } from "@tsazor/ui"
+@import { ImmediateInput, maskInput, toMask } from "@tsazor/ui/kit"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
+
+@inherits InputBase<string>
+
 <div class="@this.wrapperClass">
     @if (this.label) {
-        <label class="fui-input__label" for="@this.labelFor">@this.label</label>
+        <label class="fui-input__label" for="@this.elementId">@this.label</label>
     }
-    <input id="@this.id" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    @if (this.contentBefore || this.contentAfter) {
+        <div class="fui-input-group">
+            @if (this.contentBefore) {
+                <span class="fui-input-group__before">@this.contentBefore</span>
+            }
+            <input @ref="element" id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @oninput="this.handleInput" />
+            @if (this.contentAfter) {
+                <span class="fui-input-group__after">@this.contentAfter</span>
+            }
+        </div>
+    } else {
+        <input @ref="element" id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @oninput="this.handleInput" />
+    }
+    @if (this.help) {
+        <span class="fui-input__help" id="@this.helpId">@this.help</span>
+    }
     @if (this.message) {
         <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
     }
@@ -12,23 +38,47 @@
 @code {
     /** Optional field label (clicking focuses the input). */
     @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
     /** Placeholder text (forwarded, not captured). */
     @Parameter() placeholder?: string;
-    /** native, password or email. */
-    @Parameter() type: string = "text";
+    /** The native input type, for text (default "text"). A date or a time is a DateInput, a number a NumberInput (Blazor's InputDate, InputNumber). */
+    @Parameter() type: "text" | "password" | "email" | "search" | "tel" | "url" = "text";
+    /** true disables the native input. */
     @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
-    /** Element id; needed when a `<label for>` association is wanted. */
+    /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;
     /** Overrides the input's accessible name. */
     @Parameter() ariaLabel?: string;
+    /** The value follows the typing once it pauses for immediateDelay ms (Fluent UI Blazor's `Immediate`); otherwise it updates on change. */
+    @Parameter() immediate: boolean = false;
+    /** The pause in ms before an immediate update (`ImmediateDelay`). */
+    @Parameter() immediateDelay: number = 200;
+    /** Shapes the text as it is typed: a PatternMask, or its pattern as text ("(000) 000-0000"; MudBlazor's `Mask`). */
+    @Parameter() mask?: PatternMask | string;
+    /** Content inside the field before the text — an icon (Fluent's `contentBefore`, MudBlazor's start adornment). */
+    @Parameter() contentBefore?: RenderFragment;
+    /** Content inside the field after the text — a button that shows the password, say (MudBlazor's end adornment). */
+    @Parameter() contentAfter?: RenderFragment;
 
-    private get labelFor(): string | null {
-        return this.id ?? null;
+    private generatedId?: string;
+
+    /** Explicit or generated: one stable id per instance (label `for`, `aria-describedby`). */
+    private get elementId(): string {
+        return this.id ?? (this.generatedId ??= uniqueId("fui-input"));
+    }
+
+    private get labelFor(): string {
+        return this.elementId;
     }
 
     private get displayValue(): string {
-        return this.currentValue ?? "";
+        const value = this.currentValue ?? "";
+        return toMask(this.mask)?.format(value) ?? value;
     }
 
     private get wrapperClass(): string {
@@ -38,45 +88,67 @@
         return base;
     }
 
-    /** Fluent classes + validation state + user pass-through attributes. */
+    /** Fluent classes + validation state + `@attributes` pass-through (class appends). */
     private get inputAttributes(): Record<string, unknown> {
-        const attrs: Record<string, unknown> = {
+        return withAttributes({
             class: this.inputClass,
-        };
-        if (this.placeholder) attrs.placeholder = this.placeholder;
-        if (this.disabled) attrs.disabled = true;
-        if (this.required) attrs.required = true;
-        if (this.ariaLabel) attrs["aria-label"] = this.ariaLabel;
-        if (this.message) {
-            attrs["aria-invalid"] = "true";
-            attrs["aria-describedby"] = this.messageId;
-        }
-        for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
-            if (name === "class") continue;
-            attrs[name] = value;
-        }
-        return attrs;
+            placeholder: this.placeholder,
+            disabled: this.disabled ? true : undefined,
+            readonly: this.readOnly ? true : undefined,
+            required: this.required ? true : undefined,
+            "aria-label": this.ariaLabel,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
+            "aria-describedby": this.describedBy,
+            inputmode: toMask(this.mask)?.numeric ? "numeric" : undefined,
+        }, this.additionalAttributes);
     }
 
     private get inputClass(): string {
         const base = "fui-input";
         if (this.fieldClass.includes("invalid")) return `${base} fui-input--invalid`;
-        if (this.fieldClass) return `${base} fui-input--valid`;
+        // Blazor's four states: green only for "modified valid" — an untouched
+        // "valid" field stays quiet.
+        if (this.fieldClass.includes("modified")) return `${base} fui-input--valid`;
         return base;
     }
 
-    private get messageId(): string | null {
-        return this.id ? `${this.id}-message` : `fui-input-message`;
+    private get helpId(): string {
+        return `${this.elementId}-help`;
     }
 
-    /** The single validation message for the bound field (when invalid). */
+    /** The help text and (once shown) the message describe the field. */
+    private get describedBy(): string | undefined {
+        const ids = [this.help ? this.helpId : null, this.message ? this.messageId : null].filter((id): id is string => id !== null);
+        return ids.length > 0 ? ids.join(" ") : undefined;
+    }
+
+    private get messageId(): string {
+        return `${this.elementId}-message`;
+    }
+
+    /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
     private get message(): string {
-        if (!this.editContext || !this.ValueExpression) return "";
-        const messages = this.editContext.getValidationMessages(this.ValueExpression);
+        if (!hasSubmitAttempt(this.editContext)) return "";
+        if (!this.editContext || !this.valueExpression) return "";
+        const messages = this.editContext.getValidationMessages(this.valueExpression);
         return messages[0] ?? "";
     }
 
+    private immediateInput?: ImmediateInput;
+
+    private handleInput(e: Event): void {
+        const mask = toMask(this.mask);
+        if (mask !== undefined) maskInput(e.target as HTMLInputElement, mask);
+        if (!this.immediate) return;
+        this.immediateInput ??= new ImmediateInput(this.disposeSignal);
+        this.immediateInput.input(e, this.immediateDelay, (value) => {
+            this.currentValue = mask?.value(value) ?? value;
+        });
+    }
+
     private handleChange(e: Event): void {
-        this.currentValue = (e.target as HTMLInputElement).value;
+        this.immediateInput?.cancel();
+        const text = (e.target as HTMLInputElement).value;
+        this.currentValue = toMask(this.mask)?.value(text) ?? text;
     }
 }

@@ -1,0 +1,34 @@
+/* Toolbar — Fluent 2: controls in a row (or a column) with a small gap; dense when small. */
+
+.fui-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  padding: var(--fui-spacing-xs);
+  font-family: var(--fui-font-family);
+}
+
+.fui-toolbar--vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.fui-toolbar--small {
+  gap: 2px;
+  padding: 2px;
+}
+
+.fui-toolbar--wrap {
+  flex-wrap: wrap;
+}
+
+/* A Divider between groups: the toolbar's height, a little air around it. */
+.fui-toolbar > .fui-divider--vertical {
+  height: auto;
+  margin: var(--fui-spacing-xs);
+}
+
+.fui-toolbar--vertical > .fui-divider {
+  width: auto;
+  margin: var(--fui-spacing-xs) 0;
+}

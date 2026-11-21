@@ -1,0 +1,137 @@
+@* pages/roles/list.tsx: the roles — system roles (Admin, Basic) first, then by name — searched in the browser (a
+   200ms debounce), as cards on mobile and as a grid table on desktop; "New role" opens the create dialog. *@
+@page "/roles"
+@authorize({ policy: "Permissions.Roles.View" })
+@import { Plus, Shield, ShieldCheck } from "lucide"
+@import { listRoles, type RoleDto } from "@/api/roles"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import CreateRoleDialog from "@/components/roles/CreateRoleDialog.tsazor"
+@import RoleDesktopRow from "./RoleDesktopRow.tsazor"
+@import RoleMobileCard from "./RoleMobileCard.tsazor"
+@inject NavigationManager navigation
+
+<div class="space-y-4 sm:space-y-6">
+    <EntityPageHeader icon="@Shield" title="Roles" total="@(query.result.data ? roles.length : null)" unit="role"
+                      description="Define what people can do. Each role bundles a set of permissions; users inherit a role's permissions by being assigned to it.">
+        <Button onClick="@(() => createOpen = true)" class="h-9 flex-1 gap-1.5 rounded-lg px-4 text-[13px] font-semibold sm:flex-none">
+            <Icon icon="@Plus" class="size-4" />
+            New role
+        </Button>
+    </EntityPageHeader>
+
+    @* Search *@
+    <div class="relative w-full max-w-sm">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+        </span>
+        <input type="search" value="@search" @oninput="this.onSearch" placeholder="Search by name or description…" aria-label="Search roles"
+               class="h-9 w-full rounded-md border border-[var(--color-input)] bg-transparent pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)] focus-visible:border-[var(--color-ring)] focus-visible:ring-[3px] focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]" />
+    </div>
+
+    @if (query.result.isError) {
+        <ErrorBand message="@(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load roles.")" />
+    }
+
+    @if (query.result.isLoading) {
+        <LoadingRow label="Loading roles" />
+    }
+
+    @if (!query.result.isLoading && filtered.length === 0 && !query.result.isError) {
+        @if (debounced.length > 0) {
+            <div class="py-16 text-center">
+                <p class="font-display text-2xl">No roles found.</p>
+                <p class="mt-1 text-sm text-[var(--color-muted-foreground)]">Nothing matches “@debounced”. Try a different term.</p>
+                <Button variant="outline" class="mt-4 h-9 rounded-lg px-4 text-[13px]" onClick="@clearSearch">Clear search</Button>
+            </div>
+        } else {
+            <EmptyState icon="@ShieldCheck" kicker="// no roles" title="No roles defined yet." description="Create your first role to start bundling permissions.">
+                <Action>
+                    <Button onClick="@(() => createOpen = true)" class="h-9 rounded-lg px-4 text-[13px]">
+                        <Icon icon="@Plus" class="mr-1.5 h-4 w-4" /> New role
+                    </Button>
+                </Action>
+            </EmptyState>
+        }
+    }
+
+    @if (filtered.length > 0) {
+        <div>
+            <p class="mb-3 text-[12px] font-medium text-[var(--color-muted-foreground)]">@filtered.length role@(filtered.length !== 1 ? "s" : "") found</p>
+
+            @* Mobile card list *@
+            <div class="space-y-2 md:hidden">
+                @foreach (const role of filtered) {
+                    <RoleMobileCard @key="role.id" role="@role" onClick="@(() => open(role))" />
+                }
+            </div>
+
+            @* Desktop table *@
+            <div class="hidden overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs md:block">
+                @* Table header *@
+                <div class="@cn("grid items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-muted)]/40 px-4 py-2.5", RoleDesktopRow.columns)">
+                    <span class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Name</span>
+                    <span class="hidden text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] lg:block">Description</span>
+                    <span class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Permissions</span>
+                    <span></span>
+                </div>
+
+                <ol class="divide-y divide-[var(--color-border)]">
+                    @foreach (const role of filtered) {
+                        <RoleDesktopRow @key="role.id" role="@role" onClick="@(() => open(role))" />
+                    }
+                </ol>
+            </div>
+        </div>
+    }
+
+    <CreateRoleDialog @bind-open="createOpen" />
+</div>
+
+@code {
+    private search = "";
+    private debounced = "";
+    private createOpen = false;
+    private timer?: ReturnType<typeof setTimeout>;
+
+    private readonly query = new Query(() => ({ queryKey: ["roles"], queryFn: listRoles }));
+
+    protected override onInitialized(): void {
+        this.observe(this.query);
+    }
+
+    /** System roles first, then alphabetical. */
+    private get roles(): RoleDto[] {
+        const system = (role: RoleDto): number => (RoleDesktopRow.systemRoles.has(role.name) ? 0 : 1);
+        return [...(this.query.result.data ?? [])].sort((a, b) => system(a) - system(b) || a.name.localeCompare(b.name));
+    }
+
+    private get filtered(): RoleDto[] {
+        const term = this.debounced;
+        if (!term) return this.roles;
+        return this.roles.filter((role) => role.name.toLowerCase().includes(term) || (role.description ?? "").toLowerCase().includes(term));
+    }
+
+    /** The original's 200ms debounce (useEffect + setTimeout). */
+    private onSearch(event: Event): void {
+        this.search = (event.target as HTMLInputElement).value;
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+            this.debounced = this.search.trim().toLowerCase();
+            this.stateHasChanged();
+        }, 200);
+    }
+
+    private clearSearch(): void {
+        this.search = "";
+        this.debounced = "";
+    }
+
+    private open(role: RoleDto): void {
+        this.navigation.navigateTo(`/roles/${role.id}`);
+    }
+
+    dispose(): void {
+        clearTimeout(this.timer);
+    }
+}

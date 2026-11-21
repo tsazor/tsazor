@@ -1,0 +1,15 @@
+@* A multi-file field's settings (FluentCMS's MultiFileFieldSettings). *@
+@inherits BaseFieldSettingView<MultiFileFieldModel>
+@import { BaseFieldSettingView } from "../BaseFieldSettingView"
+@import type { MultiFileFieldModel } from "../field-models"
+
+<FormModal visible title="@this.formTitle" size="large" model="@model" onSubmit="@this.submitForm" onCancel="@onCancel">
+    <Tabs ariaLabel="Field settings">
+        <Tab title="Basic">
+            <FieldBasics model="@model" />
+        </Tab>
+        <Tab title="View">
+            <FieldViewSettings model="@model" />
+        </Tab>
+    </Tabs>
+</FormModal>

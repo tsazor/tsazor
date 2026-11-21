@@ -1,0 +1,115 @@
+/**
+ * Avatar (Fluent UI Blazor's FluentAvatar): image, else initials, else an icon; named by `name`; colorful picks a
+ * color by the name; a button with onClick (Enter and Space click it).
+ */
+import { afterEach, describe, expect, it } from "vitest";
+import { renderTree, type RenderResult } from "@tsazor/testing";
+import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { avatarColorFor } from "@tsazor/ui/kit";
+import { Avatar } from "../dist/index.js";
+
+let mounted: RenderResult[] = [];
+afterEach(() => {
+  for (const result of mounted.splice(0)) result.dispose();
+  document.body.innerHTML = "";
+});
+
+async function avatar(attrs: (b: RenderTreeBuilder) => void): Promise<HTMLElement> {
+  const result = await renderTree((b) => {
+    b.openComponent(0, Avatar);
+    attrs(b);
+    b.closeComponent();
+  });
+  mounted.push(result);
+  await result.settle();
+  return result.container.querySelector<HTMLElement>(".fui-avatar")!;
+}
+
+describe("Avatar", () => {
+  it("shows the name's initials and is an image named by it", async () => {
+    const root = await avatar((b) => b.addAttribute(1, "name", "Ada Lovelace"));
+    expect(root.textContent).toBe("AL");
+    expect(root.getAttribute("role")).toBe("img");
+    expect(root.getAttribute("aria-label")).toBe("Ada Lovelace");
+    expect(root.className).toBe("fui-avatar fui-avatar--neutral");
+    expect(root.style.getPropertyValue("--fui-avatar-size")).toBe("32px");
+  });
+
+  it("an image wins over the initials; without both it shows a person icon", async () => {
+    const pictured = await avatar((b) => {
+      b.addAttribute(1, "name", "Ada Lovelace");
+      b.addAttribute(2, "image", "/ada.png");
+    });
+    expect(pictured.querySelector("img")!.getAttribute("src")).toBe("/ada.png");
+    expect(pictured.querySelector("img")!.getAttribute("alt")).toBe("");
+    expect(pictured.textContent).toBe("");
+    const plain = await avatar((b) => b.addAttribute(1, "size", 48));
+    const icon = plain.querySelector("svg")!;
+    expect(icon.getAttribute("width")).toBe("24");
+    // No name: decoration.
+    expect(plain.getAttribute("aria-hidden")).toBe("true");
+    expect(plain.hasAttribute("role")).toBe(false);
+  });
+
+  it("colorful picks the name's color; initials, shape, size and active come through", async () => {
+    const root = await avatar((b) => {
+      b.addAttribute(1, "name", "Grace Hopper");
+      b.addAttribute(2, "color", "colorful");
+      b.addAttribute(3, "initials", "GH!");
+      b.addAttribute(4, "shape", "square");
+      b.addAttribute(5, "active", true);
+    });
+    expect(root.className).toBe(`fui-avatar fui-avatar--${avatarColorFor("colorful", "Grace Hopper")} fui-avatar--square fui-avatar--active-ring`);
+    expect(root.textContent).toBe("GH!");
+    const dimmed = await avatar((b) => b.addAttribute(1, "active", false));
+    expect(dimmed.className).toContain("fui-avatar--inactive");
+  });
+
+  it("with onClick it is a button that Enter and Space click", async () => {
+    let clicks = 0;
+    const root = await avatar((b) => {
+      b.addAttribute(1, "name", "Ada Lovelace");
+      b.addAttribute(2, "onClick", EventCallback.unbound(() => {
+        clicks++;
+      }));
+    });
+    expect(root.getAttribute("role")).toBe("button");
+    expect(root.getAttribute("tabindex")).toBe("0");
+    root.click();
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    root.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(clicks).toBe(3);
+  });
+  it("a badge joins the name (the image's children are presentational) and stays readable on an unnamed avatar", async () => {
+    const badge = (b: RenderTreeBuilder): void => {
+      b.openElement(0, "span");
+      b.addAttribute(1, "role", "img");
+      b.addAttribute(2, "aria-label", "Available");
+      b.closeElement();
+    };
+    const named = await avatar((b) => {
+      b.addAttribute(1, "name", "Ada Lovelace");
+      b.addAttribute(2, "childContent", badge);
+    });
+    const wrapper = named.querySelector("[role=img][aria-label=Available]")!.parentElement!;
+    expect(named.getAttribute("aria-label")).toBe("Ada Lovelace");
+    expect(named.getAttribute("aria-labelledby")).toBe(`${named.id} ${wrapper.id}`);
+    expect(named.id).not.toBe("");
+    const ownId = await avatar((b) => {
+      b.addAttribute(1, "name", "Ada Lovelace");
+      b.addAttribute(2, "id", "ada");
+      b.addAttribute(3, "childContent", badge);
+    });
+    expect(ownId.getAttribute("aria-labelledby")).toMatch(/^ada \S+$/);
+    // Without a badge the name is the aria-label alone.
+    const plain = await avatar((b) => b.addAttribute(1, "name", "Ada Lovelace"));
+    expect(plain.hasAttribute("aria-labelledby")).toBe(false);
+    expect(plain.hasAttribute("id")).toBe(false);
+    // Unnamed: no longer hidden as decoration while it holds a badge.
+    const unnamed = await avatar((b) => b.addAttribute(1, "childContent", badge));
+    expect(unnamed.hasAttribute("aria-hidden")).toBe(false);
+    expect(unnamed.hasAttribute("aria-labelledby")).toBe(false);
+  });
+});

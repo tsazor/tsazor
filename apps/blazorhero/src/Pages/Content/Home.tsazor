@@ -1,0 +1,50 @@
+@* Client/Pages/Content/Home.razor: MudExpansionPanels as an Accordion, MudList of links as a ListGroup. *@
+@page "/home"
+@page "/"
+
+<div class="bh-home">
+    <Icon value="@BlazorHeroLogo" size="250" class="bh-home__logo" />
+    <Typography variant="h1" class="bh-home__title">@L("Title") v2.2</Typography>
+    <Typography variant="h5" class="bh-home__subtitle">@L("Description")</Typography>
+    <p class="bh-home__text">@L("Blazor Hero Description") <Link href="https://www.mudblazor.com" target="_blank">MudBlazor</Link> @L("Component Library").</p>
+    <Alert intent="info">@L("Celebrating 1,500 Stars on Github!") <Link href="https://github.com/blazorhero/CleanArchitecture/stargazers">@L("Liked BlazorHero? Star us on Github!")</Link></Alert>
+    <div class="bh-home__buttons">
+        <Button intent="primary" href="https://codewithmukesh.com/blazorhero" target="_blank" rel="noopener">@L("Project Page")</Button>
+        <Button intent="secondary" href="https://www.buymeacoffee.com/codewithmukesh" target="_blank" rel="noopener">@L("Support Me")</Button>
+        <Button href="https://blazorhero.github.io/docs/" target="_blank" rel="noopener">@L("Documentation - Coming Soon")</Button>
+    </div>
+    <Accordion>
+        <AccordionItem title="@L("Getting Started")">
+            <p>@L("In case you are stuck anywhere or have any queries regarding this implementation, I have compiled a Quick Start Guide for you reference.")</p>
+            <Button appearance="transparent" href="https://codewithmukesh.com/blazorhero" target="_blank" rel="noopener">@L("Read The Guide")</Button>
+        </AccordionItem>
+        <AccordionItem title="@L("Important Links")">
+            <ListGroup>
+                <ListGroupItem href="https://github.com/blazorhero/CleanArchitecture">@L("Github Repository : Do Not Forget to Leave a Star ;)")</ListGroupItem>
+                <ListGroupItem href="https://codewithmukesh.com/blazorhero">@L("Quick Start Guide")</ListGroupItem>
+            </ListGroup>
+        </AccordionItem>
+        <AccordionItem title="@L("Learning Resources")">
+            <p>@L("Here are few articles that should help you get started with Blazor.")</p>
+            <ListGroup>
+                @foreach (const article of articles) {
+                    <ListGroupItem href="@article.href">@L(article.title)</ListGroupItem>
+                }
+            </ListGroup>
+        </AccordionItem>
+    </Accordion>
+</div>
+
+@code {
+    private readonly L = localizerFor("Home");
+
+    private readonly articles = [
+        { title: "Blazor For Beginners – Getting Started With Blazor", href: "https://codewithmukesh.com/blog/getting-started-with-blazor/" },
+        { title: "Exploring Blazor Project Structure", href: "https://codewithmukesh.com/blog/exploring-blazor-project-structure/" },
+        { title: "Onion Architecture In ASP.NET Core With CQRS – Detailed", href: "https://codewithmukesh.com/blog/onion-architecture-in-aspnet-core/" },
+        { title: "How To Implement Blazor CRUD Using Entity Framework Core?", href: "https://codewithmukesh.com/blog/blazor-crud-with-entity-framework-core/" },
+        { title: "Custom Authentication In Blazor WebAssembly – Detailed", href: "https://codewithmukesh.com/blog/authentication-in-blazor-webassembly/" },
+        { title: "Implementing Blazor CRUD Using Mudblazor Component Library In .NET 5", href: "https://codewithmukesh.com/blog/blazor-crud-using-mudblazor/" },
+        { title: "Building A Chat Application With Blazor, Identity, And SignalR", href: "https://codewithmukesh.com/blog/realtime-chat-application-with-blazor/" },
+    ] as const;
+}

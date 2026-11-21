@@ -1,0 +1,84 @@
+@** A group of Bootstrap checkboxes (`.form-check`, in a `fieldset` with a `legend`; InputBase — bind it with @bind)
+    for several string values out of `options`: the value is the array of the checked options' values, in the order
+    of `options`. Validation state and message as with TextInput — the same parameters as the Fluent skin's
+    CheckboxGroup. *@
+@import { FieldState } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+@inherits InputBase<string[]>
+
+<fieldset @attributes="@withClass("mb-3", groupAttributes)">
+    @if (label) {
+        <legend class="form-label fs-6">@label</legend>
+    }
+    @for (let i = 0; i < options.length; i++) {
+        <div class="@checkClass">
+            <input id="@optionId(i)" type="checkbox" class="@inputClass" value="@options[i]!.value" checked="@isChecked(options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" aria-readonly="@(readOnly ? "true" : null)" @onclick:preventDefault="@readOnly" @onchange="handleChange" />
+            <label class="form-check-label" for="@optionId(i)">@options[i]!.label</label>
+        </div>
+    }
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
+    }
+</fieldset>
+
+@code {
+    /** The group's caption (the fieldset's legend). */
+    @Parameter() label?: string;
+    /** The choices: value, visible label, and optionally disabled. */
+    @Parameter() options: { value: string; label: string; disabled?: boolean }[] = [];
+    /** Lays the options out in one row. */
+    @Parameter() inline: boolean = false;
+    /** A hint below the group, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Disables every option. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the choices without letting them change: each box says aria-readonly, a click or Space changes nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** The group's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-checkbox-group");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get checkClass(): string {
+        return this.inline ? "form-check form-check-inline" : "form-check";
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-check-input is-invalid" : validity === "valid" ? "form-check-input is-valid" : "form-check-input";
+    }
+
+    private get groupAttributes(): Record<string, unknown> {
+        return { id: this.field.id(this.id), ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+    }
+
+    private optionId(index: number): string {
+        return `${this.field.id(this.id)}-${index}`;
+    }
+
+    private isChecked(value: string): boolean {
+        return (this.currentValue ?? []).includes(value);
+    }
+
+    private handleChange(e: Event): void {
+        const input = e.target as HTMLInputElement;
+        const current = this.currentValue ?? [];
+        const checked = new Set(current);
+        if (input.checked) checked.add(input.value);
+        else checked.delete(input.value);
+        // Values the options don't show stay; the shown ones follow the options' order.
+        const shown = new Set(this.options.map((option) => option.value));
+        this.currentValue = [
+            ...current.filter((value) => !shown.has(value)),
+            ...this.options.map((option) => option.value).filter((value) => checked.has(value)),
+        ];
+    }
+}

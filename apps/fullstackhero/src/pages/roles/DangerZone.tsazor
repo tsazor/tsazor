@@ -1,0 +1,47 @@
+@* pages/roles/detail.tsx's DangerZone: delete the role once its name is typed to confirm. *@
+@import { Trash2 } from "lucide"
+@import { deleteRole, type RoleDto } from "@/api/roles"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { toast } from "@/lib/toast"
+
+<SettingsSection title="Danger zone" icon="@Trash2" description="Delete this role. Users assigned to it will lose every permission this role grants — this is not reversible.">
+    <div class="space-y-4 rounded-lg border border-[var(--color-destructive)]/40 bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.04)] p-5">
+        <div>
+            <p class="text-[13px] font-medium text-[var(--color-foreground)]">
+                Type <code class="rounded bg-[var(--color-muted)] px-1 py-0.5 font-mono text-[12px]">@role.name</code> to confirm deletion.
+            </p>
+            <Input @bind-value="confirmation" placeholder="@role.name" class="mt-2 max-w-sm" autocomplete="off" />
+        </div>
+        <Button type="button" variant="destructive" disabled="@(!ready || deleting)" onClick="@remove" class="h-9 rounded-lg px-4 text-[13px]">
+            <Icon icon="@Trash2" class="mr-1.5 h-3.5 w-3.5" />
+            @(deleting ? "Deleting…" : "Delete role")
+        </Button>
+    </div>
+</SettingsSection>
+
+@code {
+    @Parameter() role!: RoleDto;
+    @Parameter() onDeleted?: EventCallback;
+
+    private confirmation = "";
+    private deleting = false;
+
+    private get ready(): boolean {
+        return this.confirmation.trim() === this.role.name;
+    }
+
+    /** useMutation(deleteRole). */
+    private async remove(): Promise<void> {
+        this.deleting = true;
+        try {
+            await deleteRole(this.role.id);
+            toast.success(`Role ${this.role.name} deleted`);
+            await this.onDeleted?.invokeAsync();
+        } catch (err) {
+            const detail = err instanceof ApiRequestError ? err.problem?.detail ?? err.problem?.title ?? err.message : (err as Error).message;
+            toast.error("Delete failed", { description: detail });
+        } finally {
+            this.deleting = false;
+        }
+    }
+}

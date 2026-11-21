@@ -1,4 +1,4 @@
-import type { SourcePos } from "./diagnostics";
+import type { SourcePos } from "./diagnostics.js";
 
 /**
  * Mini-scanner over TS-like text spans. Razor never fully parses C#; the
@@ -58,6 +58,10 @@ export class TSScanner {
       const next = this.source[i + 1];
       if (ch === "." && isIdStart(next ?? "")) {
         i += 2;
+        i = this.eatIdentifier(i);
+      } else if (ch === "." && next === "#" && isIdStart(this.source[i + 2] ?? "")) {
+        // A private member, `@this.#contentStyle` (TypeScript's; the scan stopped at `.#` and the rest was text).
+        i += 3;
         i = this.eatIdentifier(i);
       } else if (ch === "?" && next === ".") {
         // Optional chaining `?.`: member access, `?.(` call or `?.[` indexer.
@@ -120,6 +124,12 @@ export class TSScanner {
       i++;
     }
     return i;
+  }
+
+  /** The end of the template literal whose backtick is at `index` (after its closing backtick), or -1 when it never closes. */
+  scanTemplateLiteral(index: number): number {
+    const end = this.skipTemplate(index);
+    return end > index + 1 && this.source[end - 1] === "`" ? end : -1;
   }
 
   private skipTemplate(index: number): number {

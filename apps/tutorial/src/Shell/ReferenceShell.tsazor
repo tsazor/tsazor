@@ -1,0 +1,69 @@
+@** The frame of every reference page: the site bar, the reference navigation (sections, the component and API packages, the entries of the current package) and the page content. *@
+@import reference from "virtual:tutorial-reference"
+
+<div class="reference">
+    <SiteBar Current="reference" />
+    <div class="reference-body">
+        <main class="reference-main">
+            @childContent
+        </main>
+        <nav class="reference-nav" aria-label="Reference">
+            <ul class="nav-sections">
+                <li><a href="reference" aria-current="@(section === "overview" ? "page" : null)">Overview</a></li>
+                <li><a href="reference/language" aria-current="@(section === "language" ? "page" : null)">Language</a></li>
+                <li><a href="reference/diagnostics" aria-current="@(section === "diagnostics" ? "page" : null)">Diagnostics</a></li>
+            </ul>
+            <h2 class="nav-heading">Components</h2>
+            <ul class="nav-packages">
+                @foreach (const pkg of reference.packages) {
+                    <li @key="pkg.slug">
+                        <a href="@("reference/components/" + pkg.slug)"
+                           aria-current="@(section === "components" && pkg.slug === packageSlug && !componentName ? "page" : null)">@pkg.name</a>
+                        @if (section === "components" && pkg.slug === packageSlug) {
+                            <ul class="nav-components">
+                                @foreach (const component of pkg.components) {
+                                    <li @key="component.name">
+                                        <a href="@("reference/components/" + pkg.slug + "/" + component.name)"
+                                           aria-current="@(component.name === componentName ? "page" : null)">@component.name</a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+            <h2 class="nav-heading">API</h2>
+            <ul class="nav-packages">
+                @foreach (const pkg of reference.api) {
+                    <li @key="pkg.slug">
+                        <a href="@("reference/api/" + pkg.slug)"
+                           aria-current="@(section === "api" && pkg.slug === packageSlug && !symbolName ? "page" : null)">@pkg.name</a>
+                        @if (section === "api" && pkg.slug === packageSlug) {
+                            <ul class="nav-components">
+                                @foreach (const symbol of pkg.symbols) {
+                                    <li @key="symbol.name">
+                                        <a href="@("reference/api/" + pkg.slug + "/" + symbol.name)"
+                                           aria-current="@(symbol.name === symbolName ? "page" : null)">@symbol.name</a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@code {
+    /** The section shown: the overview, the language or diagnostics page, a components or an API page. */
+    @Parameter() section: "overview" | "language" | "diagnostics" | "components" | "api" = "overview";
+    /** The package whose entries the navigation lists (components or API, by section). */
+    @Parameter() packageSlug?: string;
+    /** The component shown (marked in the navigation). */
+    @Parameter() componentName?: string;
+    /** The API export shown (marked in the navigation). */
+    @Parameter() symbolName?: string;
+    /** The page content. */
+    @Parameter() childContent?: RenderFragment;
+}

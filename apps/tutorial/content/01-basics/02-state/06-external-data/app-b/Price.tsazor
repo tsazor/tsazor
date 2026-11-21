@@ -1,0 +1,10 @@
+@import { ticker } from "./ticker"
+
+<p class="price">ACME: @ticker.price.toFixed(2)</p>
+<p class="listeners">Listening: @ticker.listeners</p>
+
+@code {
+    override onInitialized() {
+        this.observe(ticker);
+    }
+}

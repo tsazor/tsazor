@@ -1,0 +1,69 @@
+@** A Fluent UI 2 overlay drawer: a panel that slides in from an edge of the page while `isOpen` is true —
+    a navigation menu, filters, details. It is a modal dialog: focus moves into it and stays there,
+    the page behind doesn't scroll, and focus returns when it closes. It does not close itself:
+    Escape, a click on the backdrop or the close button raise onClosed, and the parent sets `isOpen`
+    to false. *@
+@import { createLayer, dismissible, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
+@import { Dismiss20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+
+@if (isOpen) {
+    <div class="fui-drawer-backdrop" @attach="topLayer()"></div>
+    <div class="@panelClass" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="additionalAttributes" @attach:top="topLayer()" @attach="trap" @attach:lock="lock" @attach:dismiss="dismiss">
+        <div class="fui-drawer__header">
+            @if (title) {
+                <h2 class="fui-drawer__title" id="@titleId">@title</h2>
+            }
+            <button type="button" class="fui-drawer__close" aria-label="@t("close")" @onclick="requestClose"><Icon value="@Dismiss20Regular" /></button>
+        </div>
+        <div class="fui-drawer__body">@childContent</div>
+    </div>
+}
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** Whether the panel is open; the parent flips this in response to onClosed. */
+    @Parameter() isOpen: boolean = false;
+    /** The edge it slides in from. */
+    @Parameter() placement: "start" | "end" | "top" | "bottom" = "start";
+    /** Heading; it also names the panel for screen readers. */
+    @Parameter() title?: string;
+    /** The panel's accessible name when it has no title. */
+    @Parameter() ariaLabel?: string;
+    /** Closes when the backdrop is clicked. */
+    @Parameter() closeOnBackdrop: boolean = true;
+    /** Closes when the user presses Escape. */
+    @Parameter() closeOnEscape: boolean = true;
+    /** Fired when the user asks to close (Escape, the backdrop or the close button). It carries no event: Escape and the backdrop have none to give. */
+    @Parameter() onClosed?: EventCallback;
+    /** The panel's content. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the panel element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly titleId = uniqueId("fui-drawer-title");
+    /** The trap and the dismiss handling are one overlay layer. */
+    private readonly layer = createLayer();
+    private readonly trap = focusTrap({ layer: this.layer });
+    private readonly lock = scrollLock();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
+
+    private get panelClass(): string {
+        return `fui-drawer fui-drawer--${this.placement}`;
+    }
+
+    private get labelledBy(): string | null {
+        return this.title ? this.titleId : null;
+    }
+
+    private dismissed(reason: DismissReason): void {
+        // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
+        if (reason === "escape" ? this.closeOnEscape : this.closeOnBackdrop) this.requestClose()?.catch((error) => this.dispatchExceptionAsync(error));
+    }
+
+    private requestClose(): Promise<void> | undefined {
+        return this.onClosed?.invokeAsync();
+    }
+}

@@ -5,7 +5,7 @@
             <polyline points="@this.linePoints" class="sparkline-line"></polyline>
         </svg>
     } else {
-        <p class="sparkline-empty">Keine Daten noch…</p>
+        <p class="sparkline-empty">No data yet…</p>
     }
 </div>
 
@@ -19,21 +19,27 @@
         this.linePoints = this.normalize();
     }
 
-    /** Maps every point into a 0-100 × 0-100 SVG coordinate string. */
+    /** Maps every point into a 0-100 × 0-100 SVG coordinate string. Points
+     *  without a price are skipped (defensive — the contract has made
+     *  `price` required since sleipnir-codegen 1.5). */
     private normalize(): string | null {
-        if (this.points.length < 2) return null;
-        let min = this.points[0].price;
+        const priced = this.points.filter((point): point is PricePoint & { price: number } => point.price !== undefined);
+        const first = priced[0];
+        if (first === undefined || priced.length < 2) return null;
+        let min = first.price;
         let max = min;
-        for (const point of this.points) {
+        for (const point of priced) {
             if (point.price < min) min = point.price;
             if (point.price > max) max = point.price;
         }
         const span = max - min || 1;
         const parts: string[] = [];
-        for (let i = 0; i < this.points.length; i++) {
-            const x = Math.round((i / (this.points.length - 1)) * 10000) / 100;
-            const y = Math.round((1 - (this.points[i].price - min) / span) * 10000) / 100;
+        let index = 0;
+        for (const point of priced) {
+            const x = Math.round((index / (priced.length - 1)) * 10000) / 100;
+            const y = Math.round((1 - (point.price - min) / span) * 10000) / 100;
             parts.push(`${x},${y}`);
+            index++;
         }
         return parts.join(" ");
     }

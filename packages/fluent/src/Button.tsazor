@@ -1,32 +1,69 @@
-<button type="@type" class="@buttonClass" disabled="@disabled" @onclick="handleClick">@childContent</button>
+@** A Fluent UI 2 native button. `intent` picks the color (secondary, the default, is Fluent's
+    neutral button; primary is the brand button; success, danger, warning, info), `appearance` the
+    weight (solid, outline, subtle, transparent); shape rounded | circular, size small | medium |
+    large. Raises onClick unless disabled; use type="submit" inside a FluentForm. With `href` it is a
+    link that looks like a button (Fluent UI Blazor's FluentAnchor): it navigates, opens in a new tab,
+    and screen readers announce a link. `iconStart`/`iconEnd` put an icon before or after the label (Fluent UI
+    Blazor's names); without a label it is an icon-only button, which needs an ariaLabel. *@
+@import type { Appearance, IconValue, Intent, Size } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { buttonClasses } from "./vocabulary"
+
+@if (href !== undefined) {
+    <a href="@(disabled ? null : href)" aria-disabled="@(disabled ? "true" : null)" @attributes="@this.buttonAttributes" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="fui-button__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-button__icon" />}</a>
+} else {
+    <button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="fui-button__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-button__icon" />}</button>
+}
 
 @code {
-    /** Fluent 2 appearance: primary | secondary | subtle | transparent. */
-    @Parameter() appearance: string = "secondary";
+    /** The color: secondary (default, Fluent's neutral button), primary (brand), success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "secondary";
+    /** The visual weight: solid (default), outline, subtle or transparent. */
+    @Parameter() appearance: Appearance = "solid";
     /** rounded (default) | circular. */
-    @Parameter() shape: string = "rounded";
-    /** small | medium | large. */
-    @Parameter() size: string = "medium";
+    @Parameter() shape: "rounded" | "circular" = "rounded";
+    /** small | medium (default) | large. */
+    @Parameter() size: Size = "medium";
+    /** true disables the native button and suppresses onClick. */
     @Parameter() disabled: boolean = false;
-    @Parameter() type: string = "button";
-    /** Accessible label for icon-only buttons. */
+    /** Native button role in a form: button (default) | submit | reset. */
+    @Parameter() type: "button" | "submit" | "reset" = "button";
+    /** Renders a link styled as the button (`<a href>`); a disabled one has no href. */
+    @Parameter() href?: string;
+    /** Accessible label for icon-only buttons (rendered as aria-label). */
     @Parameter() ariaLabel?: string;
-    /** Associates the button with an id-list for screen readers. */
+    /** Associates the button with an id-list for screen readers (rendered as aria-describedby). */
     @Parameter() ariaDescribedBy?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired on click (not while disabled); receives the MouseEvent. */
     @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The button label (text and/or an Icon). */
     @Parameter() childContent?: RenderFragment;
+    /** An icon before the label (Fluent UI Blazor's `IconStart`), drawn at its own size. */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the label (`IconEnd`). */
+    @Parameter() iconEnd?: IconValue;
 
     private get buttonClass(): string {
-        let cls = `fui-button fui-button--${this.appearance}`;
+        let cls = buttonClasses(this.intent, this.appearance, this.size);
         if (this.shape === "circular") cls += " fui-button--circular";
-        if (this.size === "small") cls += " fui-button--small";
-        else if (this.size === "large") cls += " fui-button--large";
+        if (this.childContent === undefined && (this.iconStart !== undefined || this.iconEnd !== undefined)) cls += " fui-button--icon-only";
         if (this.disabled) cls += " fui-button--disabled";
         return cls;
     }
 
-    private handleClick(e: MouseEvent): void {
-        if (this.disabled) return;
-        this.onClick?.invokeAsync(e);
+    /** Fluent classes + ARIA + `@attributes` pass-through. */
+    private get buttonAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.buttonClass,
+            "aria-label": this.ariaLabel,
+            "aria-describedby": this.ariaDescribedBy,
+        }, this.additionalAttributes);
+    }
+
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        if (this.disabled) return undefined;
+        return this.onClick?.invokeAsync(e);
     }
 }

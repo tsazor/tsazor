@@ -1,0 +1,6 @@
+/* RichText — the area an external engine (RichText2, per design-extended-library.md §2.7)
+   builds its editor in. The engine brings its own styles; the area only sizes. */
+
+.tz-rich-text {
+  min-height: 120px;
+}

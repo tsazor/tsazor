@@ -1,0 +1,83 @@
+@* Client/Shared/Components/ImportExcelModal.razor(.cs): picks a workbook and hands it to the page's `onSaved` (the
+   brands' import). The original styled a label as the upload button for a hidden InputFile; Button renders a
+   button, which opens the file dialog of the hidden input. While the import runs, an overlay covers the dialog. *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { InputFile, InputFileChangeEventArgs } from "@tsazor/runtime"
+@import { emptyUploadRequest, UploadType, type UploadRequest } from "../../Application/Catalog"
+@import type { ResultOf } from "../../Application/Wrapper"
+@import { extensionOf, toBase64 } from "../../Extensions/Files"
+@inject Toaster toaster
+
+<Dialog title="@(`${L("Import")} - ${modelName}`)">
+    <ChildContent>
+        <Button intent="primary" size="large" iconStart="@Icons.CloudArrowUp" onClick="@chooseFile">@L("Upload")</Button>
+        <InputFile @ref="fileInput" hidden accept=".xlsx" OnChange="@uploadFiles" />
+        <div class="bh-import__status">
+            @if (file !== null) {
+                <Alert intent="neutral" dismissible onDismissed="@clearFile">@file.name</Alert>
+            } else {
+                <Alert intent="info">@L("Please upload excel file!")</Alert>
+            }
+        </div>
+        <Overlay visible="@uploading" ariaLabel="@L("Import")">
+            <Spinner size="large" />
+        </Overlay>
+    </ChildContent>
+    <Footer>
+        <Button onClick="@cancel">@L("Cancel")</Button>
+        <Button intent="success" disabled="@(file === null || uploading)" onClick="@saveAsync">@L("Import")</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    /** What is imported, for the title ("Brands"). */
+    @Parameter() modelName = "";
+    /** Imports the workbook; the dialog shows the answer's messages. */
+    @Parameter() onSaved?: (upload: UploadRequest) => Promise<ResultOf<number>>;
+
+    private readonly L = localizerFor("ImportExcelModal");
+    private fileInput?: InputFile;
+    private file: File | null = null;
+    private uploadRequest: UploadRequest = emptyUploadRequest;
+    private uploading = false;
+
+    private chooseFile(): void {
+        (this.fileInput?.element as HTMLInputElement | undefined)?.click();
+    }
+
+    private async uploadFiles(e: InputFileChangeEventArgs): Promise<void> {
+        if (e.fileCount === 0) return;
+        const file = e.file;
+        this.file = file;
+        this.uploadRequest = { data: await toBase64(file), fileName: file.name, uploadType: UploadType.Document, extension: extensionOf(file.name) };
+    }
+
+    private clearFile(): void {
+        this.file = null;
+        this.uploadRequest = emptyUploadRequest;
+    }
+
+    private async saveAsync(): Promise<void> {
+        if (this.onSaved === undefined) {
+            this.dialog?.close();
+            return;
+        }
+        this.uploading = true;
+        try {
+            const result = await this.onSaved(this.uploadRequest);
+            if (result.succeeded) {
+                this.toaster.show({ message: result.messages[0]!, intent: "success" });
+                this.dialog?.close(result.data);
+            } else {
+                for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+            }
+        } finally {
+            this.uploading = false;
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "sharpts": {
+      "version": "1.0.12",
+      "commands": [
+        "sharpts"
+      ],
+      "rollForward": false
+    }
+  }
+}

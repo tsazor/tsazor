@@ -1,0 +1,12 @@
+@* Renames a folder (FluentCMS's FolderRenameModal). *@
+@import type { FolderRenameRequest } from "../../../api/models"
+
+<FormModal visible title="Rename Folder" model="@model" onSubmit="() => this.onSubmit?.invokeAsync(this.model)" onCancel="@onCancel">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter Folder Name" required />
+</FormModal>
+
+@code {
+    @Parameter() model!: FolderRenameRequest;
+    @Parameter() onSubmit?: EventCallback<FolderRenameRequest>;
+    @Parameter() onCancel?: EventCallback;
+}

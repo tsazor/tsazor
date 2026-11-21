@@ -1,0 +1,84 @@
+/**
+ * Build result types and the source-map lookup — kept apart from
+ * compile-project.ts so the main thread never pulls in the compiler or
+ * TypeScript (those load only in the worker).
+ */
+import { originalPositionFor, TraceMap } from "@jridgewell/trace-mapping";
+
+/** Project files: POSIX paths relative to the project root (`App.tsazor`, `lib/data.ts`). */
+export type Files = Readonly<Record<string, string>>;
+
+export const MODULE_PREFIX = "$app/";
+
+export interface Diagnostic {
+  file: string;
+  /** 1-based line, 0-based column (compiler convention). */
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+  severity: "error" | "warning";
+  code: string;
+  message: string;
+  /** "types": reported by the type check (`tsazor check`) — the code still runs. */
+  source?: "types";
+}
+
+export interface CompiledModule {
+  /** Module id (`$app/App.tsazor`). */
+  id: string;
+  file: string;
+  code: string;
+  /** JS → original source map (JSON), when the file maps back to a source. */
+  map?: string;
+  /**
+   * The same module as CommonJS (`.ts` files only): the preview runs lesson
+   * workers as classic workers — a sandboxed, opaque-origin frame can't start
+   * module workers — and bundles their module graph from these.
+   */
+  workerCode?: string;
+}
+
+export interface ProjectBuild {
+  modules: Record<string, CompiledModule>;
+  /** Global + scoped CSS, in file order. */
+  css: string;
+  diagnostics: Diagnostic[];
+  /** Module id of the entry component, when it compiled. */
+  entry?: string;
+  /**
+   * Module id of `Program.ts`, when the project has one: it starts the app
+   * itself (`createTsazorApp({ root: App, services })`, as in a real app);
+   * without it the preview mounts the entry component.
+   */
+  program?: string;
+  /**
+   * One entry per `@page` template of the project's pages (the counterpart of
+   * a real app's `virtual:tsazor-routes` manifest). The preview/harness
+   * import the modules and hand the RouteEntry[] to createTsazorApp.
+   */
+  routes: RouteRequest[];
+}
+
+/** A `@page` route of the built project, by module id (imported at mount time). */
+export interface RouteRequest {
+  /** The route template as written in the @page directive. */
+  template: string;
+  /** Module id of the page component (`$app/Pages/Orders.tsazor`). */
+  module: string;
+  /** Module id of the page's layout, when its @layout resolves to a project file. */
+  layout?: string;
+  /** Authorization requirements of the page's @authorize (consumed by AuthorizeRouteView). */
+  authorize?: { roles?: string[]; policy?: string };
+}
+
+/**
+ * Maps a position in a compiled module back to its source file (runtime
+ * error stacks in the preview). Lines are 1-based, columns 0-based.
+ */
+export function originalPosition(module: CompiledModule, line: number, column: number): { line: number; column: number } | undefined {
+  if (!module.map) return undefined;
+  const position = originalPositionFor(new TraceMap(module.map), { line, column });
+  if (position.line === null) return undefined;
+  return { line: position.line, column: position.column ?? 0 };
+}

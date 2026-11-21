@@ -1,0 +1,37 @@
+/* Paginator — the row count, the page and the Pagination buttons in one row. */
+
+.fui-paginator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fui-spacing-m);
+  margin-top: var(--fui-spacing-s);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+}
+
+.fui-paginator__count {
+  color: var(--fui-foreground-3);
+}
+
+.fui-paginator__page {
+  padding: 0 var(--fui-spacing-s);
+  color: var(--fui-foreground-1);
+  font-weight: var(--fui-font-weight-semibold);
+}
+
+.fui-paginator__size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-spacing-s);
+  color: var(--fui-foreground-2);
+}
+
+.fui-paginator__size .fui-paginator__size-select {
+  width: auto;
+}
+
+/* Right to left: the arrows point the way the pages go (first and previous at the right). */
+.fui-pagination__button:dir(rtl) .fui-icon {
+  transform: scaleX(-1);
+}

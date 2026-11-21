@@ -1,0 +1,28 @@
+@import { TsazorHttp, TsazorHttpError } from "@tsazor/runtime"
+@inject TsazorHttp http
+<h2>Today's bread</h2>
+@if (problem !== null) {
+    <p class="problem">@problem</p>
+} else if (breads === null) {
+    <p>Loading…</p>
+} else {
+    <ul class="breads">
+        @foreach (const bread of breads) {
+            <li>@bread</li>
+        }
+    </ul>
+}
+
+@code {
+    breads: string[] | null = null;
+    problem: string | null = null;
+
+    override async onInitialized() {
+        try {
+            this.breads = await this.http.getJson<string[]>("/api/breads");
+        } catch (error) {
+            if (!(error instanceof TsazorHttpError)) throw error;
+            this.problem = `The bakery's server didn't answer (${error.status}).`;
+        }
+    }
+}

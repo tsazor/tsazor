@@ -1,0 +1,7 @@
+<h1>Welcome back, @user.name!</h1>
+<Badge count="@unread" />
+
+@code {
+    user = { name: "Ada" };
+    unread = 1;
+}

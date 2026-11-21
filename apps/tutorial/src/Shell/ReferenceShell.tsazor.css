@@ -1,0 +1,98 @@
+.reference {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.reference-body {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    grid-template-areas: "nav main";
+    max-width: 76rem;
+    margin: 0 auto;
+}
+
+.reference-main {
+    grid-area: main;
+    min-width: 0;
+    padding: 2rem 2rem 4rem;
+}
+
+.reference-nav {
+    grid-area: nav;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 1.5rem 1rem 2rem 1.5rem;
+    border-right: 1px solid var(--border);
+    font-size: 0.92rem;
+}
+
+.reference-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.reference-nav li {
+    margin: 0.1rem 0;
+}
+
+.reference-nav a {
+    display: block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    color: var(--fg);
+    text-decoration: none;
+}
+
+.reference-nav a:hover {
+    background: var(--bg-sunken);
+}
+
+.reference-nav a[aria-current="page"] {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 600;
+}
+
+.nav-heading {
+    margin: 1.25rem 0 0.35rem 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+}
+
+.nav-components {
+    margin: 0.15rem 0 0.5rem 0.75rem !important;
+    padding-left: 0.5rem !important;
+    border-left: 1px solid var(--border);
+}
+
+.nav-components a {
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 52rem) {
+    .reference-body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "main" "nav";
+    }
+
+    .reference-main {
+        padding: 1.5rem 1rem 2rem;
+    }
+
+    .reference-nav {
+        position: static;
+        max-height: none;
+        border-right: 0;
+        border-top: 1px solid var(--border);
+        padding: 1.25rem 1rem 2rem;
+    }
+}

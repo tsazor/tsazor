@@ -1,0 +1,17 @@
+@* The fields of a content form (FluentCMS's DynamicComponents in its create and update forms): each field's form
+   view, chosen by its settings, in a twelve-column grid as wide as the field's column width. *@
+@import type { ContentField } from "./BaseContentPlugin"
+@import { formView } from "./field-types"
+
+<div class="content-fields">
+    @foreach (const entry of contentFields) {
+        @{ const view = formView(entry.field, entry.value); }
+        <div class="content-field" style="@(`grid-column: span ${Math.min(Math.max(entry.field.formColWidth, 1), 12)}`)" @key="entry.field.name">
+            <DynamicComponent Type="@view.type" Parameters="@view.parameters" />
+        </div>
+    }
+</div>
+
+@code {
+    @Parameter() contentFields: ContentField[] = [];
+}

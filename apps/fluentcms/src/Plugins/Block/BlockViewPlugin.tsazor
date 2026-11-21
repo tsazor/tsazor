@@ -1,0 +1,38 @@
+@* A block from the site's library, copied into the plugin's content (FluentCMS's BlockViewPlugin). While
+   it has none, an admin chooses one. The site builder's inline editor is not ported. *@
+@inherits BasePlugin
+@import { ensureOk } from "../../api/api-result"
+@import type { BlockDetailResponse } from "../../api/models"
+@import { contentText, pluginContents, type PluginContentItem } from "../Base/plugin-content"
+
+@if (this.item !== undefined) {
+    <div class="f-block">
+        @(new MarkupString(contentText(this.item, "Content")))
+    </div>
+} else if (this.loaded && this.viewState.page.hasAdminAccess) {
+    <div class="f-block-empty-button">
+        <Button intent="primary" onClick="() => this.choosing = true">Select</Button>
+    </div>
+    <BlockSelectModal open="@this.choosing" onClose="() => this.choosing = false" onBlockSelected="@this.select" />
+}
+
+@code {
+    private item?: PluginContentItem;
+    private loaded = false;
+    private choosing = false;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        [this.item] = await pluginContents(this.api, "BlockContent", this.plugin.id);
+        this.loaded = true;
+    }
+
+    private async select(block: BlockDetailResponse): Promise<void> {
+        this.choosing = false;
+        ensureOk(await this.api.pluginContentCreate("BlockContent", this.plugin.id, { Content: block.content ?? "" }));
+        await this.load();
+    }
+}

@@ -1,0 +1,21 @@
+.menu {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e3e6ea;
+}
+
+.missing {
+    font-size: 3rem;
+    text-align: center;
+    margin: 3rem 0;
+    color: #b0b6bf;
+}
+
+.user {
+    margin-left: auto;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    color: #4a5058;
+}

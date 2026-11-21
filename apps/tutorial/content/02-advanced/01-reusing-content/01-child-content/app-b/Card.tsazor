@@ -1,0 +1,11 @@
+@import type { RenderFragment } from "@tsazor/runtime"
+
+<div class="card">
+    <h2>@title</h2>
+    @childContent
+</div>
+
+@code {
+    @Parameter() title = "";
+    @Parameter() childContent?: RenderFragment;
+}

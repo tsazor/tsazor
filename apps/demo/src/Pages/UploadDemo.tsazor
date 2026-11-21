@@ -1,0 +1,27 @@
+@page "/upload"
+@import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+
+<h1>InputFile</h1>
+
+<p>Select files below — <code>&lt;InputFile /&gt;</code> renders <code>&lt;input type="file"&gt;</code> and raises <code>OnChange</code> with an <code>InputFileChangeEventArgs</code> whose messages and guards match Blazor's (roadmap 3.7). The files are the native DOM Files.</p>
+
+<div class="card">
+    <InputFile OnChange="@handleFiles" multiple accept="text/*" aria-label="Text files to upload" />
+    @if (files.length > 0) {
+        <ul class="file-list">
+            @foreach (const f of files) {
+                <li>@f.name — @f.size bytes — @f.type</li>
+            }
+        </ul>
+    } else {
+        <p class="log">no files selected yet</p>
+    }
+</div>
+
+@code {
+    private files: readonly File[] = [];
+
+    private handleFiles = EventCallback.bind(this, (args: InputFileChangeEventArgs) => {
+        this.files = args.getMultipleFiles();
+    });
+}

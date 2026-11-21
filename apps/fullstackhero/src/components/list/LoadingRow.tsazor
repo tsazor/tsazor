@@ -1,0 +1,11 @@
+@* components/list/loading.tsx: the small mono-caps placeholder at the top of a list while its first page resolves. *@
+@import { cn } from "@/lib/cn"
+
+<div role="status" class="@cn("px-1 py-12 text-center text-sm font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]", additionalAttributes?.class as string)">
+    @label<span class="caret text-[var(--color-accent-signal)]" aria-hidden="true"></span>
+</div>
+
+@code {
+    @Parameter() label: string = "Loading";
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

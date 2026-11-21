@@ -1,0 +1,62 @@
+/* Overflow — the items in a line that doesn't wrap; the overflowed ones keep their size out of sight, so they can be
+   measured; the "+N" button at the end. */
+
+.fui-overflow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.fui-overflow--vertical {
+  flex-direction: column;
+  align-items: stretch;
+  min-block-size: 0;
+}
+
+.fui-overflow__item {
+  flex: none;
+}
+
+.fui-overflow__item--overflowed {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.fui-overflow__more {
+  flex: none;
+  min-inline-size: 32px;
+  block-size: 24px;
+  padding: 0 var(--fui-spacing-xs);
+  border: none;
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-brand-background);
+  color: var(--fui-foreground-on-brand);
+  font: inherit;
+  font-size: var(--fui-font-size-caption, 12px);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fui-overflow__more:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-overflow__popup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+  padding: var(--fui-spacing-s);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+  z-index: var(--fui-z-dialog);
+}

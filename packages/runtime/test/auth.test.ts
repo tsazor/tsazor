@@ -3,7 +3,7 @@
  * CascadingAuthenticationState, AuthorizeRouteView) over a test
  * AuthenticationStateProvider, mirroring Blazor's Components.Authorization.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ANONYMOUS,
   AuthenticationState,
@@ -13,25 +13,29 @@ import {
   AuthorizeView,
   CascadingAuthenticationState,
   ComponentBase,
+  LayoutComponentBase,
   type ClaimsPrincipal,
   defineComponent,
   CascadingParameter,
-  Renderer,
   ServiceCollection,
+  StringLocalizer,
   type RenderFragment,
   type RenderTreeBuilder,
   createUser,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 
 /* Test provider ------------------------------------------------------------ */
 
 class TestAuthProvider extends AuthenticationStateProvider {
   state: AuthenticationState = ANONYMOUS;
-  /** When true, getState() stays pending until release() — Authorizing test. */
+  /** When true, getAuthenticationStateAsync() stays pending until release() — Authorizing test. */
   pending = false;
   private resolvers: Array<(state: AuthenticationState) => void> = [];
 
-  getState(): Promise<AuthenticationState> {
+  getAuthenticationStateAsync(): Promise<AuthenticationState> {
     if (this.pending) {
       return new Promise((resolve) => this.resolvers.push(resolve));
     }
@@ -43,7 +47,12 @@ class TestAuthProvider extends AuthenticationStateProvider {
     this.notifyAuthenticationStateChanged(this.state);
   }
 
-  /** Resolves all pending getState() calls with the current state. */
+  /** Blazor's NotifyAuthenticationStateChanged(Task): the state arrives later. */
+  notifyLater(state: Promise<AuthenticationState>): void {
+    this.notifyAuthenticationStateChanged(state);
+  }
+
+  /** Resolves all pending getAuthenticationStateAsync() calls with the current state. */
   release(): void {
     for (const resolve of this.resolvers.splice(0)) {
       resolve(this.state);
@@ -92,7 +101,7 @@ function container(): HTMLElement {
 }
 
 /**
- * waitUntilIdle does not track the untracked provider.getState() promise
+ * waitUntilIdle does not track the untracked provider.getAuthenticationStateAsync() promise
  * chains; one macrotask turn guarantees every microtask (and thus the queued
  * re-render) has flushed.
  */
@@ -104,6 +113,12 @@ async function settle(renderer: Renderer): Promise<void> {
 
 function fragment(text: string): RenderFragment {
   return (b: RenderTreeBuilder) => {
+    b.addContent(0, text);
+  };
+}
+
+function stateFragment(text: string): (state: AuthenticationState) => RenderFragment {
+  return (_state) => (b: RenderTreeBuilder) => {
     b.addContent(0, text);
   };
 }
@@ -123,7 +138,7 @@ describe("AuthorizeView", () => {
             inner.closeComponent();
           };
         });
-        b.addAttribute(3, "NotAuthorized", fragment("denied"));
+        b.addAttribute(3, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -141,8 +156,8 @@ describe("AuthorizeView", () => {
     class App extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
-        b.addAttribute(1, "ChildContent", fragment("secret"));
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(1, "ChildContent", stateFragment("secret"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -155,7 +170,7 @@ describe("AuthorizeView", () => {
 
   it("enforces roles (array or comma-separated) and named policies", async () => {
     const service = new AuthorizationService();
-    service.policies["admin-only"] = (user) => user.roles.includes("admin");
+    service.addPolicy("admin-only", (user) => user.roles.includes("admin"));
     const provider = new TestAuthProvider();
     provider.signIn(createUser({ name: "bob", roles: ["moderator"] }));
 
@@ -168,8 +183,8 @@ describe("AuthorizeView", () => {
           for (const [name, value] of Object.entries(rules)) {
             b.addAttribute(sequence++, name, value as never);
           }
-          b.addAttribute(sequence, "ChildContent", fragment("granted"));
-          b.addAttribute(sequence + 1, "NotAuthorized", fragment("denied"));
+          b.addAttribute(sequence, "ChildContent", stateFragment("granted"));
+          b.addAttribute(sequence + 1, "NotAuthorized", stateFragment("denied"));
           b.closeComponent();
         }
       }
@@ -197,6 +212,34 @@ describe("AuthorizeView", () => {
     expect(document.body.textContent).toContain("denied");
   });
 
+  it("waits for an async policy: Authorizing meanwhile, then its decision (Blazor's AuthorizeAsync)", async () => {
+    const service = new AuthorizationService();
+    const decisions: ((granted: boolean) => void)[] = [];
+    service.addPolicy("remote", () => new Promise<boolean>((resolve) => decisions.push(resolve)));
+    const provider = new TestAuthProvider();
+    provider.signIn(createUser({ name: "bob" }));
+    const renderer = buildApp(provider, (collection) => collection.registerValue(AuthorizationService, service));
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeView));
+        b.addAttribute(1, "Policy", "remote");
+        b.addAttribute(2, "ChildContent", stateFragment("granted"));
+        b.addAttribute(3, "NotAuthorized", stateFragment("denied"));
+        b.addAttribute(4, "Authorizing", ((t: RenderTreeBuilder) => t.addContent(0, "checking")) as never);
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    await settle(renderer);
+    expect(document.body.textContent).toContain("checking");
+    // A render meanwhile asks the policy no second time.
+    expect(decisions).toHaveLength(1);
+    decisions[0]!(true);
+    await settle(renderer);
+    expect(document.body.textContent).toContain("granted");
+    expect(decisions).toHaveLength(1);
+  });
+
   it("re-renders when the authentication state changes (login/logout)", async () => {
     const provider = new TestAuthProvider();
     const renderer = buildApp(provider);
@@ -204,8 +247,8 @@ describe("AuthorizeView", () => {
     class App extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
-        b.addAttribute(1, "ChildContent", fragment("secret"));
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(1, "ChildContent", stateFragment("secret"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -230,7 +273,7 @@ describe("AuthorizeView", () => {
     class App extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
-        b.addAttribute(1, "ChildContent", fragment("secret"));
+        b.addAttribute(1, "ChildContent", stateFragment("secret"));
         b.addAttribute(2, "Authorizing", fragment("checking…"));
         b.closeComponent();
       }
@@ -292,7 +335,7 @@ describe("AuthorizeRouteView", () => {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeRouteView));
         b.addAttribute(1, "RouteData", this.routeData as never);
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -320,13 +363,169 @@ describe("AuthorizeRouteView", () => {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeRouteView));
         b.addAttribute(1, "RouteData", this.routeData as never);
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
     renderer.renderInContainer(App, container());
     await settle(renderer);
     expect(document.querySelector("h1")?.textContent).toBe("Public area");
+  });
+
+  it("renders Authorizing and NotAuthorized in the default layout, Blazor's texts when none is given, and keeps the layout on sign-in", async () => {
+    // BlazorHero's login sits in MainLayout this way (port-blazorhero.md, B14).
+    class Frame extends LayoutComponentBase {
+      static made = 0;
+      constructor() {
+        super();
+        Frame.made++;
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "div");
+        b.addAttribute(1, "class", "frame");
+        b.addContent(2, this.Body);
+        b.closeElement();
+      }
+    }
+    const provider = new TestAuthProvider();
+    provider.pending = true;
+    const renderer = buildApp(provider);
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.addAttribute(2, "DefaultLayout", Frame);
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    await settle(renderer);
+    expect(document.querySelector(".frame")?.textContent).toBe("Authorizing...");
+
+    provider.release();
+    await settle(renderer);
+    expect(document.querySelector(".frame")?.textContent).toBe("Not authorized");
+
+    provider.pending = false;
+    provider.signIn(createUser({ name: "erin", roles: ["admin"] }));
+    await settle(renderer);
+    expect(document.querySelector(".frame h1")?.textContent).toBe("Admin area");
+    expect(Frame.made).toBe(1);
+  });
+
+  it("translates its default texts by the reserved tsazor.auth.* keys of a registered StringLocalizer", async () => {
+    const provider = new TestAuthProvider();
+    provider.pending = true;
+    const localizer = new StringLocalizer({
+      tables: { de: { "tsazor.auth.authorizing": "Berechtigung wird geprüft…", "tsazor.auth.notAuthorized": "Nicht berechtigt" } },
+      defaultCulture: "de",
+    });
+    const renderer = buildApp(provider, (collection) => collection.registerValue(StringLocalizer, localizer));
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.closeComponent();
+      }
+    }
+    const host = container();
+    renderer.renderInContainer(App, host);
+    await settle(renderer);
+    expect(host.textContent).toBe("Berechtigung wird geprüft…");
+
+    provider.release();
+    await settle(renderer);
+    expect(host.textContent).toBe("Nicht berechtigt");
+  });
+});
+
+describe("notifyAuthenticationStateChanged with a promise (Blazor's Task)", () => {
+  /** A promise settled by hand. */
+  function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+    let resolve!: (value: T) => void;
+    let reject!: (error: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  /** AuthorizeView for the admin role, and AuthorizeRouteView for an admin page, side by side. */
+  function renderGuards(provider: TestAuthProvider): Renderer {
+    const renderer = buildApp(provider);
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeView));
+        b.addAttribute(1, "roles", "admin");
+        b.addAttribute(2, "ChildContent", stateFragment("[view: admin]"));
+        b.addAttribute(3, "NotAuthorized", stateFragment("[view: denied]"));
+        b.addAttribute(4, "Authorizing", fragment("[view: checking]"));
+        b.closeComponent();
+        b.openComponent(5, defineComponent(AuthorizeRouteView));
+        b.addAttribute(6, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.addAttribute(7, "NotAuthorized", stateFragment("[route: denied]"));
+        b.addAttribute(8, "Authorizing", fragment("[route: checking]"));
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    return renderer;
+  }
+
+  it("shows Authorizing until it resolves; no in-between user reaches a subscriber", async () => {
+    const provider = new TestAuthProvider();
+    provider.state = new AuthenticationState(createUser({ name: "carol" }));
+    const renderer = renderGuards(provider);
+    await settle(renderer);
+    expect(document.body.textContent).toBe("[view: denied][route: denied]");
+    const heard: string[] = [];
+    provider.subscribe((state) => heard.push(`${state.user.name}:${state.user.roles.join()}`));
+
+    // Signed in by name now, the role is still on its way (a profile request).
+    const later = deferred<AuthenticationState>();
+    provider.notifyLater(later.promise);
+    await settle(renderer);
+    expect(document.body.textContent).toBe("[view: checking][route: checking]");
+
+    later.resolve(new AuthenticationState(createUser({ name: "carol", roles: ["admin"] })));
+    await settle(renderer);
+    expect(document.body.textContent).toBe("[view: admin]Admin area");
+    expect(heard).toEqual(["carol:admin"]);
+    expect(provider.peekState()?.user.roles).toEqual(["admin"]);
+  });
+
+  it("a newer notification wins over a pending promise", async () => {
+    const provider = new TestAuthProvider();
+    const renderer = renderGuards(provider);
+    await settle(renderer);
+    const heard: string[] = [];
+    provider.subscribe((state) => heard.push(state.user.name));
+
+    const stale = deferred<AuthenticationState>();
+    provider.notifyLater(stale.promise);
+    provider.signIn(createUser({ name: "dave", roles: ["admin"] }));
+    stale.resolve(new AuthenticationState(createUser({ name: "erin" })));
+    await settle(renderer);
+
+    expect(heard).toEqual(["dave"]);
+    expect(document.body.textContent).toBe("[view: admin]Admin area");
+  });
+
+  it("a rejected promise counts as signed out", async () => {
+    const provider = new TestAuthProvider();
+    provider.state = new AuthenticationState(createUser({ name: "carol", roles: ["admin"] }));
+    const renderer = renderGuards(provider);
+    await settle(renderer);
+    expect(document.body.textContent).toBe("[view: admin]Admin area");
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    provider.notifyLater(Promise.reject(new Error("profile unavailable")));
+    await settle(renderer);
+
+    expect(document.body.textContent).toBe("[view: denied][route: denied]");
+    expect(errors).toHaveBeenCalledOnce();
+    errors.mockRestore();
   });
 });
 

@@ -1,0 +1,171 @@
+@* components/file/image-input.tsx: a composite control that lets a user either upload a new image (presigned PUT to
+   S3) OR paste an external URL. After a successful upload it fetches the FileAsset metadata for the durable
+   `publicUrl` and hands it on. Fully controlled: React's `value`/`onChange` is `value` + `valueChanged`.
+   useFileUpload is the FileUpload class (hooks/file-upload.ts), observed for its progress; the resolve-URL mutation
+   is a pending flag. The picker is the original's: a transient <input type=file>, clicked from code. *@
+@import { Image as ImageIcon, Link as LinkIcon, Loader2, Upload, X } from "lucide"
+@import { getFileMetadata, Visibility } from "@/api/files"
+@import { FileUpload, formatBytes } from "@/hooks/file-upload"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { toast } from "@/lib/toast"
+@import ModeChip from "./ModeChip.tsazor"
+
+<div class="@cn("space-y-3", additionalAttributes?.class as string)">
+    @* Mode toggle *@
+    <div class="flex gap-1">
+        <ModeChip active="@(mode === "upload")" onClick="@(() => mode = "upload")" icon="@Upload">Upload</ModeChip>
+        <ModeChip active="@(mode === "url")" onClick="@(() => mode = "url")" icon="@LinkIcon">Paste URL</ModeChip>
+    </div>
+
+    @* Preview + controls row *@
+    <div class="flex items-start gap-4">
+        <div class="@cn("relative grid place-items-center overflow-hidden bg-[var(--color-muted)] ring-1 ring-inset ring-border", shape === "circle" ? "h-20 w-20 rounded-full" : "h-24 w-24 rounded-xl")">
+            @if (hasImage) {
+                <img src="@value" alt="" class="@cn("h-full w-full object-cover", tileClass)" />
+            } else if (isWorking) {
+                <Icon icon="@Loader2" class="h-5 w-5 animate-spin text-[var(--color-primary)]" />
+            } else {
+                <Icon icon="@ImageIcon" class="h-5 w-5 text-[var(--color-muted-foreground)]" />
+            }
+        </div>
+
+        <div class="flex-1 space-y-2">
+            @if (mode === "upload") {
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button type="button" size="sm" onClick="@handlePick" disabled="@isWorking">
+                        @if (isWorking) {
+                            <Icon icon="@Loader2" class="h-3.5 w-3.5 animate-spin" />
+                        } else {
+                            <Icon icon="@Upload" class="h-3.5 w-3.5" />
+                        }
+                        @(hasImage ? "Replace image" : "Choose image")
+                    </Button>
+                    @if (hasImage && !isWorking) {
+                        <Button type="button" size="sm" variant="outline" onClick="@(() => change(""))">
+                            <Icon icon="@X" class="h-3.5 w-3.5" />
+                            Remove
+                        </Button>
+                    }
+                    @if (upload.isUploading && upload.progress) {
+                        <span class="text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
+                            @upload.progress.percent% · @formatBytes(upload.progress.loaded) / @formatBytes(upload.progress.totalBytes)
+                        </span>
+                    }
+                </div>
+            } else {
+                <Input type="url" value="@value" valueChanged="@change" placeholder="https://…" maxlength="512" />
+            }
+
+            <p class="text-xs text-[var(--color-muted-foreground)]">
+                @(mode === "upload" ? `JPG/PNG/WebP/GIF · up to ${formatBytes(maxBytes)}` : "Direct link to an image you host elsewhere.")
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    static readonly imageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+    /** Current image URL (or empty). The component is fully controlled. */
+    @Parameter() value: string = "";
+    @Parameter() valueChanged?: EventCallback<string>;
+    /**
+     * Owner binding for the upload. The Files module's per-OwnerType IFileAccessPolicy
+     * decides who can attach what. For user avatars, ownerType="User" + the user id.
+     */
+    @Parameter() ownerType!: string;
+    @Parameter() ownerId?: string | null;
+    /** Allowed extensions (lower-case w/ leading dot). Server enforces too. */
+    @Parameter() allowedExtensions: string[] = ImageInput.imageExtensions;
+    @Parameter() maxBytes: number = 10 * 1024 * 1024;
+    /** Visual treatment for the preview tile — "square" for general images, "circle" for avatars. */
+    @Parameter() shape: "square" | "circle" = "square";
+    /** `class` (merged onto the root). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private mode: "upload" | "url" = "upload";
+    /** The resolve-URL mutation's isPending. */
+    private resolving = false;
+    private resetTimer?: ReturnType<typeof setTimeout>;
+
+    private readonly upload = new FileUpload(() => ({
+        ownerType: this.ownerType,
+        ownerId: this.ownerId,
+        category: "Image",
+        visibility: Visibility.Public, // public so we get a durable URL we can persist on the entity
+        allowedExtensions: this.allowedExtensions,
+        maxBytes: this.maxBytes,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.upload);
+    }
+
+    private get hasImage(): boolean {
+        return this.value.length > 0;
+    }
+
+    private get isWorking(): boolean {
+        return this.upload.isUploading || this.resolving;
+    }
+
+    private get tileClass(): string {
+        return this.shape === "circle" ? "rounded-full" : "rounded-xl";
+    }
+
+    private change(next: string): Promise<void> | undefined {
+        return this.valueChanged?.invokeAsync(next);
+    }
+
+    /** After upload+finalize, fetch metadata so we get the durable publicUrl. */
+    private async resolveUrl(fileAssetId: string): Promise<string> {
+        this.resolving = true;
+        this.stateHasChanged();
+        try {
+            const dto = await getFileMetadata(fileAssetId);
+            if (!dto.publicUrl) {
+                throw new Error("Server returned no publicUrl for this file.");
+            }
+            return dto.publicUrl;
+        } finally {
+            this.resolving = false;
+            this.stateHasChanged();
+        }
+    }
+
+    private handlePick(): void {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            // The input's change event is outside the renderer: a failure goes to the ErrorBoundary by hand.
+            this.uploadFile(file).catch((error) => this.dispatchExceptionAsync(error));
+        };
+        input.click();
+    }
+
+    private async uploadFile(file: File): Promise<void> {
+        try {
+            const asset = await this.upload.upload(file);
+            const url = await this.resolveUrl(asset.id);
+            this.change(url)?.catch((error) => this.dispatchExceptionAsync(error));
+            toast.success("Image uploaded");
+            // Clear progress so the dropzone re-arms for another upload.
+            this.resetTimer = setTimeout(() => this.upload.reset(), 1500);
+        } catch (e) {
+            const message =
+                e instanceof ApiRequestError
+                    ? (e.problem?.detail ?? e.problem?.title ?? e.message)
+                    : e instanceof Error
+                        ? e.message
+                        : "Upload failed";
+            toast.error(message);
+        }
+    }
+
+    dispose(): void {
+        clearTimeout(this.resetTimer);
+    }
+}

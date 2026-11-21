@@ -1,0 +1,62 @@
+@** A Bootstrap date field (the browser's date picker, `.form-control`; InputBase — bind it with
+    @bind) with an optional label and help text. The value is the ISO text the input edits (empty when
+    cleared): `"2026-10-07"`, or with `type` (Blazor's InputDateType) `"2026-10-07T09:30"`, `"2026-10"`
+    or `"09:30"`; a plain string has no time zone to shift the day. Validation state and
+    message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+@inherits InputBase<string>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <input @ref="element" id="@field.id(id)" type="@type" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" readonly="@readOnly" required="@required" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The field's label (clicking it focuses the input). */
+    @Parameter() label?: string;
+    /** A hint below the input, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** What the input edits (Blazor's InputDateType): date, datetime-local, month or time. */
+    @Parameter() type: "date" | "datetime-local" | "month" | "time" = "date";
+    /** The earliest date, as ISO text ("2026-01-01"). */
+    @Parameter() min?: string;
+    /** The latest date, as ISO text. */
+    @Parameter() max?: string;
+    /** Disables the input. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the date without letting it change: the native readonly — focusable, no picker (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** Marks the input as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-date");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).value;
+    }
+}

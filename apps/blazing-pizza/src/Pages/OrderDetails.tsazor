@@ -1,6 +1,5 @@
 @page "/myorders/{orderId:int}"
 @authorize
-@inherits PizzaComponentBase
 @inject OrdersClient OrdersClient
 
 <div class="main">
@@ -15,7 +14,7 @@
                 <h2>
                     Order placed @formatLongDate(this.orderWithStatus.order.createdTime)
                 </h2>
-                <p class="ml-auto mb-0">
+                <p class="ms-auto mb-0">
                     Status: <strong>@this.orderWithStatus.statusText</strong>
                 </p>
             </div>
@@ -30,7 +29,7 @@
         </div>
 
         @if (this.orderWithStatus.statusText !== "Delivered") {
-            <Poller Interval="@4000" OnTick="@this.refreshOrder" />
+            <Poller Interval="@(4000)" OnTick="@this.refreshOrder" />
         }
     }
 </div>
@@ -49,12 +48,13 @@
     // is this page, so it re-renders after each tick (original: manual
     // CancellationTokenSource + StateHasChanged).
     private refreshOrder = async (): Promise<void> => {
-        try {
-            this.orderWithStatus = await this.OrdersClient.getOrder(this.orderId);
+        const result = await this.OrdersClient.getOrder(this.orderId);
+        if (result.ok) {
+            this.orderWithStatus = result.body;
             this.invalidOrder = false;
-        } catch (err) {
+        } else {
             this.invalidOrder = true;
-            console.error(err);
+            console.error(problemMessage(result));
         }
         // Called directly from onParametersSet (not via an EventCallback), so
         // the async result needs an explicit re-render (original:

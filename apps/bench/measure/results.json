@@ -2,25 +2,191 @@
   {
     "name": "tsazor",
     "bundle": {
-      "codeRawKB": 56.1,
-      "codeGzipKB": 14.1,
+      "codeRawKB": 77.7,
+      "codeGzipKB": 24.3,
       "cssGzipKB": 0.8
     },
     "load": {
       "fcpMs": null,
-      "readyMs": 25
+      "readyMs": 21.9
     },
     "ops": {
-      "create10kMs": 460.3,
-      "append1kMs": 182.9,
-      "updateEvery10thMs": 163.1,
-      "swapMs": 235.5,
-      "selectMs": 92,
-      "removeMs": 414,
+      "create10kMs": 283.1,
+      "append1kMs": 71.8,
+      "updateEvery10thMs": 63,
+      "swapMs": 100.4,
+      "selectMs": 8.2,
+      "removeMs": 98,
+      "removeWorked": true,
+      "cycles": 10
+    },
+    "memoryMB": 15.2,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "tsazor-router",
+    "bundle": {
+      "codeRawKB": 89.4,
+      "codeGzipKB": 28.2,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": null,
+      "readyMs": 23
+    },
+    "ops": {
+      "create10kMs": 283.5,
+      "append1kMs": 66.5,
+      "updateEvery10thMs": 65.2,
+      "swapMs": 103.4,
+      "selectMs": 9.7,
+      "removeMs": 97.9,
+      "removeWorked": true,
+      "cycles": 10
+    },
+    "memoryMB": 15.3,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "react",
+    "bundle": {
+      "codeRawKB": 221.6,
+      "codeGzipKB": 69.2,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": null,
+      "readyMs": 38.1
+    },
+    "ops": {
+      "create10kMs": 360.2,
+      "append1kMs": 86.3,
+      "updateEvery10thMs": 69.3,
+      "swapMs": 155.6,
+      "selectMs": 14.2,
+      "removeMs": 174.1,
+      "removeWorked": true,
+      "cycles": 10
+    },
+    "memoryMB": 25.1,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "vue",
+    "bundle": {
+      "codeRawKB": 66.6,
+      "codeGzipKB": 26.3,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": 44,
+      "readyMs": 22.9
+    },
+    "ops": {
+      "create10kMs": 289.4,
+      "append1kMs": 83.9,
+      "updateEvery10thMs": 76.3,
+      "swapMs": 161.2,
+      "selectMs": 28.5,
+      "removeMs": 179.3,
+      "removeWorked": true,
+      "cycles": 10
+    },
+    "memoryMB": 18.8,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "svelte",
+    "bundle": {
+      "codeRawKB": 38.7,
+      "codeGzipKB": 15.1,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": 44,
+      "readyMs": 22.1
+    },
+    "ops": {
+      "create10kMs": 359.1,
+      "append1kMs": 103.6,
+      "updateEvery10thMs": 80.6,
+      "swapMs": 158.2,
+      "selectMs": 10.5,
+      "removeMs": 177.4,
+      "removeWorked": true,
+      "cycles": 10
+    },
+    "memoryMB": 23.8,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "blazor",
+    "bundle": {
+      "codeRawKB": 13795.8,
+      "codeGzipKB": 5427,
+      "cssGzipKB": 1,
+      "runtimeGzipKB": 10910
+    },
+    "load": {
+      "fcpMs": 32,
+      "readyMs": 300.5
+    },
+    "ops": {
+      "create10kMs": 319.4,
+      "append1kMs": 113.2,
+      "updateEvery10thMs": 69.6,
+      "swapMs": 166.1,
+      "selectMs": 62.2,
+      "removeMs": 165.6,
       "removeWorked": true,
       "cycles": 5
     },
-    "memoryMB": 16.5,
+    "memoryMB": 19.8,
     "errors": [],
     "todoChecks": {
       "addsTodo": true,

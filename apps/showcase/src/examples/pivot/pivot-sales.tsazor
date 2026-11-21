@@ -1,0 +1,20 @@
+@** A pivot of sales by region and quarter over the grid's machinery: every cell column sortable,
+    the row totals a column, the column totals the footer, the grand total in its corner. The
+    measure's format shapes a cell; an empty cell (no rows, or only null values) shows nothing. *@
+@import type { PivotMeasure } from "@tsazor/ui"
+
+<PivotDataGrid Data="@sales" RowField="@(sale => sale.region)" RowTitle="Region" ColumnField="@(sale => sale.quarter)" ColumnName="@(value => `Quarter ${value}`)" Measure="@measure" AriaLabel="Sales by region and quarter" />
+
+@code {
+    private readonly measure: PivotMeasure<{ region: string; quarter: string; amount: number | null }> = {
+        value: (sale) => sale.amount,
+        format: (value) => (value === undefined || value === null ? "–" : value.toFixed(2)),
+    };
+    private sales: { region: string; quarter: string; amount: number | null }[] = [
+        { region: "North", quarter: "Q1", amount: 100 },
+        { region: "North", quarter: "Q2", amount: 50 },
+        { region: "South", quarter: "Q1", amount: 75 },
+        { region: "North", quarter: "Q1", amount: 25 },
+        { region: "South", quarter: "Q3", amount: null },
+    ];
+}

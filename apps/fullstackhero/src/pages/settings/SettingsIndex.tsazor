@@ -1,0 +1,12 @@
+@* routes.tsx: the settings index — `<Navigate to="/settings/profile" replace />` inside SettingsLayout. *@
+@page "/settings"
+@layout SettingsLayout
+@authorize
+@import SettingsLayout from "./SettingsLayout.tsazor"
+@inject NavigationManager navigation
+
+@code {
+    protected override onInitialized(): void {
+        this.navigation.navigateTo("/settings/profile", { replaceHistoryEntry: true });
+    }
+}

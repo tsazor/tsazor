@@ -1,0 +1,5 @@
+@using @tsazor/fluent
+@* A template resolves the skin's components through its package (the self-reference works
+   from inside the package). A copy lives under the app's own _Imports, whose @using binds the
+   skin the same way — the copies resolve as they are. *@
+@import { Parameter, RenderFragment } from "@tsazor/runtime"

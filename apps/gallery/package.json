@@ -4,18 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsazor check && vite build",
+    "check": "tsazor check",
     "dev": "vite",
-    "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test test/",
-    "verify": "node scripts/verify.mjs"
+    "test": "node --test test/*.test.mjs",
+    "verify": "node scripts/verify.mjs",
+    "verify:a11y": "node scripts/verify-a11y.mjs"
   },
   "dependencies": {
     "@tsazor/fluent": "workspace:*",
+    "@tsazor/fluent-icons": "workspace:*",
+    "@tsazor/markdown": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*"
   },
   "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
     "playwright-core": "^1.63.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.7"

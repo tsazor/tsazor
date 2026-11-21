@@ -1,10 +1,12 @@
+import { componentInternals } from "../src/components/component-internals";
 /**
  * M3 acceptance tests: complete parameter system — ChildContent via markup
  * (addContent inside a component frame), CaptureUnmatchedValues, and async
  * lifecycle orchestration (onInitialized delays the first render).
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, RenderTreeBuilder, Renderer, Parameter, defineComponent, EventCallback } from "../src/index";
+import { ComponentBase, RenderTreeBuilder, Parameter, defineComponent, EventCallback } from "../src/index";
+import { Renderer } from "../src/internal";
 import type { RenderFragment } from "../src/index";
 
 class Card extends ComponentBase {
@@ -78,7 +80,7 @@ describe("child content (Blazor's markup-inside-component syntax)", () => {
     expect(container.querySelector("footer")?.textContent).toBe("one");
 
     (state.component as unknown as { text: string }).text = "two";
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.querySelector("footer")?.textContent).toBe("two");
   });
@@ -126,10 +128,62 @@ describe("CaptureUnmatchedValues", () => {
     const captured = (componentState.component as unknown as { extras?: Record<string, unknown> }).extras;
     expect(captured).toEqual({ placeholder: "Enter…", "data-id": 7 });
   });
+
+  /** Child capturing unmatched attributes; renders them as a sorted key list. */
+  class Capture extends ComponentBase {
+    @Parameter({ captureUnmatchedValues: true }) rest?: Record<string, unknown>;
+    protected override buildRenderTree(b: RenderTreeBuilder): void {
+      b.addContent(0, Object.keys(this.rest ?? {}).sort().join(","));
+    }
+  }
+
+  async function hostWith(attrs: () => Record<string, unknown>) {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    let host!: Host;
+    class Host extends ComponentBase {
+      protected override onInitialized(): void {
+        host = this;
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Capture));
+        let seq = 1;
+        for (const [name, value] of Object.entries(attrs())) b.addAttribute(seq++, name, value as never);
+        b.closeComponent();
+      }
+      rerender(): void {
+        this.stateHasChanged();
+      }
+    }
+    const errors: unknown[] = [];
+    renderer.errorHandler = (e) => void errors.push(e.error);
+    renderer.renderInContainer(Host, container);
+    await renderer.waitUntilIdle();
+    return { container, renderer, errors, rerender: async () => { host.rerender(); await renderer.waitUntilIdle(); } };
+  }
+
+  it("rebuilds the dictionary per parameter set: an attribute the parent drops disappears (Blazor)", async () => {
+    let attrs: Record<string, unknown> = { a: 1, b: { x: 1 } };
+    const view = await hostWith(() => attrs);
+    expect(view.container.textContent).toBe("a,b");
+    attrs = { b: { x: 2 } };
+    await view.rerender();
+    expect(view.container.textContent).toBe("b");
+  });
+
+  it("accepts the capture property passed explicitly", async () => {
+    const view = await hostWith(() => ({ rest: { id: "x", title: "t" } }));
+    expect(view.container.textContent).toBe("id,title");
+  });
+
+  it("rejects an explicit capture property combined with unmatched attributes (Blazor)", async () => {
+    const view = await hostWith(() => ({ rest: { id: "x" }, title: "t" }));
+    expect(view.errors.map(String).join("\n")).toMatch(/cannot be set explicitly when also used to capture unmatched values/);
+  });
 });
 
 describe("async lifecycle orchestration", () => {
-  it("delays the first render until async onInitialized completes", async () => {
+  it("renders the result of an async onInitialized once it completes", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();
     let initialized = false;
@@ -186,15 +240,15 @@ describe("async lifecycle orchestration", () => {
     expect(container.querySelector("span")?.textContent).toBe("a");
 
     (state.component as unknown as { value: string }).value = "b";
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.querySelector("span")?.textContent).toBe("b");
     expect(seen).toEqual(["a", "b"]);
   });
 });
 
-describe("plain-function event parameters (Blazor's EventCallbackFactory conversion)", () => {
-  it("binds a plain function to an on*-named parameter and re-renders the declaring parent", async () => {
+describe("EventCallback parameters (Blazor's EventCallbackFactory conversion, done by the compiler since B8)", () => {
+  it("an EventCallback bound to the declaring parent re-renders it", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();
 
@@ -217,11 +271,11 @@ describe("plain-function event parameters (Blazor's EventCallbackFactory convers
         b.addContent(1, this.label);
         b.closeElement();
         b.openComponent(2, defineComponent(Clicker));
-        // Plain function on purpose: the renderer must bind it to this
-        // component (Blazor's `OnClick="Handler"` semantics).
-        b.addAttribute(3, "onClick", () => {
+        // What the compiler emits for `OnClick="handler"` on an EventCallback
+        // parameter; the renderer passes values through unchanged (B8).
+        b.addAttribute(3, "onClick", EventCallback.bind(this, () => {
           this.label = "clicked";
-        });
+        }));
         b.closeComponent();
       }
     }

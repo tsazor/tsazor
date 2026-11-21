@@ -24,6 +24,18 @@
   animation: fui-dialog-enter var(--fui-duration-gentle) var(--fui-ease-standard);
 }
 
+.fui-dialog--small {
+  width: min(400px, 100%);
+}
+
+.fui-dialog--large {
+  width: min(800px, 100%);
+}
+
+.fui-dialog--xlarge {
+  width: min(1140px, 100%);
+}
+
 .fui-dialog__header {
   display: flex;
   align-items: center;

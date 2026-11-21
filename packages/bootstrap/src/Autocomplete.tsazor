@@ -1,0 +1,274 @@
+@** A Bootstrap autocomplete (a `.form-control` with `.badge` chips and a `.dropdown-menu`; Fluent UI Blazor's
+    FluentAutocomplete; the ARIA combobox pattern with a listbox popup). Typing searches `items` (filtered by their text) or raises `onOptionsSearch`, whose handler sets
+    `args.items`; a newer search aborts the older one (`args.signal`) and its late answer is dropped. The
+    arrow keys move through the options, Enter picks one, Escape closes the list. With `multiple` (the
+    default) the picked options are removable chips, bound with `@bind-selectedOptions`; Backspace in the
+    empty input removes the last. Without it, one option, bound with `@bind-selectedOption` — the same parameters as
+    the Fluent skin's Autocomplete. In a form, the bound field takes part as an input's does (MudAutocomplete's
+    For): a pick notifies the EditContext, and once the form was submitted the field shows its validation message. *@
+@typeparam TOption
+@import { EditContext } from "@tsazor/runtime"
+@import { anchoredPosition, dismissible, uniqueId } from "@tsazor/ui"
+@import { SearchRunner, comboboxKeyAction, filterOptions, hasSubmitAttempt, toggleOption } from "@tsazor/ui/kit"
+@import { topLayer } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { OptionsSearchEventArgs } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+
+<div @attributes="@withClass("mb-3 tz-autocomplete", this.additionalAttributes)">
+    @if (label) {
+        <label class="form-label" for="@this.inputId">@label</label>
+    }
+    <div class="@(this.message ? "form-control is-invalid tz-autocomplete__field" : "form-control tz-autocomplete__field")" @ref="field">
+        @if (multiple) {
+            @foreach (const option of selectedOptions) {
+                <span class="badge text-bg-light border tz-autocomplete__chip" @key="this.keyOf(option)">
+                    @optionText(option)
+                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@(disabled || readOnly)" @onclick="() => this.removeChip(option)"></button>
+                </span>
+            }
+        }
+        <input id="@this.inputId" class="tz-autocomplete__input" type="text" role="combobox" autocomplete="off"
+               aria-autocomplete="list" aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId"
+               aria-activedescendant="@this.activeId" aria-label="@ariaLabel" placeholder="@placeholder" disabled="@disabled" readonly="@readOnly"
+               aria-invalid="@(this.message ? "true" : null)" aria-describedby="@(this.message ? this.messageId : null)"
+               value="@this.inputText" @oninput="this.input" @onkeydown="this.keydown" />
+    </div>
+    @if (this.message) {
+        <div class="invalid-feedback d-block" role="alert" id="@this.messageId">@this.message</div>
+    }
+    @if (this.open) {
+        <ul class="dropdown-menu show tz-autocomplete__list" role="listbox" id="@this.listId" aria-label="@(label ?? ariaLabel)" aria-multiselectable="@(multiple ? "true" : null)" @attach:top="topLayer()" @attach="position" @attach:dismiss="dismiss">
+            @for (let i = 0; i < this.options.length; i++) {
+                <li class="@this.optionClass(i)" role="option" id="@this.optionId(i)" aria-selected="@(this.isSelected(this.options[i]!) ? "true" : "false")" @onmousedown:preventDefault @onclick="() => this.pick(this.options[i]!)">
+                    @if (optionTemplate !== undefined) {
+                        @optionTemplate(this.options[i]!)
+                    } else {
+                        @optionText(this.options[i]!)
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** The input's accessible name when there is no label. */
+    @Parameter() ariaLabel?: string;
+    /** The input's hint while it's empty. */
+    @Parameter() placeholder?: string;
+    /** The options, searched by their text; or leave it out and answer `onOptionsSearch`. */
+    @Parameter() items?: TOption[];
+    /** Raised with the search text; the handler sets `args.items` (Fluent UI Blazor's OnOptionsSearch). */
+    @Parameter() onOptionsSearch?: EventCallback<OptionsSearchEventArgs<TOption>>;
+    /** An option's text, shown and searched. */
+    @Parameter() optionText: (option: TOption) => string = (option) => String(option);
+    /** What makes two options the same (by default their text). */
+    @Parameter() optionKey?: (option: TOption) => string | number | object;
+    /** How an option looks in the list. */
+    @Parameter() optionTemplate?: (option: TOption) => RenderFragment;
+    /** Several values (chips), the default; false for one. */
+    @Parameter() multiple: boolean = true;
+    /** The values, with `multiple` (bind with `@bind-selectedOptions`). */
+    @Parameter() selectedOptions: TOption[] = [];
+    /** Raised with the values when the user adds or removes one. */
+    @Parameter() selectedOptionsChanged?: EventCallback<TOption[]>;
+    /** The value, without `multiple` (bind with `@bind-selectedOption`). */
+    @Parameter() selectedOption: TOption | null = null;
+    /** Raised with the value when the user picks one. */
+    @Parameter() selectedOptionChanged?: EventCallback<TOption | null>;
+    /** The bound field in a form (`@bind-selectedOption` passes it), as an input's ValueExpression. */
+    @Parameter() selectedOptionExpression?: string;
+    /** The bound field in a form (`@bind-selectedOptions` passes it). */
+    @Parameter() selectedOptionsExpression?: string;
+    /** The form's EditContext, from the nearest EditForm. */
+    @CascadingParameter({ type: EditContext }) editContext?: EditContext;
+    /** At most this many values. */
+    @Parameter() maximumSelectedOptions?: number;
+    /** At most this many options in the list (Fluent UI Blazor's MaximumOptionsSearch). */
+    @Parameter() maximumOptionsSearch: number = 9;
+    /** Disables the input and the chips' remove buttons. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the picked options without letting them change: the native readonly on the input, no list, no removable chips (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** `@attributes` pass-through to the root (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly generatedId = uniqueId("tz-autocomplete");
+    private field?: HTMLElement;
+    private open = false;
+    private active = -1;
+    private options: readonly TOption[] = [];
+    /** What the user typed; null shows the selected option (one value). */
+    private typed: string | null = null;
+
+    private readonly runner = new SearchRunner<TOption>((text, signal) => this.search(text, signal));
+    private readonly position = anchoredPosition({ anchor: () => this.field, placement: () => "bottom-start" });
+    private readonly dismiss = dismissible({ onDismiss: () => this.close(), ignore: () => [this.field] });
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => this.runner.cancel());
+        // A validation or a submit elsewhere in the form changes what this field shows.
+        if (this.editContext) this.observe(this.editContext.onValidationStateChanged);
+    }
+
+    /** The bound field, for the form. */
+    private get fieldName(): string | undefined {
+        return this.multiple ? this.selectedOptionsExpression : this.selectedOptionExpression;
+    }
+
+    /** The field's first validation message, once the form was submitted (as the inputs). */
+    private get message(): string {
+        const field = this.fieldName;
+        if (!field || !this.editContext || !hasSubmitAttempt(this.editContext)) return "";
+        return this.editContext.getValidationMessages(field)[0] ?? "";
+    }
+
+    private get messageId(): string {
+        return `${this.inputId}-message`;
+    }
+
+    /** The form learns of a change after the parent has the value (InputBase's order). */
+    private notifyFieldChanged(value: unknown): void {
+        const field = this.fieldName;
+        if (field && this.editContext) this.editContext.notifyFieldChanged(field, value);
+    }
+
+    private get inputId(): string {
+        return this.id ?? this.generatedId;
+    }
+
+    private get listId(): string {
+        return `${this.inputId}-list`;
+    }
+
+    private optionId(index: number): string {
+        return `${this.inputId}-option-${index}`;
+    }
+
+    private get activeId(): string | null {
+        return this.open && this.active >= 0 ? this.optionId(this.active) : null;
+    }
+
+
+    private get inputText(): string {
+        if (this.typed !== null) return this.typed;
+        return !this.multiple && this.selectedOption !== null ? this.optionText(this.selectedOption) : "";
+    }
+
+    private keyOf(option: TOption): string | number | object {
+        return (this.optionKey ?? this.optionText)(option);
+    }
+
+    private isSelected(option: TOption): boolean {
+        const key = this.keyOf(option);
+        const selected = this.multiple ? this.selectedOptions : this.selectedOption === null ? [] : [this.selectedOption];
+        return selected.some((candidate) => this.keyOf(candidate) === key);
+    }
+
+    private optionClass(index: number): string {
+        return index === this.active ? "dropdown-item tz-autocomplete__option active" : "dropdown-item tz-autocomplete__option";
+    }
+
+    private async search(text: string, signal: AbortSignal): Promise<readonly TOption[]> {
+        if (this.onOptionsSearch === undefined) return filterOptions(this.items ?? [], text, this.optionText);
+        const args = new OptionsSearchEventArgs<TOption>(text, signal);
+        await this.onOptionsSearch.invokeAsync(args);
+        return args.items;
+    }
+
+    private async input(e: Event): Promise<void> {
+        this.typed = (e.target as HTMLInputElement).value;
+        await this.refresh(this.typed);
+    }
+
+    private async refresh(text: string): Promise<void> {
+        const options = await this.runner.runAsync(text);
+        if (options === undefined) return;
+        this.options = options.slice(0, this.maximumOptionsSearch);
+        this.active = -1;
+        this.open = this.options.length > 0;
+    }
+
+    private async keydown(e: KeyboardEvent): Promise<void> {
+        // Read-only: the keys open no list and remove no chip.
+        if (this.readOnly) return;
+        const action = comboboxKeyAction(e.key, {
+            open: this.open,
+            active: this.active,
+            count: this.options.length,
+            inputEmpty: this.inputText === "",
+            multiple: this.multiple,
+        });
+        if (action.kind === "none") {
+            // Opening with the arrows before anything was typed: search for everything.
+            if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !this.open) {
+                e.preventDefault();
+                await this.refresh(this.typed ?? "");
+                if (this.open) this.active = e.key === "ArrowDown" ? 0 : this.options.length - 1;
+            }
+            return;
+        }
+        e.preventDefault();
+        switch (action.kind) {
+            case "open":
+            case "move":
+                this.open = true;
+                this.active = action.active;
+                break;
+            case "select":
+                await this.pick(this.options[action.index]!);
+                break;
+            case "close":
+                this.close();
+                break;
+            case "remove-last":
+                if (this.selectedOptions.length > 0) await this.remove(this.selectedOptions[this.selectedOptions.length - 1]!);
+                break;
+        }
+    }
+
+    private async pick(option: TOption): Promise<void> {
+        if (this.multiple) {
+            const next = toggleOption(this.selectedOptions, option, { multiple: true, maximum: this.maximumSelectedOptions, key: (o) => this.keyOf(o) });
+            this.selectedOptions = next;
+            this.typed = "";
+            this.close();
+            await this.selectedOptionsChanged?.invokeAsync(next);
+            this.notifyFieldChanged(next);
+        } else {
+            this.selectedOption = option;
+            this.typed = null;
+            this.close();
+            await this.selectedOptionChanged?.invokeAsync(option);
+            this.notifyFieldChanged(option);
+        }
+    }
+
+    /** A chip's remove button: the focus goes to the input first, as the button goes with its chip. */
+    private removeChip(option: TOption): Promise<void> {
+        this.field?.querySelector("input")?.focus();
+        return this.remove(option);
+    }
+
+    private async remove(option: TOption): Promise<void> {
+        const key = this.keyOf(option);
+        const next = this.selectedOptions.filter((candidate) => this.keyOf(candidate) !== key);
+        this.selectedOptions = next;
+        await this.selectedOptionsChanged?.invokeAsync(next);
+        this.notifyFieldChanged(next);
+    }
+
+    private close(): void {
+        if (!this.open) return;
+        this.open = false;
+        this.active = -1;
+        this.stateHasChanged();
+    }
+}

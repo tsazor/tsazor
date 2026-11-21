@@ -1,0 +1,58 @@
+@page "/datagrid"
+@** The DataGrid's examples (design-extended-library.md §2.1): the ones every grid needs first,
+    then what the extended layer adds — the built-in filter and the density (2026-10-16), later
+    the aggregates, resize, editing, grouping and export as their examples arrive. *@
+@import { Typography, Paginator } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import GridBasicExample from "../examples/grid/grid-basic.tsazor"
+@import GridSortingExample from "../examples/grid/grid-sorting.tsazor"
+@import GridPaginationExample from "../examples/grid/grid-pagination.tsazor"
+@import GridSelectionExample from "../examples/grid/grid-selection.tsazor"
+@import GridFilterExample from "../examples/grid/grid-filter.tsazor"
+@import GridDensityExample from "../examples/grid/grid-density.tsazor"
+@import GridAggregatesExample from "../examples/grid/grid-aggregates.tsazor"
+@import GridWidthsExample from "../examples/grid/grid-widths.tsazor"
+@import GridEditingExample from "../examples/grid/grid-editing.tsazor"
+@import GridGroupsExample from "../examples/grid/grid-groups.tsazor"
+@import GridSnapshotExample from "../examples/grid/grid-snapshot.tsazor"
+
+<Typography Variant="h1">DataGrid</Typography>
+<Typography>
+    A grid shaped like Blazor's QuickGrid: the columns are PropertyColumn and TemplateColumn
+    children, the rows come from Items (sorted and paged here) or an ItemsProvider (sorted and
+    paged by your code or a server, with an AbortSignal). The extended layer's features — the
+    built-in column filter among them — are QuickGrid-shaped extensions.
+</Typography>
+
+<Example Title="A grid over rows" Description="The columns from PropertyColumn and TemplateColumn, the data as Items."
+    Id="grid/grid-basic"><GridBasicExample /></Example>
+
+<Example Title="Sorting" Description="Sortable columns sort on a click on their header; the default sort applies without one."
+    Id="grid/grid-sorting"><GridSortingExample /></Example>
+
+<Example Title="Pagination" Description="A shared PaginationState drives the grid and the Paginator."
+    Id="grid/grid-pagination"><GridPaginationExample /></Example>
+
+<Example Title="Selection" Description="Checkboxes bound to selectedItems; radio buttons for one row."
+    Id="grid/grid-selection"><GridSelectionExample /></Example>
+
+<Example Title="The built-in filter" Description="A filterable column gets a filter in its options panel: operator, value, apply and clear."
+    Id="grid/grid-filter"><GridFilterExample /></Example>
+
+<Example Title="Density" Description="density compact is the dense table; comfortable is the normal one."
+    Id="grid/grid-density"><GridDensityExample /></Example>
+
+<Example Title="Aggregates" Description="A footer per column: sum, avg, count, min, max or your own, over all rows or the current page's."
+    Id="grid/grid-aggregates"><GridAggregatesExample /></Example>
+
+<Example Title="Column width and order" Description="The header's grip moves a column (drag or arrow keys); the handle at its end resizes it."
+    Id="grid/grid-widths"><GridWidthsExample /></Example>
+
+<Example Title="Inline editing" Description="Editing a row: its columns with an EditContent show the edit cells; Enter commits, Escape cancels."
+    Id="grid/grid-editing"><GridEditingExample /></Example>
+
+<Example Title="Grouping" Description="A collapsible header row per value, its rows underneath; groups by value order."
+    Id="grid/grid-groups"><GridGroupsExample /></Example>
+
+<Example Title="Persistence and export" Description="The columns' state as plain data out and back (the app stores it); the rows as CSV."
+    Id="grid/grid-snapshot"><GridSnapshotExample /></Example>

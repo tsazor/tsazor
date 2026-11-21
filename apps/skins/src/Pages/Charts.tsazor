@@ -1,0 +1,186 @@
+@page "/charts"
+@import { hierarchy, treemap, treemapSquarify } from "d3-hierarchy"
+@import { SeriesChart, type Series } from "../charts"
+@import { serverEvents, type StreamState } from "../server-events"
+@import { Chart, Sparkline, type ChartSeries } from "@tsazor/charts"
+
+<Typography Variant="h1">Charts and live data</Typography>
+<Typography>
+    A chart library through <code>@@attach</code>, a visualization of the app's own in SVG markup, and a live chart of
+    server events through <code>observe</code> — the patterns of docs/guide-charts.md and docs/guide-live-data.md.
+</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">@@tsazor/charts</Typography>
+    <div class="charts-grid">
+        <Chart ChartType="line" ChartSeries="@sold" ChartLabels="@days" AriaLabel="Loaves sold this week" ChartOptions="@smooth" @bind-SelectedIndex="pickedBread" class="chart-sold" />
+        <Chart ChartType="bar" ChartSeries="@sold" ChartLabels="@days" AriaLabel="Loaves by day" CanHideSeries="@true" class="chart-days" />
+        <Chart ChartType="stacked-bar" ChartSeries="@sold" ChartLabels="@days" AriaLabel="All loaves by day" class="chart-stacked" />
+        <Chart ChartType="donut" ChartSeries="@share" ChartLabels="@groups" AriaLabel="Sales by group" LegendPosition="end" @bind-SelectedIndex="pickedGroup" class="chart-share" />
+    </div>
+    <Typography Variant="caption">Picked bread <span class="chart-picked" role="status">@pickedBread</span>, group <span class="chart-group">@pickedGroup</span>.</Typography>
+    <table class="spark-table">
+        <caption>Loaves over the last two weeks</caption>
+        <thead><tr><th scope="col">Bread</th><th scope="col">Trend</th><th scope="col">Today</th></tr></thead>
+        <tbody>
+            @foreach (const row of trends) {
+                <tr><th scope="row">@row.name</th><td><Sparkline Data="@row.data" AriaLabel="@row.name" Area="@true" /></td><td>@row.data[row.data.length - 1]</td></tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">A chart library</Typography>
+    <ButtonGroup AriaLabel="Week">
+        <Button Intent="@(week === 0 ? "primary" : "secondary")" aria-pressed="@(week === 0 ? "true" : "false")" OnClick="@(() => this.show(0))">This week</Button>
+        <Button Intent="@(week === 1 ? "primary" : "secondary")" aria-pressed="@(week === 1 ? "true" : "false")" OnClick="@(() => this.show(1))">Last week</Button>
+    </ButtonGroup>
+    <div class="chart-box sales-chart">
+        <canvas role="img" aria-label="@summary" @attach="sales.attach"></canvas>
+    </div>
+    <details class="chart-data">
+        <summary>The data</summary>
+        <table class="chart-table sales-table">
+            <caption>@weeks[week]!.label</caption>
+            <thead><tr><th scope="col">Day</th><th scope="col">Loaves</th></tr></thead>
+            <tbody>
+                @for (let i = 0; i < weeks[week]!.labels.length; i++) {
+                    <tr><th scope="row">@weeks[week]!.labels[i]</th><td>@weeks[week]!.values[i]</td></tr>
+                }
+            </tbody>
+        </table>
+    </details>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">The app's own SVG</Typography>
+    <svg class="treemap" viewBox="0 0 600 260" role="img" aria-labelledby="treemap-title">
+        <title id="treemap-title">@treemapTitle</title>
+        @foreach (const tile of tiles) {
+            <g class="@(`treemap__tile treemap__tile--${tile.group}`)" data-name="@tile.name">
+                <rect x="@tile.x" y="@tile.y" width="@tile.width" height="@tile.height" rx="3"><title>@tile.name: @tile.value</title></rect>
+                @if (tile.width > 70 && tile.height > 28) {
+                    <text x="@(tile.x + 6)" y="@(tile.y + 18)" aria-hidden="true">@tile.name</text>
+                }
+            </g>
+        }
+    </svg>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Live data</Typography>
+    <p class="live-state">Stream: <span class="live-stream">@stream</span>. Oven: <span class="live-now">@(readings.at(-1)?.celsius ?? "–")</span> °C.</p>
+    <div class="chart-box oven-chart">
+        <canvas role="img" aria-label="@ovenSummary" @attach="oven.attach"></canvas>
+    </div>
+    <details class="chart-data">
+        <summary>The readings</summary>
+        <table class="chart-table oven-table">
+            <caption>@ovenSeries.label</caption>
+            <thead><tr><th scope="col">Reading</th><th scope="col">°C</th></tr></thead>
+            <tbody>
+                @foreach (const reading of readings) {
+                    <tr @key="reading.id"><th scope="row">@reading.id</th><td>@reading.celsius</td></tr>
+                }
+            </tbody>
+        </table>
+    </details>
+</section>
+
+@code {
+    private readonly weeks: Series[] = [
+        { label: "Loaves sold this week", labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], values: [120, 98, 134, 110, 156, 182] },
+        { label: "Loaves sold last week", labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], values: [104, 121, 99, 140, 133, 171] },
+    ];
+    private week = 0;
+    private readonly days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    private readonly sold: ChartSeries[] = [
+        { name: "Rye", data: [120, 98, 134, 110, 156, 182] },
+        { name: "Spelt", data: [40, 52, 38, 61, 75, 70] },
+        { name: "Sourdough", data: [80, 85, 90, 72, 101, 130] },
+    ];
+    private readonly smooth = { interpolation: "smooth" as const };
+    private readonly groups = ["Breads", "Pastries", "Drinks"];
+    private readonly share: ChartSeries[] = [{ name: "Sales", data: [795, 450, 290] }];
+    private pickedBread = -1;
+    private pickedGroup = -1;
+    private readonly trends = [
+        { name: "Rye", data: [104, 121, 99, 140, 133, 171, 120, 98, 134, 110, 156, 182] },
+        { name: "Spelt", data: [44, 39, 51, 48, 60, 58, 40, 52, 38, 61, 75, 70] },
+    ];
+    private readonly sales = new SeriesChart(this.weeks[0]!);
+
+    private readonly products = [
+        { name: "Breads", children: [{ name: "Sourdough", value: 340 }, { name: "Rye", value: 210 }, { name: "Spelt", value: 150 }, { name: "Baguette", value: 95 }] },
+        { name: "Pastries", children: [{ name: "Croissant", value: 260 }, { name: "Danish", value: 120 }, { name: "Pretzel", value: 70 }] },
+        { name: "Drinks", children: [{ name: "Coffee", value: 230 }, { name: "Tea", value: 60 }] },
+    ];
+
+    /** The live chart shows the last readings: a window that moves on with each event. */
+    private static readonly WINDOW = 20;
+    private stream: StreamState = "connecting";
+    private readings: { id: number; celsius: number }[] = [];
+    private readonly oven = new SeriesChart(this.ovenSeries, { type: "line", live: true });
+
+    protected override onInitialized(): void {
+        this.observe(serverEvents<{ id: number; celsius: number }>("/api/events", (state) => {
+            this.stream = state;
+            this.stateHasChanged();
+        }), (reading) => {
+            this.readings = [...this.readings, reading].slice(-Charts.WINDOW);
+            this.oven.update(this.ovenSeries);
+        });
+    }
+
+    private get ovenSeries(): Series {
+        return {
+            label: "Oven temperature, °C",
+            labels: this.readings.map((reading) => String(reading.id)),
+            values: this.readings.map((reading) => reading.celsius),
+        };
+    }
+
+    /** The line in words, for the canvas's text alternative. */
+    private get ovenSummary(): string {
+        const values = this.readings.map((reading) => reading.celsius);
+        if (values.length === 0) return "Oven temperature: waiting for the first reading.";
+        return `Oven temperature, the last ${values.length} readings: from ${Math.min(...values)} to ${Math.max(...values)} °C, now ${values.at(-1)} °C.`;
+    }
+
+    private show(week: number): void {
+        this.week = week;
+        this.sales.update(this.weeks[week]!);
+    }
+
+    /** The bars in words, for the canvas's text alternative. */
+    private get summary(): string {
+        const series = this.weeks[this.week]!;
+        const top = series.values.indexOf(Math.max(...series.values));
+        return `${series.label}: from ${Math.min(...series.values)} to ${Math.max(...series.values)}, the most on ${series.labels[top]}.`;
+    }
+
+    /** d3-hierarchy lays the products out; the markup draws them. */
+    private get tiles(): { name: string; group: string; value: number; x: number; y: number; width: number; height: number }[] {
+        type Node = { name: string; value?: number; children?: Node[] };
+        const root = hierarchy<Node>({ name: "Sales", children: this.products })
+            .sum((node) => node.value ?? 0)
+            .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+        const laidOut = treemap<Node>().size([600, 260]).padding(2).tile(treemapSquarify)(root);
+        return laidOut.leaves().map((leaf) => ({
+            name: leaf.data.name,
+            group: (leaf.parent?.data.name ?? "").toLowerCase(),
+            value: leaf.value ?? 0,
+            x: leaf.x0,
+            y: leaf.y0,
+            width: leaf.x1 - leaf.x0,
+            height: leaf.y1 - leaf.y0,
+        }));
+    }
+
+    private get treemapTitle(): string {
+        const leaves = this.products.flatMap((group) => group.children);
+        const top = leaves.reduce((best, leaf) => (leaf.value > best.value ? leaf : best));
+        return `Sales by product: ${leaves.length} products in ${this.products.length} groups, ${top.name} the most with ${top.value}.`;
+    }
+}

@@ -1,0 +1,62 @@
+@page "/more"
+@import { InputFileChangeEventArgs } from "@tsazor/runtime"
+
+<h1>More components</h1>
+<p class="intro">
+    The rest of Tier 1, with the same parameters in both skins: a button group, a date field (the
+    value is ISO text like <code>2026-10-07</code>), a file field, a <code>FormField</code> around a
+    control of your own, a popover, a top bar and skeleton placeholders.
+</p>
+
+<section class="demo">
+    <h2>Navbar</h2>
+    <Navbar Brand="Bakery" AriaLabel="Main">
+        <a href="/more" aria-current="page">Orders</a>
+        <a href="/more">Customers</a>
+    </Navbar>
+</section>
+
+<section class="demo">
+    <h2>ButtonGroup and Popover</h2>
+    <div class="demo-row">
+        <ButtonGroup AriaLabel="View">
+            <Button Intent="@(view === "day" ? "primary" : "secondary")" OnClick="@(() => this.view = "day")">Day</Button>
+            <Button Intent="@(view === "week" ? "primary" : "secondary")" OnClick="@(() => this.view = "week")">Week</Button>
+            <Button Intent="@(view === "month" ? "primary" : "secondary")" OnClick="@(() => this.view = "month")">Month</Button>
+        </ButtonGroup>
+        <span class="echo view-choice">View: @view</span>
+        <Popover Label="Opening hours" Title="Opening hours">
+            <p>Mon–Fri 6–18, Sat 7–13.</p>
+        </Popover>
+    </div>
+</section>
+
+<section class="demo">
+    <h2>Date, file and your own control</h2>
+    <DateInput Label="Delivery date" Min="2026-01-01" Help="Orders before 14:00 go out the next day." @bind-Value="delivery" />
+    <p class="echo delivery-echo">Delivery: @(delivery || "not set")</p>
+    <FileInput Label="Order list" Accept=".csv" Help="One order per line." OnChange="@fileChosen" />
+    <p class="echo file-echo">@fileName</p>
+    <FormField Label="Crust" Id="crust" Help="How dark the crust should be.">
+        <input id="crust" type="range" min="1" max="5" value="@crust" aria-describedby="crust-help" @oninput="@((e: Event) => this.crust = (e.target as HTMLInputElement).value)" />
+    </FormField>
+</section>
+
+<section class="demo">
+    <h2>Skeleton</h2>
+    <div class="demo-row skeleton-demo" role="region" aria-busy="true" aria-label="Loading the customer">
+        <Skeleton Shape="circular" Width="48px" />
+        <div style="flex: 1"><Skeleton Lines="3" /></div>
+    </div>
+</section>
+
+@code {
+    private view = "week";
+    private delivery = "";
+    private fileName = "No file chosen.";
+    private crust = "3";
+
+    private fileChosen(e: InputFileChangeEventArgs): void {
+        this.fileName = `Chose ${e.file.name}.`;
+    }
+}

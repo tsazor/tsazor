@@ -1,0 +1,75 @@
+@* Picks a file (FluentCMS's FileSelectorModal, the file pickers' dialog): the folders and files, opened one folder at a
+   time; a file's name or Select picks it; files can be uploaded into the open folder. *@
+@import type { FileUploadConfig, FolderDetailResponse } from "../../api/models"
+@import { ensureOk } from "../../api/api-result"
+@import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+@import { DEFAULT_UPLOAD_CONFIG, downloadUrl, uploadProblem, type AssetDetail } from "./assets"
+@import FilesTable from "./FilesTable.tsazor"
+@inject FluentCmsClient Api
+
+<Dialog isOpen title="Choose File" size="large" onClosed="@this.cancel">
+    <ChildContent>
+        <div class="file-selector">
+            <FolderBreadcrumb folders="@this.parentFolders" current="@this.folderId" rootId="@this.rootFolder?.id" onNavigate="@this.navigateFolder" />
+            <FilesTable @ref="this.filesTable" @bind-folderId="this.folderId" @bind-rootFolder="this.rootFolder" @bind-parentFolders="this.parentFolders" onRowClick="@this.rowClick">
+                <ActionsFragment>
+                    <ActionButton visible="@(!context.isFolder)" iconName="@IconName.Check" label="Select" intent="primary" aria-label="@(`Select ${context.name}`)" @onclick="() => this.select(context)" />
+                    <ActionButton visible="@(!context.isFolder)" iconName="@IconName.Download" label="Download" href="@downloadUrl(this.parentFolders, context)" target="_blank" aria-label="@(`Download ${context.name}`)" />
+                    <ActionButton visible="@context.isFolder" label="Open" aria-label="@(`Open ${context.name}`)" @onclick="() => this.navigateFolder(context.id)" />
+                </ActionsFragment>
+            </FilesTable>
+            <FileInput label="Upload into this folder" multiple onChange="@this.upload" />
+            @if (this.error !== undefined) {
+                <Alert intent="danger">@this.error</Alert>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        <Button onClick="@this.cancel">Cancel</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @Parameter() onSubmit?: EventCallback<AssetDetail>;
+    @Parameter() onCancel?: EventCallback;
+
+    private folderId: string | null = null;
+    private rootFolder?: FolderDetailResponse;
+    private parentFolders: FolderDetailResponse[] = [];
+    private filesTable?: FilesTable;
+    private uploadConfig: FileUploadConfig = DEFAULT_UPLOAD_CONFIG;
+    private error?: string;
+
+    protected override async onInitialized(): Promise<void> {
+        this.uploadConfig = ensureOk(await this.Api.globalSettingsGet()).fileUpload ?? DEFAULT_UPLOAD_CONFIG;
+    }
+
+    private navigateFolder(id: string): void {
+        this.folderId = id;
+    }
+
+    private rowClick(item: AssetDetail): Promise<void> | undefined {
+        return item.isFolder ? undefined : this.select(item);
+    }
+
+    private select(item: AssetDetail): Promise<void> | undefined {
+        return this.onSubmit?.invokeAsync(item);
+    }
+
+    private async upload(args: InputFileChangeEventArgs): Promise<void> {
+        this.error = undefined;
+        try {
+            const files = [...args.getMultipleFiles(this.uploadConfig.maxCount)];
+            this.error = uploadProblem(files, this.uploadConfig);
+            if (this.error !== undefined) return;
+            ensureOk(await this.Api.fileUpload({ files }, { folderId: this.folderId ?? this.rootFolder?.id }));
+            await this.filesTable?.load();
+        } catch (error) {
+            this.error = error instanceof Error ? error.message : String(error);
+        }
+    }
+
+    private cancel(): Promise<void> | undefined {
+        return this.onCancel?.invokeAsync();
+    }
+}

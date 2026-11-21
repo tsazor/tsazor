@@ -1,0 +1,5 @@
+<div class="boxes">
+    <Box label="One" />
+    <Box label="Two" />
+    <Box label="Three" />
+</div>

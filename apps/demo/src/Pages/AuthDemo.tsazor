@@ -2,37 +2,26 @@
 @inject DemoAuthProvider Auth
 
 <div class="card">
-    <h1>Auth-Demo</h1>
-    <p class="muted">AuthorizeView mit Blazor-Semantik — der AuthenticationStateProvider ist über DI registriert.</p>
+    <h1>Auth demo</h1>
+    <p class="muted">AuthorizeView with Blazor semantics — the AuthenticationStateProvider is registered via DI.</p>
 
-    <AuthorizeView ChildContent=@granted NotAuthorized=@denied />
+    <AuthorizeView>
+        <Authorized>
+            <div class="success">Signed in as @(context.user.name).</div>
+            <p>Only the signed-in user sees this line.</p>
+        </Authorized>
+        <NotAuthorized>
+            <p class="error-text">Not signed in — protected content is hidden.</p>
+        </NotAuthorized>
+    </AuthorizeView>
 
     <div class="field">
-        <button class="btn" @onclick="signIn">Anmelden (alice)</button>
-        <button class="btn" @onclick="signOut">Abmelden</button>
+        <button class="btn" @onclick="signIn">Sign in (alice)</button>
+        <button class="btn" @onclick="signOut">Sign out</button>
     </div>
 </div>
 
 @code {
-    private granted: RenderFragment = (b) => this.renderGranted(b);
-    private denied: RenderFragment = (b) => {
-        b.openElement(0, "p");
-        b.addAttribute(1, "class", "error-text");
-        b.addContent(2, "Nicht angemeldet — geschützter Inhalt ist ausgeblendet.");
-        b.closeElement();
-    };
-
-    private renderGranted(b: RenderTreeBuilder): void {
-        const name = this.Auth.peekState()?.user.name ?? "";
-        b.openElement(0, "div");
-        b.addAttribute(1, "class", "success");
-        b.addContent(2, `Angemeldet als ${name}.`);
-        b.closeElement();
-        b.openElement(3, "p");
-        b.addContent(4, "Diese Zeile sieht nur der angemeldete Benutzer.");
-        b.closeElement();
-    }
-
     private signIn() {
         this.Auth.signIn("alice");
     }

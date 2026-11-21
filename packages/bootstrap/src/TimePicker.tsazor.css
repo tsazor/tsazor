@@ -1,0 +1,17 @@
+/* TimePicker — the times in a .dropdown-menu the component places; the active time (the keys') wears a focus ring,
+   the picked one Bootstrap's .active. */
+
+.tz-time-picker__list {
+  position: fixed;
+  min-width: 10rem;
+  max-height: 17.5rem;
+  overflow: auto;
+}
+
+.tz-time-picker__option {
+  cursor: pointer;
+}
+
+.tz-time-picker__option--active {
+  box-shadow: inset 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.5);
+}

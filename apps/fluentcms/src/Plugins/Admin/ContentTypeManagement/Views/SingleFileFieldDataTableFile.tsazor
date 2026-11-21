@@ -1,0 +1,6 @@
+@* A file field in the content list as a link to the file (FluentCMS's SingleFileFieldDataTableFile). *@
+@inherits BaseFieldValueView<string | null, SingleFileFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { SingleFileFieldModel } from "../field-models"
+
+<FileLink fileId="@fieldValue.value" />

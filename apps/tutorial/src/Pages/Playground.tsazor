@@ -1,0 +1,177 @@
+@page "/playground"
+@inject TutorialState State
+@import { compilerClient } from "../engine/compiler-client"
+@import CodeEditor from "../Shell/CodeEditor.tsazor"
+@import { ENTRY, STARTER, fileNameProblem, renameFile, templateFor } from "../playground"
+
+<PageTitle>Playground · Tsazor tutorial</PageTitle>
+<div class="playground">
+    <SiteBar Current="playground" />
+    <div class="workbench">
+        <div class="editor-pane">
+            <div class="toolbar">
+                <FileTabs Files="@fileNames" Active="@active" Diagnostics="@diagnostics" OnSelect="selectFile" />
+                <div class="actions">
+                    @if (naming !== undefined) {
+                        <form class="naming" @onsubmit="commitName" @onsubmit:preventDefault>
+                            <input class="name-input" aria-label="@namingLabel" aria-invalid="@(nameProblem ? "true" : null)" aria-describedby="name-problem" @bind="newName" @bind:event="oninput" @onkeydown="nameKey" @ref="nameInput" />
+                            <button type="submit" class="action action--primary" disabled="@(nameProblem !== undefined)">@(naming === "add" ? "Add" : "Rename")</button>
+                            <button type="button" class="action" @onclick="cancelName">Cancel</button>
+                        </form>
+                    } else {
+                        <button type="button" class="action new-file" @onclick="startAdd" title="Add a file">+ File</button>
+                        <button type="button" class="action rename-file" @onclick="startRename" disabled="@(active === ENTRY)" title="Rename the open file">Rename</button>
+                        <button type="button" class="action delete-file" @onclick="deleteFile" disabled="@(active === ENTRY)" title="Delete the open file">Delete</button>
+                        <button type="button" class="action reset" @onclick="reset" title="Back to the start project">Reset</button>
+                    }
+                </div>
+            </div>
+            @if (naming !== undefined && nameProblem && newName.length > 0) {
+                <p class="name-problem" id="name-problem" role="alert">@nameProblem</p>
+            }
+            <div class="editor-host">
+                <CodeEditor Files="@files" Active="@active" Revision="@revision" Diagnostics="@diagnostics" OnEdit="edit" @ref="editor" />
+            </div>
+            <ProblemsPanel Items="@diagnostics" Compiling="@compiling" CompileError="@compileError" OnPick="reveal" />
+        </div>
+        <Preview Build="@build" Stale="@hasErrors" />
+    </div>
+</div>
+
+@code {
+    private files: LessonFiles = {};
+    private active = ENTRY;
+    /** Bumped whenever the editor must reload its files (a file added, renamed, deleted; Reset). */
+    private revision = 0;
+    private build?: ProjectBuild;
+    private diagnostics: Diagnostic[] = [];
+    private compiling = false;
+    private compileError?: string;
+    private compileTimer?: ReturnType<typeof setTimeout>;
+    private editor?: CodeEditor;
+    /** The open file-name field: adding a file or renaming the open one. */
+    private naming?: "add" | "rename";
+    private newName = "";
+    private nameInput?: HTMLInputElement;
+    private focusName = false;
+
+    private get fileNames(): string[] {
+        return Object.keys(this.files);
+    }
+
+    private get hasErrors(): boolean {
+        return this.diagnostics.some((d) => d.severity === "error" && d.source !== "types");
+    }
+
+    private get nameProblem(): string | undefined {
+        return fileNameProblem(this.newName.trim(), this.files, this.naming === "rename" ? this.active : undefined);
+    }
+
+    private get namingLabel(): string {
+        return this.naming === "add" ? "New file name" : `New name for ${this.active}`;
+    }
+
+    protected override onInitialized(): void {
+        this.load(this.State.playground, ENTRY);
+    }
+
+    protected override onAfterRender(): void {
+        if (this.focusName && this.nameInput) {
+            this.focusName = false;
+            this.nameInput.focus();
+            this.nameInput.select();
+        }
+    }
+
+    private load(files: LessonFiles, active: string): void {
+        this.files = files;
+        this.active = active in files ? active : ENTRY;
+        this.revision++;
+        void this.compile();
+    }
+
+    /** A structural change (file added, renamed, deleted): kept, reloaded, rebuilt. */
+    private change(files: LessonFiles, active: string): void {
+        this.State.playground = files;
+        this.load(files, active);
+    }
+
+    private selectFile(file: string): void {
+        this.active = file;
+    }
+
+    private edit(change: { file: string; text: string }): void {
+        this.files = { ...this.files, [change.file]: change.text };
+        this.State.playground = this.files;
+        clearTimeout(this.compileTimer);
+        this.compileTimer = setTimeout(() => void this.compile(), 250);
+    }
+
+    private startAdd(): void {
+        this.naming = "add";
+        this.newName = "";
+        this.focusName = true;
+    }
+
+    private startRename(): void {
+        if (this.active === ENTRY) return;
+        this.naming = "rename";
+        this.newName = this.active;
+        this.focusName = true;
+    }
+
+    private cancelName(): void {
+        this.naming = undefined;
+    }
+
+    private nameKey(event: KeyboardEvent): void {
+        if (event.key === "Escape") this.cancelName();
+    }
+
+    private commitName(): void {
+        const name = this.newName.trim();
+        if (this.nameProblem !== undefined) return;
+        if (this.naming === "add") {
+            this.change({ ...this.files, [name]: templateFor(name) }, name);
+        } else if (this.naming === "rename" && name !== this.active) {
+            this.change(renameFile(this.files, this.active, name), name);
+        }
+        this.naming = undefined;
+    }
+
+    private deleteFile(): void {
+        if (this.active === ENTRY) return;
+        const { [this.active]: _removed, ...rest } = this.files;
+        this.change(rest, ENTRY);
+    }
+
+    private reset(): void {
+        this.naming = undefined;
+        this.change({ ...STARTER }, ENTRY);
+    }
+
+    private reveal(diagnostic: Diagnostic): void {
+        this.active = diagnostic.file;
+        this.editor?.reveal(diagnostic.file, diagnostic.line, diagnostic.column);
+    }
+
+    private async compile(): Promise<void> {
+        this.compiling = true;
+        const outcome = await compilerClient.compile(this.files, (types) => {
+            this.diagnostics = [...(this.build?.diagnostics ?? []), ...types];
+            this.stateHasChanged();
+        });
+        if (!outcome) return; // superseded by a newer edit
+        this.compiling = false;
+        this.compileError = outcome.error;
+        if (outcome.build) {
+            this.build = outcome.build;
+            this.diagnostics = [...outcome.build.diagnostics, ...this.diagnostics.filter((d) => d.source === "types" && d.file in this.files)];
+        }
+        this.stateHasChanged();
+    }
+
+    dispose(): void {
+        clearTimeout(this.compileTimer);
+    }
+}

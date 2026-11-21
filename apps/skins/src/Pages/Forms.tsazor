@@ -1,0 +1,245 @@
+@page "/forms"
+@import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+@import { PatternMask } from "@tsazor/ui"
+@import type { Decimal } from "@tsazor/primitives"
+@import type { DateRange } from "@tsazor/ui"
+@import { Shape } from "../shape"
+@import { formatFileSize, uploadTo, type FileUploadErrorEventArgs, type FileUploadEventArgs } from "@tsazor/bootstrap"
+
+<Typography Variant="h1">Forms</Typography>
+<Typography>
+    Every input binds with <code>@@bind-Value</code>, takes <code>Label</code> and <code>Help</code>, and shows its field's
+    first validation message once the form was submitted. Submit the empty form to see them.
+</Typography>
+
+<Form Model="@order" Validators="@rules" OnValidSubmit="@reserve">
+    <TextInput Label="Name" Help="As it should appear on the order." @bind-Value="order.name" />
+    <Select Label="Bread" @bind-Value="order.bread">
+        <option value="">Choose…</option>
+        <option value="sourdough">Sourdough</option>
+        <option value="rye">Rye</option>
+    </Select>
+    <NumberInput Label="Loaves" Min="1" Max="10" @bind-Value="order.loaves" />
+    <DecimalInput Label="Deposit" Help="Optional, in euros." Format="F2" @bind-Value="order.deposit" />
+    <DateInput Label="Pick-up date" Min="2026-01-01" @bind-Value="order.pickup" />
+    <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="order.slicing" />
+    <TextArea Label="Note" Rows="2" @bind-Value="order.note" />
+    <Checkbox Label="I accept the terms" @bind-Value="order.terms" />
+    <Switch Label="Send me a reminder" Help="One day before pick-up." @bind-Value="order.reminder" />
+    <FileInput Label="Delivery list (optional)" Accept=".csv" OnChange="@fileChosen" />
+    <Button Type="submit" Intent="primary">Reserve</Button>
+</Form>
+<p class="order-status" role="status">@status</p>
+
+<section class="demo">
+    <Typography Variant="h2">Choices</Typography>
+    <CheckboxGroup Label="Allergens to leave out" Options="@allergenOptions" Inline="@true" @bind-Value="allergens" />
+    <Autocomplete Label="Toppings" Items="@toppingOptions" Placeholder="Type to search" @bind-SelectedOptions="toppings" />
+    <Select Label="Shape" Items="@shapes" OptionText="@((shape: Shape | null) => shape === null ? "" : Shape[shape])" Placeholder="Any shape" @bind-SelectedOption="shape" />
+    <Typography Variant="caption">
+        Leave out <span class="choice-allergens">@allergens.join(", ")</span>; toppings <span class="choice-toppings">@toppings.join(", ")</span>; shape <span class="choice-shape">@(shape === null ? "any" : `${Shape[shape]} (${shape})`)</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Wizard</Typography>
+    <Wizard @bind-Value="wizardStep" OnFinish="@finishOrder" DisplayStepNumber="all" AriaLabel="Order steps" class="order-wizard">
+        <Steps>
+            <WizardStep Label="Customer" Summary="Who orders">
+                <Form Model="@wizardOrder" Validators="@wizardRules">
+                    <TextInput Label="Name on the order" @bind-Value="wizardOrder.name" />
+                </Form>
+            </WizardStep>
+            <WizardStep Label="Pickup" Summary="When">
+                <DateInput Label="Pick-up date" @bind-Value="wizardOrder.pickup" />
+            </WizardStep>
+            <WizardStep Label="Confirm">
+                <Typography>@(`Bread for ${wizardOrder.name}, picked up ${wizardOrder.pickup || "any day"}.`)</Typography>
+            </WizardStep>
+        </Steps>
+    </Wizard>
+    <Typography Variant="caption"><span class="wizard-status" role="status">@wizardStatus</span></Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Slider</Typography>
+    <div class="slider-demo">
+        <div class="slider-demo__stack">
+            <Slider Label="Crust" Step="25" TickMarks="@true" TickMarkLabels="@crustLabels" @bind-Value="crust" />
+            <Slider Label="Oven" Min="180" Max="260" Step="5" ValueLabel="@true" ValueFormat="@celsius" @bind-Value="oven" />
+            <Slider Label="Rise" Size="small" ValueLabel="@true" Immediate="@false" Help="Applies when you let go." @bind-Value="rise" />
+        </div>
+        <Slider Label="Sweetness" Orientation="vertical" Max="10" TickMarks="@true" ValueLabel="@true" @bind-Value="sweetness" />
+    </div>
+    <Typography Variant="caption">
+        Crust <span class="slider-crust">@crust</span>, oven <span class="slider-oven">@oven</span>, rise <span class="slider-rise">@rise</span>, sweetness <span class="slider-sweetness">@sweetness</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Date picker and calendar</Typography>
+    <div class="date-demo">
+        <div class="date-demo__fields">
+            <DatePicker Label="Pickup day" Locale="en-US" MinDate="2026-10-05" MaxDate="2026-12-20" DisabledDateFunc="@closedOnSundays" Help="We bake Monday to Saturday." @bind-Value="pickupDay" />
+            <DatePicker Label="Liefertag" Locale="de-DE" ButtonLabel="Datum wählen" Labels="@germanLabels" @bind-Value="deliveryDay" />
+            <DatePicker Label="Billing month" Locale="en-US" View="months" @bind-Value="billingMonth" />
+            <DateRangePicker Label="Closed for holidays" Locale="en-US" @bind-Value="closure" />
+        </div>
+        <Calendar AriaLabel="Holidays" Locale="en-US" SelectMode="range" PickerMonth="2026-12-01" @bind-SelectedDates="holidays" />
+    </div>
+    <Typography Variant="caption">
+        Pickup <span class="date-pickup">@pickupDay</span>, delivery <span class="date-delivery">@deliveryDay</span>, billing <span class="date-billing">@billingMonth</span>, holidays <span class="date-holidays">@holidays.join(", ")</span>, closed <span class="date-closure">@(closure === null ? "never" : `${closure.start ?? "…"} to ${closure.end ?? "…"}`)</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Time picker</Typography>
+    <div class="date-demo__fields">
+        <TimePicker Label="Pickup time" Locale="en-US" StartHour="7" EndHour="19" Increment="30" DisabledTimeFunc="@lunchBreak" Help="Closed from 12 to 1." @bind-Value="pickupTime" />
+        <TimePicker Label="Lieferzeit" Locale="de-DE" ButtonLabel="Uhrzeit wählen" @bind-Value="deliveryTime" />
+        <TimePicker Label="Reminder" RenderStyle="native" @bind-Value="reminderTime" />
+    </div>
+    <Typography Variant="caption">
+        Pickup at <span class="time-pickup">@pickupTime</span>, delivery at <span class="time-delivery">@deliveryTime</span>, reminder at <span class="time-reminder">@reminderTime</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Masked input</Typography>
+    <div class="date-demo__fields">
+        <TextInput Label="Phone" Type="tel" Mask="(000) 000-0000" @bind-Value="phone" />
+        <TextInput Label="Card number" Mask="@cardMask" @bind-Value="card" />
+        <TextInput Label="Batch code" Mask="@batchMask" @bind-Value="batch" />
+    </div>
+    <Typography Variant="caption">
+        Phone <span class="mask-phone">@phone</span>, card <span class="mask-card">@card</span>, batch <span class="mask-batch">@batch</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Rating</Typography>
+    <div class="demo-row">
+        <Rating AriaLabel="Rate our rye" Color="marigold" @bind-Value="ryeRating" />
+        <span class="rating-value">@ryeRating</span>
+    </div>
+    <div class="demo-row">
+        <RatingDisplay Value="4.5" Count="1234" Locale="en-US" Color="marigold" />
+        <RatingDisplay Value="3.7" Count="86" Locale="en-US" Compact="@true" />
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Color picker</Typography>
+    <ColorPickerInput Label="Label color" Help="A hex code, or pick one." @bind-Value="labelColor" />
+    <div class="color-demo">
+        <ColorPicker View="hsv" AriaLabel="Accent" @bind-SelectedColor="accentColor" />
+        <ColorPicker View="wheel" AriaLabel="Wrapping paper" @bind-SelectedColor="paperColor" />
+    </div>
+    <Typography Variant="caption">
+        Label <span class="color-label">@labelColor</span>, accent <span class="color-accent">@accentColor</span>, paper <span class="color-paper">@paperColor</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">File upload</Typography>
+    <FileUpload Multiple="@true" Accept=".csv,.txt" MaximumFileSize="@(1024 * 1024)" Upload="@sendToServer" OnFileUploaded="@sent" OnFileError="@failed">
+        <span>Drop price lists here, or click to choose (CSV or text, up to 1 MB each)</span>
+    </FileUpload>
+    <ul class="upload-log">
+        @foreach (const line of uploadLog) {
+            <li>@line</li>
+        }
+    </ul>
+    <Button id="read-list" Intent="secondary">Read a delivery list</Button>
+    <FileUpload AnchorId="read-list" DragDropZoneVisible="@false" Accept=".csv" OnFileUploaded="@readList" />
+    <Typography Variant="caption"><span class="delivery-list">@deliveryList</span></Typography>
+</section>
+
+@code {
+    private allergens: string[] = ["nuts"];
+    private readonly allergenOptions = [{ value: "gluten", label: "Gluten" }, { value: "nuts", label: "Nuts" }, { value: "sesame", label: "Sesame" }];
+    private toppings: string[] = [];
+    /** A typed Select (B43): the enum member itself, null for the placeholder's "Any shape". */
+    private shape: Shape | null = null;
+    private readonly shapes: (Shape | null)[] = [Shape.Round, Shape.Long, Shape.Tin];
+    private readonly toppingOptions = ["Sesame", "Poppy seeds", "Sunflower seeds", "Pumpkin seeds", "Flax", "Oats", "Caraway"];
+
+    private pickupDay = "2026-10-10";
+    private pickupTime = "16:30:00";
+    private ryeRating = 3;
+    private phone = "";
+    private card = "";
+    private batch = "";
+    /** The card number binds its digits only. */
+    private readonly cardMask = new PatternMask("0000 0000 0000 0000", { cleanDelimiters: true });
+    /** Two letters, upper case, and four digits. */
+    private readonly batchMask = new PatternMask("aa-0000", { transform: (char) => char.toUpperCase() });
+    private labelColor = "#0f6cbd";
+    private accentColor = "#ff0000";
+    private paperColor = "";
+    private deliveryTime = "09:00:00";
+    private reminderTime = "";
+    private readonly lunchBreak = (time: string): boolean => time >= "12:00:00" && time < "13:00:00";
+    private deliveryDay = "2026-10-10";
+    private billingMonth = "2026-10-01";
+    /** A DateRangePicker (B45): ISO dates, either end open; null for none. */
+    private closure: DateRange | null = null;
+    private holidays: string[] = [];
+    private readonly closedOnSundays = (date: string): boolean => new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
+    private readonly sendToServer = uploadTo("/api/upload");
+    private uploadLog: string[] = [];
+    private deliveryList = "No list read yet.";
+
+    private sent(args: FileUploadEventArgs): void {
+        this.uploadLog = [...this.uploadLog, `${args.name}: ${formatFileSize(args.size, "en-US")} sent`];
+    }
+
+    private failed(error: FileUploadErrorEventArgs): void {
+        this.uploadLog = [...this.uploadLog, `${error.fileName ?? "The files"}: ${error.errorMessage}`];
+    }
+
+    private readList(args: FileUploadEventArgs): void {
+        const lines = new TextDecoder().decode(args.buffer).split(/\r?\n/).filter((line) => line.trim() !== "");
+        this.deliveryList = `Read ${lines.length} lines from ${args.name}.`;
+    }
+
+    private readonly germanLabels = { previousMonth: "Vorheriger Monat", nextMonth: "Nächster Monat", previousYear: "Vorheriges Jahr", nextYear: "Nächstes Jahr", previousYears: "Vorherige Jahre", nextYears: "Nächste Jahre" };
+
+    private crust = 50;
+    private oven = 220;
+    private rise = 30;
+    private sweetness = 4;
+    private readonly crustLabels = ["Pale", "Light", "Golden", "Dark", "Bold"];
+    private readonly celsius = (value: number): string => `${value} °C`;
+
+    private wizardStep = 0;
+    private wizardStatus = "";
+    private readonly wizardOrder = { name: "", pickup: "" };
+    private readonly wizardRules = {
+        name: (value: unknown) => (String(value ?? "").trim() === "" ? "Whom is the bread for?" : null),
+    };
+
+    private finishOrder(): void {
+        this.wizardStatus = `Ordered for ${this.wizardOrder.name}.`;
+    }
+
+    private order = { name: "", bread: "", loaves: 1, deposit: null as Decimal | null, pickup: "", slicing: "whole", note: "", terms: false, reminder: false };
+    private status = "";
+    private readonly slicing = [
+        { value: "whole", label: "Whole" },
+        { value: "sliced", label: "Sliced" },
+    ];
+    private readonly rules = {
+        name: (value: unknown) => (value ? null : "Enter a name."),
+        bread: (value: unknown) => (value ? null : "Choose a bread."),
+        terms: (value: unknown) => (value === true ? null : "Accept the terms."),
+    };
+
+    private reserve(): void {
+        this.status = `Reserved: ${this.order.loaves} × ${this.order.bread} for ${this.order.name}.`;
+    }
+
+    private fileChosen(e: InputFileChangeEventArgs): void {
+        this.status = `Delivery list: ${e.file.name}.`;
+    }
+}

@@ -1,0 +1,101 @@
+@page "/icons"
+@import { Virtualize } from "@tsazor/runtime"
+@import { Toaster } from "@tsazor/bootstrap"
+@import { iconGroups, iconPackage, iconsOf, rowsOf, searchIcons, type IconEntry } from "../icon-sets"
+@import { skin, skinLabel } from "../skin"
+@inject Toaster toaster
+
+<Typography Variant="h1">Icons</Typography>
+<p class="icons-intro">
+    The @skinLabel(skin) build's icon set. Import it once, then pass an icon wherever a component takes one
+    (<code>Value</code>, <code>IconStart</code>, <code>IconEnd</code>). A click on an icon copies its markup.
+</p>
+<pre class="icons-import"><code>@(`@import * as Icons from "${iconPackage}"`)</code></pre>
+
+<div class="icons-filters">
+    <TextInput Label="Search" Type="search" Placeholder="save, arrow, folder…" Immediate="@true" @bind-Value="query" @bind-Value:after="filter" />
+    @if (variants.length > 1) {
+        <Select Label="Variant" @bind-Value="variant" @bind-Value:after="variantChanged">
+            @foreach (const name of variants) {
+                <option value="@name">@name</option>
+            }
+        </Select>
+        <Select Label="Size" @bind-Value="size" @bind-Value:after="load">
+            @foreach (const name of sizes) {
+                <option value="@name">@name.slice(4)</option>
+            }
+        </Select>
+    }
+</div>
+@if (entries === undefined) {
+    <Spinner Label="Loading the icons…" />
+} else {
+    <p class="icons-count" aria-live="polite">@shown.length icons</p>
+    <div class="icons-grid">
+        <Virtualize Items="@rows" Context="row" ItemSize="88">
+            <div class="icons-row">
+                @foreach (const entry of row) {
+                    <button type="button" class="icons-cell" title="@entry.path" @onclick="() => copy(entry)">
+                        <Icon Value="@entry.value" Size="24" />
+                        <span class="icons-name">@entry.name</span>
+                    </button>
+                }
+            </div>
+        </Virtualize>
+    </div>
+}
+
+@code {
+    private static readonly COLUMNS = 6;
+
+    private query = "";
+    private variant = iconGroups[0]?.variant ?? "";
+    private size = "Size20";
+    /** The chosen group's icons; undefined while they load. */
+    private entries?: readonly IconEntry[];
+    private shown: readonly IconEntry[] = [];
+    private rows: IconEntry[][] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private get variants(): string[] {
+        return [...new Set(iconGroups.map((group) => group.variant))];
+    }
+
+    private get sizes(): string[] {
+        return iconGroups.filter((group) => group.variant === this.variant).map((group) => group.size);
+    }
+
+    /** A variant without the chosen size starts at its first one. */
+    private async variantChanged(): Promise<void> {
+        if (!this.sizes.includes(this.size)) this.size = this.sizes[0] ?? "";
+        await this.load();
+    }
+
+    /** Loads the chosen group (Bootstrap's one group, or Fluent's variant and size). */
+    private async load(): Promise<void> {
+        const group = iconGroups.find((candidate) => candidate.variant === this.variant && candidate.size === this.size) ?? iconGroups[0];
+        if (group === undefined) return;
+        this.entries = undefined;
+        this.entries = await iconsOf(group);
+        this.filter();
+    }
+
+    private filter(): void {
+        this.shown = searchIcons(this.entries ?? [], this.query);
+        this.rows = rowsOf(this.shown, Icons.COLUMNS);
+    }
+
+    private async copy(entry: IconEntry): Promise<void> {
+        const markup = `<Icon Value="@${entry.path}" />`;
+        try {
+            await navigator.clipboard.writeText(markup);
+            this.toaster.show({ message: `Copied ${markup}`, intent: "success" });
+        } catch {
+            // No clipboard (an insecure origin, a denied permission): show the markup to copy by hand.
+            this.toaster.show({ message: markup, intent: "info" });
+        }
+    }
+}

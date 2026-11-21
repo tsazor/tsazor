@@ -1,0 +1,25 @@
+# Tsazor
+
+> Blazor's component model and Razor syntax in strict TypeScript: `.tsazor` components, built by Vite, running in the browser without WebAssembly. Packages on npm under `@tsazor/*`, all at one version; `npm create tsazor` starts an app, `dotnet new tsazor` one hosted in ASP.NET Core.
+
+Every new app carries an `AGENTS.md` with its packages, the core patterns, the pitfalls and the commands that verify a change (`npm run check`, `npm test`, `npm run build`). Start there.
+
+## Start
+
+- [AGENTS.md of a new app](https://github.com/tsazor/tsazor/blob/main/packages/create-tsazor/template/AGENTS.md): the patterns, the pitfalls, which sample to copy
+- [Getting started](https://github.com/tsazor/tsazor/blob/main/docs/getting-started.md): project structure, tsconfig, imports, component resolution, tests
+
+## Reference
+
+- [Language reference](https://github.com/tsazor/tsazor/blob/main/docs/language-reference.md): every directive, `@bind`, DI, localization, components, `observe`, diagnostics
+- [Migration guide from Blazor](https://github.com/tsazor/tsazor/blob/main/docs/migration-guide.md): C# and Blazor APIs to their Tsazor counterparts
+- [Fluent skin](https://github.com/tsazor/tsazor/blob/main/docs/fluent.md): tokens, themes, components
+- [The framework's texts](https://github.com/tsazor/tsazor/blob/main/docs/library-texts.md): every library text and validation message key, English and German
+- [Live data](https://github.com/tsazor/tsazor/blob/main/docs/guide-live-data.md): `observe`, server events, reconnecting, job progress, the connection state
+- [API surface](https://github.com/tsazor/tsazor/tree/main/api): the public declarations of every package
+
+## Optional
+
+- [Patterns for larger apps](https://github.com/tsazor/tsazor/blob/main/docs/patterns.md)
+- [Charts](https://github.com/tsazor/tsazor/blob/main/docs/guide-charts.md)
+- [Authentication](https://github.com/tsazor/tsazor/blob/main/docs/auth.md)

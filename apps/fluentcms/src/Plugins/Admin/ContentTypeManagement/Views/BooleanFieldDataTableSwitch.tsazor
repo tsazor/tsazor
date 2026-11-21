@@ -1,0 +1,6 @@
+@* A yes/no field in the content list as a disabled switch (FluentCMS's BooleanFieldDataTableSwitch). *@
+@inherits BaseFieldValueView<boolean, BooleanFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { BooleanFieldModel } from "../field-models"
+
+<Switch Value="@fieldValue.value" ariaLabel="@field.label" disabled />

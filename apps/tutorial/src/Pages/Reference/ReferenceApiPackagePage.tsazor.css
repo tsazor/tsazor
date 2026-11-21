@@ -1,0 +1,68 @@
+h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.8rem;
+}
+
+.lead {
+    color: var(--fg-muted);
+    line-height: 1.6;
+}
+
+.group h2 {
+    margin: 2rem 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.symbols {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td {
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+td:first-child {
+    width: 16rem;
+    white-space: nowrap;
+}
+
+code,
+td ::deep code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--bg-sunken);
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+}
+
+.tag {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+    color: var(--fg-muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.tag--deprecated {
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+@media (max-width: 40rem) {
+    td:first-child {
+        width: auto;
+        white-space: normal;
+    }
+
+    td ::deep code,
+    code {
+        overflow-wrap: anywhere;
+    }
+}

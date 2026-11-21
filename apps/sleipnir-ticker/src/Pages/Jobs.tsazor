@@ -1,0 +1,100 @@
+@page "/jobs"
+@import { InputNumber, InputText, ServerValidationErrors, ValidationMessage } from "@tsazor/runtime"
+@import type { AnalysisJob, AnalysisRequest } from "../api"
+@import { fieldErrorsOf, jobVariant } from "../jobs.mjs"
+@inject SleipnirClient Client
+@inject NavigationManager Navigation
+
+<div class="jobs-page">
+    <h1>Analysis jobs</h1>
+    <p class="text-muted">A job analyzes the last points of the price history. The server validates the form; its field errors appear under the fields.</p>
+
+    <Card>
+        <CardHeader>New job</CardHeader>
+        <CardBody>
+            <EditForm EditContext="@this.editContext" OnValidSubmit="@this.start" class="job-form">
+                <div class="mb-3 field field-label">
+                    <label class="form-label" for="job-label">Label</label>
+                    <InputText id="job-label" class="form-control" @bind-Value="model.label" />
+                    <ValidationMessage For="label" />
+                </div>
+                <div class="mb-3 field field-points">
+                    <label class="form-label" for="job-points">Points</label>
+                    <InputNumber id="job-points" class="form-control" @bind-Value="model.points" />
+                    <ValidationMessage For="points" />
+                </div>
+                <Button Type="submit" Intent="primary" Disabled="@this.submitting">Start</Button>
+            </EditForm>
+            @if (this.failure !== null) {
+                <Alert Intent="danger">@this.failure</Alert>
+            }
+        </CardBody>
+    </Card>
+
+    <Card>
+        <CardHeader>Jobs</CardHeader>
+        <CardBody>
+            @if (this.jobs.length === 0) {
+                <p class="jobs-empty">No jobs yet.</p>
+            } else {
+                <ListGroup Flush="@true">
+                    @for (const job of this.jobs) {
+                        <ListGroupItem>
+                            <a class="job-link" href="@(`/jobs/${job.id}`)">#@job.id @job.label</a>
+                            <span class="text-muted"> · @job.points points</span>
+                            <Badge Intent="@jobVariant(job.state)">@job.state</Badge>
+                        </ListGroupItem>
+                    }
+                </ListGroup>
+            }
+        </CardBody>
+    </Card>
+</div>
+
+@code {
+    private model: AnalysisRequest = { label: "", points: 60 };
+    private editContext = new EditContext(this.model);
+    /** The server's field errors at their fields: a new submit starts without them, an edited field drops its own. */
+    private serverErrors = new ServerValidationErrors(this.editContext);
+    private jobs: AnalysisJob[] = [];
+    private submitting = false;
+    private failure: string | null = null;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.loadJobs();
+    }
+
+    private start = async (): Promise<void> => {
+        this.submitting = true;
+        this.failure = null;
+        try {
+            const response = await this.Client.call(this.Client.jobs.start({ ...this.model }));
+            if (response.data !== null && response.error == null) {
+                this.Navigation.navigateTo(`/jobs/${response.data.id}`);
+                return;
+            }
+            const errors = fieldErrorsOf(response.error);
+            if (errors !== null) {
+                this.serverErrors.apply(errors);
+            } else {
+                this.failure = response.error?.message ?? `Call failed (code ${response.code}).`;
+            }
+        } catch (err) {
+            this.failure = err instanceof Error ? err.message : String(err);
+        } finally {
+            this.submitting = false;
+        }
+    };
+
+    private async loadJobs(): Promise<void> {
+        const response = await this.Client.call(this.Client.jobs.list());
+        this.jobs = response.data ?? [];
+    }
+}
+
+<style>
+    .jobs-page { display: grid; gap: 1rem; }
+    .job-form { max-width: 420px; }
+    .job-form .validation-message { color: #b3261e; font-size: 0.875rem; }
+    .job-link { margin-right: 0.25rem; }
+</style>

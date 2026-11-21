@@ -1,0 +1,41 @@
+@* pages/settings/security.tsx: SecuritySettings — combines password change + 2FA enrollment/disable into one tab.
+   Profile query fuels both: we read twoFactorEnabled to decide whether to render the enroll wizard or the disable
+   controls (the original's TwoFactorSection). Password change is driven through a Dialog (mirrors dashboard
+   pattern). *@
+@page "/settings/security"
+@layout SettingsLayout
+@authorize
+@import { getMyProfile } from "@/api/users"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import SettingsLayout from "./SettingsLayout.tsazor"
+@import PasswordSection from "./PasswordSection.tsazor"
+@import TwoFactorEnroll from "./TwoFactorEnroll.tsazor"
+@import TwoFactorDisable from "./TwoFactorDisable.tsazor"
+
+@if (profile.result.isLoading) {
+    <LoadingRow label="Loading security state" />
+} else if (profile.result.isError) {
+    <ErrorBand message="@(profile.result.error instanceof ApiRequestError ? (profile.result.error.problem?.detail ?? profile.result.error.message) : "Failed to load security state.")" />
+} else {
+    <div class="space-y-5 fsh-enter">
+        <PasswordSection />
+        @if (twoFactorEnabled) {
+            <TwoFactorDisable />
+        } else {
+            <TwoFactorEnroll />
+        }
+    </div>
+}
+
+@code {
+    private readonly profile = new Query(() => ({ queryKey: ["identity", "profile"], queryFn: getMyProfile }));
+
+    protected override onInitialized(): void {
+        this.observe(this.profile);
+    }
+
+    private get twoFactorEnabled(): boolean {
+        return this.profile.result.data?.twoFactorEnabled ?? false;
+    }
+}

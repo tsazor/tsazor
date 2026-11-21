@@ -1,0 +1,9 @@
+.order-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    background: #5b5bd6;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+}

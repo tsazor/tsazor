@@ -1,6 +1,7 @@
 /**
  * Shadow-module tests over a temp workspace: pipeline parity with the vite
- * plugin (imports, code-behind, knownGlobals) plus the v2 import rewrites.
+ * plugin (shared resolution, inherited @imports, code-behind) plus the v2
+ * import rewrites.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { writeFileSync } from "node:fs";
@@ -40,11 +41,16 @@ beforeAll(async () => {
     ].join("\n"),
   );
   // Bare-package component stub: @fake/ui ships .tsazor sources (like
-  // @tsazor/components) — the v2 rewrite must shadow from source.
+  // @tsazor/bootstrap) — the v2 rewrite must shadow from source.
   const pkg = path.join(root, "node_modules", "@fake", "ui");
   await mkdir(path.join(pkg, "src"), { recursive: true });
-  writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0" }));
+  // Its entry exports Badge — bare-package tags resolve only against the export list.
+  // Like a real package, its `exports` list only ".": the rewrite must not resolve `@fake/ui/package.json`
+  // (Linux and macOS refuse it; only Windows let the old backslashed path through).
+  writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0", main: "./index.js", exports: { ".": "./index.js" } }));
+  writeFileSync(path.join(pkg, "index.js"), 'export { default as Badge } from "./dist/Badge.js";\nexport { default as Chip } from "./dist/Chip.js";\n');
   writeFileSync(path.join(pkg, "src", "Badge.tsazor"), '<span class="badge">@Text</span>\n\n@code {\n    @Parameter() Text?: string;\n}\n');
+  writeFileSync(path.join(pkg, "src", "Chip.tsazor"), '<i class="chip">@Text</i>\n\n@code {\n    @Parameter() Text?: string;\n}\n');
   cleanup = async () => rm(root, { recursive: true, force: true });
 });
 
@@ -54,7 +60,7 @@ const build = () => buildShadowModule(path.join(root, "Pages", "Demo.tsazor"), d
 const demoSource = ["<Alert Variant=\"@size\" />", "", "@code {", "    count = 3;", "}"].join("\n");
 
 describe("buildShadowModule", () => {
-  it("mirrors the build pipeline: runtime imports, code-behind import, knownGlobals", async () => {
+  it("mirrors the build pipeline: runtime imports, code-behind import, runtime tags", async () => {
     const shadow = await buildShadowModule(
       path.join(root, "Pages", "Demo.tsazor"),
       [
@@ -73,15 +79,30 @@ describe("buildShadowModule", () => {
     expect(shadow!.code).toContain('import DemoBase from "./Demo.tsazor.ts";');
     expect(shadow!.code).toContain("extends DemoBase");
     expect(shadow!.code).toContain("export default class Demo extends DemoBase {");
-    // NavLink is a runtime component: collectCodeImports imports it.
-    expect(shadow!.code).toContain("NavLink");
+    // NavLink is a runtime component tag: the compiler imports it itself.
+    expect(shadow!.code).toContain('import { NavLink as __tsazor_comp_NavLink } from "@tsazor/runtime";');
   });
 
   it("rewrites sibling .tsazor component imports to their shadow", async () => {
     const shadow = await build();
     // Demo (Pages/) imports Alert (Shared/) → "../Shared/Alert.tsazor.gen".
-    expect(shadow!.code).toContain('import Alert from "../Shared/Alert.tsazor.gen";');
+    expect(shadow!.code).toContain('import __tsazor_comp_Alert from "../Shared/Alert.tsazor.gen";');
     expect(shadow!.code).not.toContain('from "../Shared/Alert.tsazor";');
+  });
+
+  it("rewrites a .tsazor import through the app's tsconfig `paths` (`@/…`) to its shadow — the class, not a ComponentType", async () => {
+    const app = path.join(root, "aliased-app");
+    await mkdir(path.join(app, "src", "layouts"), { recursive: true });
+    await mkdir(path.join(app, "src", "pages"), { recursive: true });
+    await writeFile(path.join(app, "tsconfig.json"), '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }');
+    await writeFile(path.join(app, "src", "layouts", "Shell.tsazor"), "@inherits LayoutComponentBase\n<main>@Body</main>\n");
+    const shadow = await buildShadowModule(
+      path.join(app, "src", "pages", "Page.tsazor"),
+      '@import Shell from "@/layouts/Shell.tsazor"\n<LayoutView Layout="@Shell"><p>x</p></LayoutView>\n',
+      app,
+    );
+    expect(shadow!.code).toContain('import Shell from "../layouts/Shell.tsazor.gen";');
+    expect(shadow!.code).not.toContain('from "@/layouts/Shell.tsazor"');
   });
 
   it("rewrites bare-package components to their shipped .tsazor sources", async () => {
@@ -96,6 +117,73 @@ describe("buildShadowModule", () => {
     expect(badgeImport).toBeDefined();
     expect(badgeImport!).toContain("node_modules");
     expect(badgeImport!).toContain(path.join("src", "Badge.tsazor.gen.ts").replace(/\\/g, "/"));
+  });
+
+  it("splits a multi-name package import into per-component shadows (found by the tarball gate)", async () => {
+    // `{ Badge, Chip }` binds names from two different component files — the
+    // earlier single-shadow rebinding made the second name a TS2724.
+    const pkgRoot = path.join(root, "badge-ws");
+    await writeFile(path.join(pkgRoot, "_Imports.tsazor"), "@using @fake/ui\n");
+    await writeFile(path.join(pkgRoot, "Pages", "C.tsazor"), "");
+    const shadow = await buildShadowModule(
+      path.join(pkgRoot, "Pages", "C.tsazor"),
+      '<Badge Text="hi" />\n<Chip Text="yo" />\n',
+      root,
+    );
+    const code = shadow!.code;
+    expect(code).toContain("import { Badge as __tsazor_comp_Badge }");
+    expect(code).toContain("import { Chip as __tsazor_comp_Chip }");
+    // Each name lands on its own component shadow…
+    expect(code).toContain(path.join("src", "Badge.tsazor.gen.ts").replace(/\\/g, "/"));
+    expect(code).toContain(path.join("src", "Chip.tsazor.gen.ts").replace(/\\/g, "/"));
+    // …and nothing is imported from the package itself any more.
+    expect(code).not.toContain('from "@fake/ui"');
+  });
+
+  it("shifts the mappings when a multi-name import splits into per-name shadows (X1)", async () => {
+    // `{ Badge, Chip }` in one @import became two import lines while the
+    // compiler's mappings still counted one: every later generated line
+    // shifted, and the type layer read the wrong statement — a grid's
+    // TGridItem (its second pass) then stayed unanswered (RZ10001) and the
+    // columns' lambdas fell back to RenderTreeBuilder.
+    const shadow = await buildShadowModule(
+      path.join(root, "Pages", "Split.tsazor"),
+      '@import { Badge, Chip } from "@fake/ui"\n<p>@count</p>\n\n@code {\n    count = 3;\n}\n',
+      root,
+    );
+    const lines = shadow!.code.split("\n");
+    expect(lines.some((line) => line.includes("Badge.tsazor.gen.ts"))).toBe(true);
+    expect(lines.some((line) => line.includes("Chip.tsazor.gen.ts"))).toBe(true);
+    // The statement after the split-imports still maps onto its own source line.
+    const stmtLine = lines.findIndex((line) => line.includes("this.count"));
+    expect(stmtLine).toBeGreaterThan(0);
+    expect(shadow!.map.genToSrc(stmtLine, 4)).toEqual({ line: 1, character: 3 });
+    expect(shadow!.map.srcToGen(1, 4)?.line).toBe(stmtLine);
+  });
+
+  it("keeps an inline type beside a component in one import (`{ Badge, type BadgeSize }`)", async () => {
+    // The type's name used to be dropped: the import split into the component's shadow and nothing else.
+    const shadow = await buildShadowModule(
+      path.join(root, "Pages", "Typed.tsazor"),
+      '@import { Badge, type BadgeSize, tooltip as tip } from "@fake/ui"\n<p>x</p>\n',
+      root,
+    );
+    const lines = shadow!.code.split("\n");
+    expect(lines.some((line) => line.includes("Badge.tsazor.gen.ts"))).toBe(true);
+    expect(lines).toContain('import { type BadgeSize, tooltip as tip } from "@fake/ui";');
+  });
+
+  it("binds a helper whose name differs from a component only in case to the package, not the component", async () => {
+    // `tooltip` (a function) next to `Tooltip.tsazor`: on a case-insensitive file
+    // system the existence check found the component and bound the helper to its shadow.
+    writeFileSync(path.join(root, "node_modules", "@fake", "ui", "src", "Tooltip.tsazor"), "<span>@ChildContent</span>\n\n@code {\n    @Parameter() ChildContent?: RenderFragment;\n}\n");
+    const shadow = await buildShadowModule(
+      path.join(root, "Pages", "T.tsazor"),
+      '@import { tooltip } from "@fake/ui"\n<p>x</p>\n',
+      root,
+    );
+    const importLine = shadow!.code.split("\n").find((l) => l.includes("tooltip"))!;
+    expect(importLine).toBe('import { tooltip } from "@fake/ui";');
   });
 
   it("keeps the real sidecar .ts import untouched (resolves to the real file)", async () => {
@@ -132,9 +220,18 @@ describe("buildShadowModule", () => {
     expect(tsazorOfShadowPath(shadow!.virtualPath)?.replace(/\\/g, "/")).toContain("/Pages/Demo.tsazor");
   });
 
-  it("maps the _Imports.tsazor chain to trivial modules", async () => {
-    const importsShadow = await buildShadowModule(path.join(root, "_Imports.tsazor"), "@using ./Shared\n", root);
-    expect(importsShadow!.code).toBe("export default null;\n");
+  it("makes an _Imports.tsazor's shadow its own @imports, each mapped onto its directive", async () => {
+    const usingsOnly = await buildShadowModule(path.join(root, "_Imports.tsazor"), "@using ./Shared\n", root);
+    expect(usingsOnly!.code).toBe("export {};\n");
+    const imports = await buildShadowModule(
+      path.join(root, "_Imports.tsazor"),
+      '@using ./Shared\n@import type { Entry } from "./store"\n@import { fmt,\n    parse } from "./util"\n',
+      root,
+    );
+    expect(imports!.code).toBe('import type { Entry } from "./store";\nimport { fmt,\n    parse } from "./util";\nexport {};\n');
+    // The first import's specifier: generated column 27, source line 2 behind `@import ` (0-based: line 1, column 28).
+    expect(imports!.map.genToSrc(0, 27)).toEqual({ line: 1, character: 28 });
+    expect(imports!.map.genToSrc(2, 4)).toEqual({ line: 3, character: 4 });
   });
 
   it("stays graceful on broken markup (lenient parser; v1 layer carries diagnostics)", async () => {

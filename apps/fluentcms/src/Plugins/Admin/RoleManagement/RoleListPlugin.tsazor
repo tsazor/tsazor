@@ -1,0 +1,58 @@
+@inherits BasePlugin
+@import type { Intent } from "@tsazor/fluent"
+@import type { RoleDetailResponse, RoleTypes } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginBody title="Roles">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create Role")" label="Add Role" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.roles" ariaLabel="Roles">
+            <PropertyColumn property="(role) => role.name" title="Name" />
+            <PropertyColumn property="(role) => role.description" title="Description" />
+            <TemplateColumn title="Type" Context="role">
+                <Indicator intent="@RoleListPlugin.types[role.type].intent">@RoleListPlugin.types[role.type].label</Indicator>
+            </TemplateColumn>
+            <PropertyColumn property="(role) => role.usersCount" title="Users Count" />
+            <TemplateColumn title="Actions" Context="role">
+                <ActionButtons>
+                    <ActionButtonDelete visible="@(role.type === "UserDefined")" @onclick="() => this.selected = role" aria-label="@(`Delete ${role.name}`)" />
+                    <ActionButtonEdit href="@this.getUrl("Update Role", { id: role.id })" />
+                </ActionButtons>
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete <b>"@this.selected?.name"</b> role?
+</Confirm>
+
+@code {
+    private static readonly types: Record<RoleTypes, { intent: Intent; label: string }> = {
+        AllUsers: { intent: "success", label: "All Users" },
+        Authenticated: { intent: "secondary", label: "Authenticated Users" },
+        Guest: { intent: "info", label: "Guests" },
+        UserDefined: { intent: "warning", label: "Custom Role" },
+        Administrators: { intent: "danger", label: "Administrators" },
+    };
+
+    private roles: RoleDetailResponse[] = [];
+    private selected?: RoleDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        this.roles = ensureOk(await this.api.roleGetAll({ siteId: this.viewState.site.id })) ?? [];
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.roleDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

@@ -1,0 +1,569 @@
+/* Global styles (Blazor: wwwroot/css/app.css). @tsazor/fluent styles the components; the classes the app passes to
+   them live here, as the original's Class and Style attributes lived in its markup. */
+html,
+body {
+    margin: 0;
+}
+
+h1:focus {
+    outline: none;
+}
+
+/* The theme root: the page's background and text in the theme's colours, dark mode included. */
+.bh-root {
+    min-height: 100vh;
+    background: var(--fui-background-2);
+    color: var(--fui-foreground-1);
+    font-family: var(--fui-font-family);
+}
+
+.bh-title {
+    font-size: var(--fui-font-size-subtitle);
+    font-weight: var(--fui-font-weight-semibold);
+    white-space: nowrap;
+}
+
+/* MudSpacer: what follows it sits at the end of the bar. */
+.bh-header-end {
+    display: flex;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+    margin-inline-start: auto;
+}
+
+/* MudHidden Breakpoint.MdAndDown: the coffee button, the support menu and the direction toggle on wide screens only. */
+.bh-wide-only {
+    display: flex;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+}
+
+@media (max-width: 1279.98px) {
+    .bh-wide-only {
+        display: none;
+    }
+}
+
+/* Signed out: MudContainer MaxWidth.Small (centred in the window below the bar) and MudPaper (the card). */
+.bh-signed-out {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - var(--fui-app-layout-header-height) - 2 * var(--fui-spacing-l));
+}
+
+.bh-signed-out__card {
+    width: 500px;
+    max-width: 100%;
+    padding: 32px;
+    box-sizing: border-box;
+}
+
+/* Login.razor: a column, the logo and the texts centred, Sign In across the width. */
+.bh-login {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fui-spacing-m);
+}
+
+.bh-login__logo,
+.bh-home__logo,
+.bh-not-found__logo {
+    align-self: center;
+    color: var(--fui-brand-background);
+}
+
+.bh-login__title,
+.bh-login__text {
+    margin: 0;
+    text-align: center;
+}
+
+.bh-login__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bh-login__submit {
+    width: 100%;
+}
+
+/* Home.razor: centred, a MudContainer of the default width. */
+.bh-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--fui-spacing-m);
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.bh-home__title,
+.bh-home__subtitle,
+.bh-home__text {
+    margin: 0;
+    text-align: center;
+}
+
+.bh-home__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-home > .fui-accordion {
+    align-self: stretch;
+}
+
+/* MainBody.razor's user card at the top of the drawer. */
+.bh-user-card {
+    display: flex;
+    align-items: center;
+    gap: var(--fui-spacing-m);
+    padding: var(--fui-spacing-l);
+}
+
+.bh-user-card__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* NotFoundLayout.razor */
+.bh-not-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fui-spacing-l);
+    min-height: 100vh;
+    padding: var(--fui-spacing-l);
+    box-sizing: border-box;
+    text-align: center;
+}
+
+/* HeroTitle.razor: the page's title in the brand colour (MudText Typo.h5 Color.Primary) and its description. */
+.bh-hero-title {
+    margin-bottom: var(--fui-spacing-l);
+}
+
+.bh-hero-title__title {
+    margin: 0 0 var(--fui-spacing-s);
+    color: var(--fui-accent);
+}
+
+.bh-hero-title__description {
+    margin: 0;
+    color: var(--fui-foreground-2);
+}
+
+/* MudTable's ToolBarContent: the actions on the start, the search on the end. */
+.bh-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+    margin-bottom: var(--fui-spacing-m);
+}
+
+.bh-table-toolbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-table-toolbar__search {
+    min-width: 260px;
+}
+
+/* MudTable's FooterContent (the switches) and PagerContent in one row. */
+.bh-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+    margin-top: var(--fui-spacing-s);
+}
+
+.bh-table-footer__switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fui-spacing-l);
+}
+
+/* MudGrid with MudItem xs="12" md="6": two columns from a medium window on. */
+.bh-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--fui-spacing-m);
+}
+
+.bh-import__status {
+    margin-top: var(--fui-spacing-l);
+}
+
+/* AddEditProductModal.razor: the picture (MudAvatar Square, its natural size up to the column) and its buttons. */
+.bh-product-image {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-product-image__preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: var(--fui-radius-md);
+}
+
+.bh-product-image__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fui-spacing-xs);
+}
+
+/* Profile.razor and UserProfile.razor: MudGrid with the picture (MudItem xs="12" sm="4" md="3") beside the details
+   (sm="8" md="9"); the administrator's card (xs="12") above them. */
+.bh-profile {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--fui-spacing-l);
+    align-items: start;
+}
+
+.bh-profile > * {
+    grid-column: span 12;
+}
+
+@media (min-width: 600px) {
+    .bh-profile > .bh-profile__card {
+        grid-column: span 4;
+    }
+
+    .bh-profile > .bh-profile__details {
+        grid-column: span 8;
+    }
+}
+
+@media (min-width: 960px) {
+    .bh-profile > .bh-profile__card {
+        grid-column: span 3;
+    }
+
+    .bh-profile > .bh-profile__details {
+        grid-column: span 9;
+    }
+}
+
+.bh-profile__picture {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--fui-spacing-l);
+}
+
+/* MudAvatar Style="height:250px; width:250px", in a narrow column too. */
+.bh-profile__picture .fui-avatar {
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.bh-profile__name,
+.bh-profile__email {
+    margin: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.bh-profile__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--fui-spacing-xs);
+    margin-top: var(--fui-spacing-m);
+}
+
+.bh-profile__admin-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+}
+
+/* MudCardActions Class="pb-4 pl-4" with the button at the end (ml-auto). */
+.bh-profile__footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.bh-security__current {
+    margin-top: var(--fui-spacing-m);
+}
+
+/* Account.razor: MudTabs PanelClass="mt-6". */
+.bh-account [role="tabpanel"] {
+    margin-top: var(--fui-spacing-xl);
+}
+
+/* Dashboard.razor: MudGrid with MudItem xs="12" sm="6" md="3" — four tiles a row from md (960px), two from sm (600px);
+   the chart (sm="8") and its neighbour (sm="4") share a row from sm. */
+.bh-dashboard {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--fui-spacing-l);
+}
+
+.bh-dashboard > * {
+    grid-column: span 12;
+}
+
+@media (min-width: 600px) {
+    .bh-dashboard > .bh-tile {
+        grid-column: span 6;
+    }
+
+    .bh-dashboard > .bh-dashboard__chart {
+        grid-column: span 8;
+    }
+
+    .bh-dashboard > .bh-dashboard__aside {
+        grid-column: span 4;
+    }
+}
+
+@media (min-width: 960px) {
+    .bh-dashboard > .bh-tile {
+        grid-column: span 3;
+    }
+}
+
+/* MudPaper Elevation="25" Class="d-flex flex-row pt-6 pb-4" Style="height:100px". */
+.bh-tile {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: 100px;
+    box-sizing: border-box;
+}
+
+.bh-tile__icon {
+    flex: none;
+    margin: 0 var(--fui-spacing-l);
+}
+
+/* MudBlazor's palette (Color.Primary is BlazorHero's, the others MudBlazor's defaults). */
+.bh-tile__icon--primary {
+    color: var(--fui-accent);
+}
+
+.bh-tile__icon--secondary {
+    color: #ff4081;
+}
+
+.bh-tile__icon--error {
+    color: #f44336;
+}
+
+.bh-tile__icon--success {
+    color: #007e33;
+}
+
+.bh-tile__icon--warning {
+    color: #ff9800;
+}
+
+.bh-tile__label {
+    margin: 0;
+    color: var(--fui-foreground-2);
+}
+
+.bh-tile__value {
+    margin: 0;
+    font-size: var(--fui-font-size-title);
+    font-weight: var(--fui-font-weight-semibold);
+}
+
+/* MudPaper Class="pa-4" Style="height:400px". */
+.bh-dashboard__chart,
+.bh-dashboard__aside {
+    min-height: 400px;
+    box-sizing: border-box;
+}
+
+/* Chat.razor: the conversation and the contacts side by side; the contacts in a Drawer below md (MudHidden). */
+.bh-chat {
+    display: flex;
+    flex-direction: row;
+    gap: var(--fui-spacing-xl);
+    align-items: flex-start;
+}
+
+.bh-chat__conversation {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.bh-chat__contacts {
+    flex: none;
+    min-width: 350px;
+}
+
+.bh-chat__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+    min-height: 48px;
+}
+
+.bh-chat__bar h1,
+.bh-chat__bar h2 {
+    margin: 0;
+}
+
+.bh-chat__spacer {
+    flex: 1 1 auto;
+}
+
+/* style="max-height:65vh;min-height:65vh; overflow:scroll" (and 70vh for the contacts). */
+.bh-chat__messages {
+    display: flex;
+    flex-direction: column;
+    height: 65vh;
+    overflow: auto;
+    padding: 0 var(--fui-spacing-l);
+}
+
+.bh-chat__contact-list {
+    height: 70vh;
+    overflow: auto;
+}
+
+.bh-chat__message {
+    display: flex;
+    flex-direction: row;
+    gap: var(--fui-spacing-l);
+    margin: var(--fui-spacing-l) 0;
+}
+
+.bh-chat__from,
+.bh-chat__date {
+    margin: 0;
+}
+
+.bh-chat__date {
+    font-size: xx-small;
+    color: var(--fui-foreground-2);
+}
+
+.bh-chat__text {
+    margin: 5px 0 0;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.bh-chat__compose {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+    padding: var(--fui-spacing-s);
+}
+
+.bh-chat__input {
+    flex: 1 1 auto;
+}
+
+.bh-chat__input .fui-input-wrapper,
+.bh-chat__input input {
+    width: 100%;
+}
+
+.bh-chat__contact {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--fui-spacing-l);
+}
+
+.bh-chat__contact-name,
+.bh-chat__contact-email {
+    display: block;
+}
+
+.bh-chat__contact-email {
+    font-size: xx-small;
+}
+
+/* MudBadge Overlap Bottom Dot: the status dot on the avatar's lower end corner. */
+.bh-presence {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-end: 0;
+}
+
+.bh-presence .fui-indicator__dot {
+    width: 12px;
+    height: 12px;
+    box-shadow: 0 0 0 2px var(--fui-background-1);
+}
+
+.bh-chat__guide {
+    margin: 10px 0 20px;
+}
+
+/* MudHidden Breakpoint.MdAndUp and .SmAndDown: shown only below 960px, or only from it on. */
+@media (min-width: 960px) {
+    .bh-narrow-only {
+        display: none;
+    }
+}
+
+@media (max-width: 959.98px) {
+    .bh-wide-chat-only {
+        display: none;
+    }
+}
+
+/* AuditTrails.razor: the date range and the value switches above the grid; the open trail's details below it. */
+.bh-audit-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+    margin-bottom: var(--fui-spacing-m);
+}
+
+/* MudDateRangePicker with its Clear action: the picker and the button side by side. */
+.bh-audit-range {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-audit-dates {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fui-spacing-xs);
+}
+
+/* A trail's details in its detail row (MudTable ChildRowContent). */
+.bh-audit-details {
+    display: grid;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-audit-details__table th {
+    text-align: start;
+    padding: var(--fui-spacing-s) var(--fui-spacing-m) var(--fui-spacing-s) 0;
+    vertical-align: top;
+}
+
+.bh-audit-details__table td > * {
+    margin: 0 var(--fui-spacing-xs) var(--fui-spacing-xs) 0;
+}

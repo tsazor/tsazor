@@ -1,0 +1,14 @@
+<label>
+    <input type="checkbox" @bind="dark" />
+    Dark mode
+</label>
+
+<Toolbar />
+
+@code {
+    dark = false;
+
+    get theme(): string {
+        return this.dark ? "dark" : "light";
+    }
+}

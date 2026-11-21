@@ -1,0 +1,46 @@
+@* components/layout/app-shell.tsx: the three-area layout — sidebar, topbar, main content — and the app's default
+   layout (App.tsazor). Desktop: the sidebar collapses to a 52px icon rail (persisted); below `md` a drawer from the
+   topbar's hamburger. The inactivity guard runs while signed in. The original renders the shell only behind
+   ProtectedRoute; here the signed-out and restoring states pass through it (AuthorizeRouteView's NotAuthorized and
+   Authorizing render in the default layout), so it shows its chrome only to a signed-in user. React Router's
+   lazy-route Suspense fallback is the router's: the previous page stays until the next one's chunk is in. *@
+@inherits LayoutComponentBase
+@import { ShellState } from "./shell-state"
+@inject AuthService auth
+
+@if (auth.isAuthenticated && !auth.isInitializing) {
+    <CascadingValue Value="@shell" IsFixed="true">
+        @* Skip-to-content link — first focusable element. *@
+        <a href="#main-content" class="sr-only z-[100] rounded-md bg-[var(--color-foreground)] px-4 py-2 text-sm font-medium text-[var(--color-background)] focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]">
+            Skip to content
+        </a>
+
+        <div class="flex h-screen flex-col overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
+            <div class="flex min-h-0 flex-1">
+                <Sidebar />
+                <div class="flex min-w-0 flex-1 flex-col">
+                    <Topbar />
+                    <main id="main-content" tabindex="-1" class="flex-1 overflow-auto p-4 focus:outline-none md:p-6">
+                        @Body
+                    </main>
+                </div>
+            </div>
+        </div>
+
+        @* Mobile drawer. *@
+        <MobileNavRoot />
+
+        @* Inactivity auto-logout — warning modal + countdown, signed-in only. *@
+        <InactivityGuard />
+    </CascadingValue>
+} else {
+    @Body
+}
+
+@code {
+    private readonly shell = new ShellState();
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+    }
+}

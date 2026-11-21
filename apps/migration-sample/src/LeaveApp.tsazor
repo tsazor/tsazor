@@ -1,0 +1,34 @@
+@** Hands a URL the Tsazor pages do not serve back to the gateway with a full page load — a link
+    to a Blazor page that was not marked `target="_top"`, or the login page. The gateway then
+    routes it (to the Blazor app). A marker stops a loop when the gateway sends the URL back here. *@
+@inject NavigationManager Navigation
+
+@if (stuck) {
+    <h1>Not found</h1>
+    <p>Neither the Tsazor pages nor the Blazor app have <code>@Navigation.uri</code>.</p>
+} else {
+    <p role="status">Opening…</p>
+}
+
+@code {
+    /** Where to go (absolute or root-relative); default: the current URL. */
+    @Parameter() to?: string;
+
+    private stuck = false;
+    private static readonly KEY = "migration-sample:left";
+
+    protected override onInitialized(): void {
+        const target = new URL(this.to ?? this.Navigation.uri, this.Navigation.baseUri).href;
+        try {
+            if (sessionStorage.getItem(LeaveApp.KEY) === target) {
+                sessionStorage.removeItem(LeaveApp.KEY);
+                this.stuck = true;
+                return;
+            }
+            sessionStorage.setItem(LeaveApp.KEY, target);
+        } catch {
+            // storage blocked: leave anyway
+        }
+        this.Navigation.navigateTo(target, { forceLoad: true, replaceHistoryEntry: true });
+    }
+}

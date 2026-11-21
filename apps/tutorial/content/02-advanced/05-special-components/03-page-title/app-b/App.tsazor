@@ -1,0 +1,30 @@
+<PageTitle>(@unread) Inbox</PageTitle>
+<HeadContent>
+    <meta name="description" content="Your mail, @unread unread" />
+</HeadContent>
+
+<h1>Inbox</h1>
+
+<ul class="mails">
+    @foreach (const mail of mails) {
+        <li class="@(mail.read ? null : "unread")">@mail.subject</li>
+    }
+</ul>
+
+<button @onclick="readAll">Mark all as read</button>
+
+@code {
+    mails = [
+        { subject: "Lunch on Friday?", read: false },
+        { subject: "Your invoice", read: true },
+        { subject: "Release notes 1.2", read: false },
+    ];
+
+    get unread(): number {
+        return this.mails.filter((mail) => !mail.read).length;
+    }
+
+    readAll() {
+        for (const mail of this.mails) mail.read = true;
+    }
+}

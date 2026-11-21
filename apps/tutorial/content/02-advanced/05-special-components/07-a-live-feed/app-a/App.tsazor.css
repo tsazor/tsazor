@@ -1,0 +1,10 @@
+.feed {
+    height: 320px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+}
+
+.event {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+}

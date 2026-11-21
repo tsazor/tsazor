@@ -1,0 +1,12 @@
+@* A single-select field as radio buttons (FluentCMS's SelectFieldFormRadioGroup). *@
+@inherits BaseFieldValueView<string | null, SelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import { selectOptions, type SelectFieldModel } from "../field-models"
+
+<RadioGroup @bind-Value="fieldValue.value" label="@field.label" options="@this.options" />
+
+@code {
+    private get options(): { value: string; label: string }[] {
+        return selectOptions(this.field.options).map((option) => ({ value: option, label: option }));
+    }
+}

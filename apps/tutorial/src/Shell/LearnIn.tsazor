@@ -1,0 +1,28 @@
+@** "Learn it in": the lessons that teach a reference entry, linked in the reader's track (a lesson only the other track has links there). *@
+@inject TutorialState State
+@import type { LessonLink } from "../reference-types"
+
+@if (lessons.length > 0) {
+    <aside class="learn-in" aria-labelledby="learn-in-title">
+        <h2 id="learn-in-title">Learn it in the tutorial</h2>
+        <ul>
+            @foreach (const lesson of lessons) {
+                const track = trackOf(lesson);
+                <li @key="lesson.slug">
+                    <a href="@(track + "/" + lesson.slug)">@lesson.title[track]</a>
+                    <span class="chapter">@lesson.chapter</span>
+                </li>
+            }
+        </ul>
+    </aside>
+}
+
+@code {
+    /** The lessons (from the lessons' keywords). */
+    @Parameter() lessons: LessonLink[] = [];
+
+    private trackOf(lesson: LessonLink): Track {
+        const preferred = this.State.preferredTrack;
+        return lesson.title[preferred] !== undefined ? preferred : preferred === "ts" ? "blazor" : "ts";
+    }
+}

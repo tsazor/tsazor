@@ -1,0 +1,6 @@
+<button class="themed @theme">@label</button>
+
+@code {
+    @Parameter() label = "";
+    @CascadingParameter({ type: String }) theme = "light";
+}

@@ -1,0 +1,28 @@
+<header>
+    <h1>Docs</h1>
+    @if (!open) {
+        <button class="open" @onclick="show">Search…</button>
+    }
+</header>
+
+@if (open) {
+    <div class="search">
+        <input placeholder="Search the docs" @onfocus="() => focused = true" @onblur="() => focused = false" />
+        <button class="close" @onclick="close">✕</button>
+        <p class="hint">@(focused ? "Type away." : "Click the box first…")</p>
+    </div>
+}
+
+@code {
+    open = false;
+    focused = false;
+
+    show() {
+        this.open = true;
+    }
+
+    close() {
+        this.open = false;
+        this.focused = false;
+    }
+}

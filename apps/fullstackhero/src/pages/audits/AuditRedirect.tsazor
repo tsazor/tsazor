@@ -1,0 +1,13 @@
+@* routes.tsx's `{ path: "audits/:id", element: <Navigate to="/audits" replace /> }`: the detail is a side sheet on the
+   list now, so a bookmarked /audits/:id goes back to the list, in place of the entry. *@
+@page "/audits/{id}"
+@authorize
+@inject NavigationManager navigation
+
+@code {
+    @Parameter() id: string = "";
+
+    protected override onInitialized(): void {
+        this.navigation.navigateTo("/audits", { replaceHistoryEntry: true });
+    }
+}

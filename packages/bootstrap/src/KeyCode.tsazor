@@ -1,0 +1,97 @@
+@** The keys pressed in its content, or on the whole page (Fluent UI Blazor's FluentKeyCode): onKeyDown and onKeyUp
+    with the KeyboardEvent, for the keys of `only` (or all but `ignore`; KeyboardEvent.key names: "Enter",
+    "ArrowUp", "a"). `preventDefault` stops every key's default action, `preventDefaultOnly` that of some;
+    `stopPropagation`, `stopRepeat` (a held key once). The modifier keys themselves don't count (`ignoreModifier`).
+    `globalDocument` listens on the page, `anchor` on the element with that id; else the content is wrapped in a
+    `span` (or a `div`, `tagName`). In markup of your own, `@onkeydown` with `@onkeydown:preventDefault` does the same
+    for one element — the same parameters as the Fluent skin's KeyCode. *@
+@import { withClass } from "./attributes"
+
+@if (!this.globalDocument && !this.anchor) {
+    @if (this.tagName === "div") {
+        <div @attributes="@this.wrapperAttributes" @attach="this.listen">@childContent</div>
+    } else {
+        <span @attributes="@this.wrapperAttributes" @attach="this.listen">@childContent</span>
+    }
+}
+
+@code {
+    /** Listens on the whole page (`GlobalDocument`). */
+    @Parameter() globalDocument: boolean = false;
+    /** Listens on the element with this id instead of the content (`Anchor`). */
+    @Parameter() anchor?: string;
+    /** The element that wraps the content: span (default) or div (`TagName`). */
+    @Parameter() tagName: "span" | "div" = "span";
+    /** Raised with each keydown that counts. */
+    @Parameter() onKeyDown?: EventCallback<KeyboardEvent>;
+    /** Raised with each keyup that counts. */
+    @Parameter() onKeyUp?: EventCallback<KeyboardEvent>;
+    /** Only these keys count (KeyboardEvent.key names). */
+    @Parameter() only: string[] = [];
+    /** These keys don't count. */
+    @Parameter() ignore: string[] = [];
+    /** Shift, Control, Alt and Meta pressed alone don't count (default). */
+    @Parameter() ignoreModifier: boolean = true;
+    /** Stops the default action of every key that counts. */
+    @Parameter() preventDefault: boolean = false;
+    /** Stops the default action of these keys only. */
+    @Parameter() preventDefaultOnly: string[] = [];
+    /** Stops the keys from going on to the elements around. */
+    @Parameter() stopPropagation: boolean = false;
+    /** A held key counts once (`StopRepeat`, `PreventMultipleKeyDown`). */
+    @Parameter() stopRepeat: boolean = false;
+    /** The content whose keys count. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` on the wrapping element (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private detach?: () => void;
+    private listening?: string;
+
+    private get wrapperAttributes(): Record<string, unknown> {
+        return withClass("tz-key-code", this.additionalAttributes);
+    }
+
+    /** The content's element. */
+    private readonly listen = (element: HTMLElement): (() => void) => this.on(element);
+
+    protected override onAfterRender(): void {
+        // The page or an anchor: (re)attached when the target changes.
+        const target = this.globalDocument ? "document" : this.anchor ? `#${this.anchor}` : undefined;
+        if (target === this.listening) return;
+        this.detach?.();
+        this.detach = undefined;
+        this.listening = target;
+        if (target === "document") this.detach = this.on(document);
+        else if (this.anchor) {
+            const element = document.getElementById(this.anchor);
+            if (element !== null) this.detach = this.on(element);
+        }
+    }
+
+    dispose(): void {
+        this.detach?.();
+    }
+
+    private on(target: EventTarget): () => void {
+        const down = (e: Event): void => this.key(e as KeyboardEvent, this.onKeyDown);
+        const up = (e: Event): void => this.key(e as KeyboardEvent, this.onKeyUp);
+        target.addEventListener("keydown", down);
+        target.addEventListener("keyup", up);
+        return () => {
+            target.removeEventListener("keydown", down);
+            target.removeEventListener("keyup", up);
+        };
+    }
+
+    private key(e: KeyboardEvent, callback: EventCallback<KeyboardEvent> | undefined): void {
+        if (this.ignoreModifier && ["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+        if (this.only.length > 0 && !this.only.includes(e.key)) return;
+        if (this.ignore.includes(e.key)) return;
+        if (this.stopRepeat && e.repeat) return;
+        if (this.preventDefault || this.preventDefaultOnly.includes(e.key)) e.preventDefault();
+        if (this.stopPropagation) e.stopPropagation();
+        // The listener is outside the renderer: its errors go to the ErrorBoundary by hand.
+        callback?.invokeAsync(e).catch((error) => this.dispatchExceptionAsync(error));
+    }
+}

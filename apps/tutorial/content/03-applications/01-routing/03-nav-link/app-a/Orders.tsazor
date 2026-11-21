@@ -1,0 +1,17 @@
+@page "/orders"
+<h2>Orders</h2>
+<ul class="orders">
+    @foreach (const order of orders) {
+        <li>
+            <a href="@(`/orders/${order.id}`)">#@order.id @order.customer</a>
+        </li>
+    }
+</ul>
+
+@code {
+    orders = [
+        { id: 101, customer: "Marta" },
+        { id: 102, customer: "Jonas" },
+        { id: 103, customer: "Bea" },
+    ];
+}

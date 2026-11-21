@@ -1,0 +1,71 @@
+@** A sidebar navigation landmark (nav; Bootstrap's `.nav-pills.flex-column`) that renders links as a list of runtime
+    NavLinks, which mark the link matching the current URL active. A link may have an `icon`, and an `iconActive`
+    shown while it is the current page (Fluent UI Blazor's `IconRest`/`IconActive`). `sections` add links under
+    headings (MudBlazor's MudListSubheader, Fluent UI Blazor's FluentNavGroup), each a group named by its heading.
+    compact switches to the icon rail: a link with an icon shows only the icon, its label stays its accessible name
+    and its tooltip, and the headings hide — the same parameters as the Fluent skin's SidebarNav. *@
+@import { uniqueId, type IconValue } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+
+<nav aria-label="@(ariaLabel ?? t("sidebarNav.label"))" @attributes="@withClass(navClass, additionalAttributes)">
+    @foreach (const section of this.allSections) {
+        <div role="@(section.heading ? "group" : null)" aria-labelledby="@(section.heading ? section.id : null)">
+            @if (section.heading) {
+                <p class="tz-nav__heading" id="@section.id">@section.heading</p>
+            }
+            <ul class="nav nav-pills flex-column gap-1">
+                @foreach (const link of section.links) {
+                    <li class="nav-item">
+                        <NavLink class="nav-link tz-nav__link" activeClass="active" href="@link.href" target="@link.target" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
+                            @if (link.icon) {
+                                <Icon value="@link.icon" class="@(link.iconActive ? "tz-nav__icon tz-nav__icon--rest" : "tz-nav__icon")" />
+                            }
+                            @if (link.iconActive) {
+                                <Icon value="@link.iconActive" class="tz-nav__icon tz-nav__icon--active" />
+                            }
+                            <span class="tz-nav__label">@link.label</span>
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+    @this.childContent
+</nav>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link).
+     * `target` is the link's, as MudNavLink's Target: "_blank" opens it in a new tab, outside the app's routing. */
+    @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] = [];
+    /** Links under headings, after `links`: each section a group named by its heading. */
+    @Parameter() sections: { heading?: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] }[] = [];
+    /** Accessible nav name. */
+    @Parameter() ariaLabel?: string;
+    /** Renders the compact (icon-rail) variant. */
+    @Parameter() compact: boolean = false;
+    /** Further attributes for the nav element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Extra content below the links. */
+    @Parameter() childContent?: RenderFragment;
+
+    private readonly sectionIds = uniqueId("tz-nav-section");
+
+    /** `links` as a first section without a heading, then the sections — each with the id its heading has. */
+    private get allSections(): { heading?: string; id: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] }[] {
+        const sections = this.links.length > 0 ? [{ links: this.links }, ...this.sections] : this.sections;
+        return sections.map((section, index) => ({ ...section, id: `${this.sectionIds}-${index}` }));
+    }
+
+    private get navClass(): string {
+        return this.compact ? "tz-nav tz-nav--compact" : "tz-nav";
+    }
+
+    /** The rail shows only the icon: the label becomes its tooltip. */
+    private titleOf(link: { label: string; icon?: IconValue }): string | null {
+        return this.compact && link.icon !== undefined ? link.label : null;
+    }
+
+}

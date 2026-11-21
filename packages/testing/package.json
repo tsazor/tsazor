@@ -1,6 +1,16 @@
 {
   "name": "@tsazor/testing",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/testing"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/testing#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Test helpers for Tsazor components: render() over happy-dom.",
   "main": "./dist/index.js",
@@ -12,8 +22,12 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"
@@ -22,7 +36,7 @@
     "@tsazor/runtime": "workspace:*"
   },
   "devDependencies": {
-    "happy-dom": "^18.0.1",
+    "happy-dom": "^21.0.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.7"
   }

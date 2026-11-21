@@ -1,0 +1,42 @@
+@page "/virtualization/variable-height-table"
+@import type { HeightItem } from "./models"
+<p>This tests variable-height items inside an HTML table with SpacerElement="tr".</p>
+
+<table id="variable-height-table">
+    <thead style="position: sticky; top: 0; background-color: silver">
+        <tr>
+            <th>Item</th>
+            <th>Height</th>
+        </tr>
+    </thead>
+    <tbody>
+        <Virtualize Items="@items" ItemSize="50" SpacerElement="tr" OverscanCount="3">
+            <tr>
+                <td id="vht-row-@context.index">Item @context.index</td>
+                <td>
+                    <div style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 80%);">
+                        @(context.height)px
+                    </div>
+                </td>
+            </tr>
+        </Virtualize>
+    </tbody>
+</table>
+
+<p><span id="vht-total-items">Total items: @items.length</span></p>
+
+<style>
+    html, body { overflow-y: scroll }
+</style>
+
+@code {
+    items: HeightItem[] = [];
+
+    protected override onInitialized(): void {
+        this.items = range(0, 500).map((i) => ({
+            index: i,
+            height: 30 + (i * 37 % 171),
+            hue: i * 7 % 360,
+        }));
+    }
+}

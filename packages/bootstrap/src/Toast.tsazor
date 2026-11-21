@@ -1,0 +1,58 @@
+@** A single Bootstrap toast: optional title, message and Close button, announced politely (role="alert" for intent
+    danger, otherwise role="status") — the same parameters as the Fluent skin's Toast. App-wide toasts go through the
+    `Toaster` service and a ToastRegion; this one is for placing a toast yourself. *@
+@import type { Intent } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { backgroundColor } from "./vocabulary"
+@import { libraryTexts } from "@tsazor/ui"
+
+<div @attributes="@withClass(this.toastClass, this.toastAttributes)">
+    <div class="d-flex">
+        <div class="toast-body">
+            @if (this.title) {
+                <strong class="d-block">@this.title</strong>
+            }
+            @this.childContent
+        </div>
+        @if (this.dismissible) {
+            <button type="button" class="btn-close me-2 m-auto" aria-label="@t("close")" @onclick="this.close"></button>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The status: info (default), success, warning, danger or neutral. */
+    @Parameter() intent: Intent = "info";
+    /** Optional headline. */
+    @Parameter() title?: string;
+    /** Message body. */
+    @Parameter() childContent?: RenderFragment;
+    /** Shows the close button. */
+    @Parameter() dismissible: boolean = true;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired when the user closes the toast. */
+    @Parameter() onDismissed?: EventCallback<MouseEvent>;
+
+    private get toastClass(): string {
+        return `toast show align-items-center border-0 text-bg-${backgroundColor(this.intent)}`;
+    }
+
+    private get toastAttributes(): Record<string, unknown> {
+        return {
+            // role=alert for danger (assertive), otherwise status (polite); no aria-live of its own,
+            // which would make a danger toast polite too.
+            role: this.intent === "danger" ? "alert" : "status",
+            "aria-atomic": "true",
+            // Light text and a white close button on the strong colors.
+            "data-bs-theme": this.intent === "primary" || this.intent === "secondary" || this.intent === "success" || this.intent === "danger" ? "dark" : null,
+            ...this.additionalAttributes,
+        };
+    }
+
+    private close(e: MouseEvent): Promise<void> | undefined {
+        return this.onDismissed?.invokeAsync(e);
+    }
+}

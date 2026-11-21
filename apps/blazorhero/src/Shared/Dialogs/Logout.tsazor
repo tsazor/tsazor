@@ -1,0 +1,38 @@
+@* Client/Shared/Dialogs/Logout.razor: shown by the DialogService (MudBlazor's DialogService.Show<Logout>); its
+   Dialog takes the frame from it. Logging out leaves the hub first, as the original does. *@
+@import type { HubConnection } from "@microsoft/signalr"
+@import { DialogReference } from "@tsazor/fluent"
+@inject AuthenticationManager authenticationManager
+@inject NavigationManager navigation
+
+<Dialog title="@L("Logout Confirmation")">
+    <ChildContent>
+        <p>@contentText</p>
+    </ChildContent>
+    <Footer>
+        <Button onClick="@cancel">@L("Cancel")</Button>
+        <Button intent="@intent" onClick="@submit">@buttonText</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() hubConnection?: HubConnection;
+    @Parameter() contentText = "";
+    @Parameter() buttonText = "";
+    @Parameter() intent: Intent = "danger";
+    @Parameter() currentUserId = "";
+
+    private readonly L = localizerFor("Logout");
+
+    private async submit(): Promise<void> {
+        await this.hubConnection?.send(ApplicationConstants.SignalR.OnDisconnect, this.currentUserId);
+        this.authenticationManager.logout();
+        this.navigation.navigateTo("/login");
+        this.dialog?.close(true);
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

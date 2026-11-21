@@ -1,0 +1,27 @@
+{
+  "name": "blazor-parity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Blazor's own E2E suites, ported: the test pages as .tsazor and the Selenium tests as Playwright checks, run against Tsazor's components.",
+  "scripts": {
+    "build": "tsazor check && vite build && vite build --mode bootstrap",
+    "check": "tsazor check",
+    "dev": "vite --port 5361",
+    "dev:bootstrap": "vite --mode bootstrap --port 5361",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@tsazor/bootstrap": "workspace:*",
+    "@tsazor/fluent": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "bootstrap": "^5.3.8"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  }
+}

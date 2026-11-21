@@ -1,0 +1,26 @@
+@* tenant-branding-card.tsx's BrandAssetsEditor: URL editors for the logo, the dark-mode logo and the favicon. An
+   emptied URL also asks the server to delete the asset. *@
+@import type { BrandAssetsDto } from "@/api/tenants"
+@import AssetField from "./AssetField.tsazor"
+
+<div class="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+    <div class="border-b border-[oklch(from_var(--color-border)_l_c_h_/_0.5)] px-4 py-2.5">
+        <h4 class="text-[12.5px] font-semibold tracking-tight text-[var(--color-foreground)]">Brand assets</h4>
+        <p class="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-muted-foreground)]">
+            URLs to your hosted brand assets. Upload via the Files module first, then paste the resulting public URL here.
+        </p>
+    </div>
+    <div class="space-y-4 p-4">
+        <AssetField id="logo-url" label="Logo URL" value="@(assets.logoUrl ?? "")"
+                    onChange="@(v => onChange?.invokeAsync({ logoUrl: v || null, deleteLogo: v.length === 0 }))" />
+        <AssetField id="logo-dark-url" label="Logo URL (dark mode)" value="@(assets.logoDarkUrl ?? "")"
+                    onChange="@(v => onChange?.invokeAsync({ logoDarkUrl: v || null, deleteLogoDark: v.length === 0 }))" />
+        <AssetField id="favicon-url" label="Favicon URL" value="@(assets.faviconUrl ?? "")"
+                    onChange="@(v => onChange?.invokeAsync({ faviconUrl: v || null, deleteFavicon: v.length === 0 }))" />
+    </div>
+</div>
+
+@code {
+    @Parameter() assets!: BrandAssetsDto;
+    @Parameter() onChange?: EventCallback<Partial<BrandAssetsDto>>;
+}

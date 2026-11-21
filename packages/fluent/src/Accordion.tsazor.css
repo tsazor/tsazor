@@ -1,0 +1,58 @@
+/* Accordion — Fluent 2 accordion: subtle header buttons with a chevron, a padded panel. */
+
+.fui-accordion {
+  font-family: var(--fui-font-family);
+}
+
+.fui-accordion__item + .fui-accordion__item {
+  border-top: 1px solid var(--fui-stroke-2);
+}
+
+.fui-accordion__header {
+  margin: 0;
+  font-size: var(--fui-font-size-body);
+  font-weight: var(--fui-font-weight-semibold);
+}
+
+.fui-accordion__button {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+  width: 100%;
+  padding: var(--fui-spacing-s) var(--fui-spacing-m);
+  border: none;
+  border-radius: var(--fui-radius-md);
+  background: transparent;
+  color: var(--fui-foreground-1);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.fui-accordion__button:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-accordion__button:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+/* Fluent's ChevronRight, turned down while open. */
+.fui-accordion__chevron {
+  flex: none;
+  transition: transform var(--fui-duration-fast, 100ms) var(--fui-ease-standard);
+}
+
+.fui-accordion__chevron:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+.fui-accordion__button[aria-expanded="true"] .fui-accordion__chevron {
+  transform: rotate(90deg);
+}
+
+.fui-accordion__panel {
+  padding: var(--fui-spacing-xs) var(--fui-spacing-m) var(--fui-spacing-m) calc(var(--fui-spacing-m) + 20px + var(--fui-gap-sm));
+  color: var(--fui-foreground-2);
+}

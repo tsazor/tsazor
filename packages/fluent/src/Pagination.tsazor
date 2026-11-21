@@ -1,51 +1,71 @@
-<nav class="fui-pagination" aria-label="Pagination">
-    <button type="button" class="fui-pagination__button" aria-label="First page" title="First page"
-            disabled="@this.atFirst" @onclick="() => this.go(1)">«</button>
-    <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page"
-            disabled="@this.atFirst" @onclick="() => this.go(this.page - 1)">‹</button>
+@** A controlled page navigator (nav landmark): First/Previous/Next/Last buttons and the page
+    numbers within 2 of the current page, plus the first and last page with an ellipsis where
+    numbers are skipped. It keeps no page state; clicks raise onPageChanged and the parent updates
+    page. *@
+@import { withAttributes } from "./attributes"
+@import { ChevronDoubleLeft20Regular, ChevronDoubleRight20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+
+<nav aria-label="@(this.ariaLabel ?? t("pagination.label"))" @attributes="@this.paginationAttributes">
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")"
+            aria-disabled="@(this.atFirst ? "true" : null)" @onclick="() => this.go(1)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")"
+            aria-disabled="@(this.atFirst ? "true" : null)" @onclick="() => this.go(this.page - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
     @for (const item of this.windowItems) {
         @if (typeof item === "number") {
-            <button type="button" class="@this.pageClass(item)" aria-label="@`Go to page ${item}`"
-                    aria-current="@this.currentPageAttr(item)" title="@`Go to page ${item}`"
+            <button type="button" class="@this.pageClass(item)" aria-label="@t("pagination.goTo", { page: item })"
+                    aria-current="@this.currentPageAttr(item)" title="@t("pagination.goTo", { page: item })"
                     @onclick="@(() => this.go(item))">@item</button>
         }
         else {
             <span class="fui-pagination__ellipsis" aria-hidden="true">…</span>
         }
     }
-    <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page"
-            disabled="@this.atLast" @onclick="() => this.go(this.page + 1)">›</button>
-    <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page"
-            disabled="@this.atLast" @onclick="() => this.go(this.totalPages)">»</button>
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")"
+            aria-disabled="@(this.atLast ? "true" : null)" @onclick="() => this.go(this.page + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")"
+            aria-disabled="@(this.atLast ? "true" : null)" @onclick="() => this.go(this.pageCount)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
 </nav>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Current page (1-based) — controlled: the component keeps no page state. */
     @Parameter() page: number = 1;
     /** Total number of pages. */
-    @Parameter() totalPages: number = 1;
-    @Parameter() onPageChange?: EventCallback<number>;
+    @Parameter() pageCount: number = 1;
+    /** Accessible nav name. */
+    @Parameter() ariaLabel?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired when a button targets another valid page; receives the new 1-based page number. */
+    @Parameter() onPageChanged?: EventCallback<number>;
+
+    private get paginationAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-pagination" }, this.additionalAttributes);
+    }
 
     private get atFirst(): boolean {
         return this.page <= 1;
     }
 
     private get atLast(): boolean {
-        return this.page >= this.totalPages;
+        return this.page >= this.pageCount;
     }
 
     /** Number window around the current page (±2), ellipses at the trimmed edges
      * (pre-clarified local decision — no hidden "jump 5" ellipsis behavior). */
     private get windowItems(): Array<number | "gap"> {
-        const total = Math.max(this.totalPages, 1);
+        const total = Math.max(this.pageCount, 1);
         const window: number[] = [];
         for (let i = Math.max(1, this.page - 2); i <= Math.min(total, this.page + 2); i++) window.push(i);
         if (window[0] !== undefined && window[0] > 1) {
             if (window[0] > 2) window.unshift("gap" as unknown as number);
             window.unshift(1);
         }
-        if (window[window.length - 1] < total) {
-            if (window[window.length - 1] < total - 1) window.push("gap" as unknown as number);
+        const last = window[window.length - 1];
+        if (last !== undefined && last < total) {
+            if (last < total - 1) window.push("gap" as unknown as number);
             window.push(total);
         }
         return window as Array<number | "gap">;
@@ -61,7 +81,7 @@
     }
 
     private async go(next: number): Promise<void> {
-        if (next < 1 || next > this.totalPages || next === this.page) return;
-        await this.onPageChange?.invokeAsync(next);
+        if (next < 1 || next > this.pageCount || next === this.page) return;
+        await this.onPageChanged?.invokeAsync(next);
     }
 }

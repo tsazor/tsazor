@@ -1,0 +1,146 @@
+@* pages/users/detail.tsx: one account — the hero card (monogram, name, @username and email, the status and email badges,
+   activate/deactivate), the identity card, the role assignment, and the user's sessions. *@
+@page "/users/{id}"
+@authorize({ policy: "Permissions.Users.View" })
+@import { ArrowLeft, Mail, User as UserIcon, Users } from "lucide"
+@import { getUser, getUserRoles, toggleUserStatus, type UserRoleDto } from "@/api/users"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { Query } from "@/lib/query"
+@import UserSessionsCard from "@/components/sessions/UserSessionsCard.tsazor"
+@import DetailRow from "./DetailRow.tsazor"
+@import RolesEditor from "./RolesEditor.tsazor"
+@inject NavigationManager navigation
+
+<div class="space-y-6">
+    <EntityPageHeader icon="@Users" title="@displayName" description="@(user?.email ?? undefined)">
+        <Button variant="ghost" size="sm" onClick="@(() => navigation.navigateTo("/users"))" class="h-9 gap-1.5 rounded-lg px-3 text-[13px]">
+            <Icon icon="@ArrowLeft" class="size-3.5" /> Directory
+        </Button>
+    </EntityPageHeader>
+
+    @if (userQuery.result.isError) {
+        <ErrorBand message="@describeErr(userQuery.result.error)" />
+    }
+
+    @if (userQuery.result.isLoading && !user) {
+        <LoadingRow label="Loading account" />
+    }
+
+    @if (user) {
+        const current = user;
+        @* Hero card *@
+        <div class="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs">
+            <div class="flex flex-col items-start gap-6 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <div class="flex items-center gap-5">
+                    <Monogram seed="@(current.id ?? current.userName ?? "user")" firstName="@(current.firstName ?? undefined)" lastName="@(current.lastName ?? undefined)" fallback="@(current.userName ?? current.email ?? undefined)" size="lg" />
+                    <div>
+                        <h2 class="font-display text-2xl font-semibold tracking-tight md:text-3xl">@displayName</h2>
+                        <div class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-xs text-[var(--color-muted-foreground)]">
+                            @if (current.userName) {
+                                <code class="rounded bg-[var(--color-muted)] px-1 py-0.5 text-[11px]">@(`@${current.userName}`)</code>
+                            }
+                            @if (current.email) {
+                                <span class="truncate">@current.email</span>
+                            }
+                        </div>
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <Badge variant="@(current.isActive ? "success" : "muted")" class="font-mono text-[10px] uppercase tracking-[0.14em]">
+                                @(current.isActive ? "Active" : "Disabled")
+                            </Badge>
+                            <Badge variant="@(current.emailConfirmed ? "info" : "warning")" class="font-mono text-[10px] uppercase tracking-[0.14em]">
+                                <Icon icon="@Mail" class="h-3 w-3" />
+                                @(current.emailConfirmed ? "Email confirmed" : "Email pending")
+                            </Badge>
+                        </div>
+                    </div>
+                </div>
+
+                <Button variant="@(current.isActive ? "outline" : "default")" onClick="@(() => toggle(!current.isActive))" disabled="@toggling" class="shrink-0 h-9 rounded-lg px-4 text-[13px]">
+                    @(toggling ? "Updating…" : current.isActive ? "Deactivate account" : "Activate account")
+                </Button>
+            </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            @* Identity details *@
+            <SettingsSection title="Identity card" icon="@UserIcon" description="Account identifiers and contact details captured at registration.">
+                <dl class="space-y-0 divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+                    <DetailRow label="User ID" mono>@(current.id ?? "—")</DetailRow>
+                    <DetailRow label="Username" mono>@(current.userName ?? "—")</DetailRow>
+                    <DetailRow label="Email" mono>@(current.email ?? "—")</DetailRow>
+                    <DetailRow label="Phone" mono>@(current.phoneNumber ?? "—")</DetailRow>
+                    <DetailRow label="Status">@(current.isActive ? "Active" : "Disabled")</DetailRow>
+                    <DetailRow label="Email confirmed">@(current.emailConfirmed ? "Yes" : "Pending confirmation")</DetailRow>
+                </dl>
+            </SettingsSection>
+
+            @* Roles editor *@
+            <RolesEditor userId="@(current.id ?? id)" roles="@(rolesQuery.result.data ?? UserDetail.noRoles)" loading="@rolesQuery.result.isLoading" error="@rolesQuery.result.error" onSaved="@onRolesSaved" />
+        </div>
+
+        <UserSessionsCard userId="@(current.id ?? id)" />
+    }
+</div>
+
+@code {
+    @Parameter() id: string = "";
+
+    /** One empty list, so the editor's draft only resets when the roles really change. */
+    private static readonly noRoles: UserRoleDto[] = [];
+
+    private toggling = false;
+
+    private readonly userQuery = new Query(() => ({
+        queryKey: ["user", this.id],
+        queryFn: () => getUser(this.id),
+        enabled: !!this.id,
+    }));
+
+    private readonly rolesQuery = new Query(() => ({
+        queryKey: ["user", this.id, "roles"],
+        queryFn: () => getUserRoles(this.id),
+        enabled: !!this.id,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.userQuery);
+        this.observe(this.rolesQuery);
+    }
+
+    private get user() {
+        return this.userQuery.result.data;
+    }
+
+    private get displayName(): string {
+        const user = this.user;
+        return [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.userName || user?.email || this.id;
+    }
+
+    /** useMutation(toggleUserStatus): activate or deactivate, then refresh the user and the directory. */
+    private async toggle(activate: boolean): Promise<void> {
+        this.toggling = true;
+        try {
+            await toggleUserStatus(this.id, activate);
+            toast.success(activate ? "User activated" : "User deactivated");
+            void queryClient.invalidateQueries({ queryKey: ["user", this.id] });
+            void queryClient.invalidateQueries({ queryKey: ["users"] });
+        } catch (err) {
+            toast.error("Status change failed", { description: this.describeErr(err) });
+        } finally {
+            this.toggling = false;
+        }
+    }
+
+    private onRolesSaved(): void {
+        void queryClient.invalidateQueries({ queryKey: ["user", this.id, "roles"] });
+        void queryClient.invalidateQueries({ queryKey: ["users"] });
+    }
+
+    private describeErr(err: unknown): string {
+        if (err instanceof ApiRequestError) return err.problem?.detail ?? err.problem?.title ?? err.message;
+        if (err instanceof Error) return err.message;
+        return String(err);
+    }
+}

@@ -1,0 +1,31 @@
+@* components/list/pagination.tsx: the mono-caps folio counter — "Showing N of T · folio PP / TT" — with previous and
+   next. *@
+@import { ChevronLeft, ChevronRight } from "lucide"
+
+<div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+    <span class="font-mono text-[10.5px] font-medium uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+        @(`Showing ${shown} of ${totalCount} ${noun} · folio ${String(page).padStart(2, "0")} / ${String(Math.max(totalPages, 1)).padStart(2, "0")}`)
+    </span>
+    <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" disabled="@(!hasPrev || fetching)" onClick="@(() => onPrev?.invokeAsync())">
+            <Icon icon="@ChevronLeft" class="mr-1 h-3.5 w-3.5" /> Previous
+        </Button>
+        <Button variant="outline" size="sm" disabled="@(!hasNext || fetching)" onClick="@(() => onNext?.invokeAsync())">
+            Next <Icon icon="@ChevronRight" class="ml-1 h-3.5 w-3.5" />
+        </Button>
+    </div>
+</div>
+
+@code {
+    @Parameter() page: number = 1;
+    @Parameter() totalPages: number = 1;
+    @Parameter() totalCount: number = 0;
+    @Parameter() shown: number = 0;
+    @Parameter() fetching: boolean = false;
+    @Parameter() hasPrev: boolean = false;
+    @Parameter() hasNext: boolean = false;
+    @Parameter() onPrev?: EventCallback;
+    @Parameter() onNext?: EventCallback;
+    /** Optional left label override, e.g. "audit events". Default: "items". */
+    @Parameter() noun: string = "items";
+}

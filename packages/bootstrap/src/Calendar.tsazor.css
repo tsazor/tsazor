@@ -1,0 +1,158 @@
+/* Calendar — in Bootstrap's variables: a title with the month and two chevrons, then the days. A picked day is the
+   primary color, a range's days between its ends the primary's subtle background, today is outlined; a ruled-out day
+   is struck through; the days of the months around are dimmed. */
+
+.tz-calendar {
+  --tz-calendar-cell: 2.25rem;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  user-select: none;
+}
+
+.tz-calendar--disabled {
+  opacity: 0.65;
+}
+
+.tz-calendar__header {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.tz-calendar__title {
+  flex: 1;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: var(--bs-border-radius);
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--bs-body-color);
+  text-align: start;
+}
+
+button.tz-calendar__title:hover {
+  background: var(--bs-tertiary-bg);
+}
+
+.tz-calendar__step {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--tz-calendar-cell);
+  block-size: var(--tz-calendar-cell);
+  padding: 0;
+  border: none;
+  border-radius: var(--bs-border-radius);
+  background: none;
+  color: var(--bs-body-color);
+}
+
+.tz-calendar__step:hover:not(:disabled) {
+  background: var(--bs-tertiary-bg);
+}
+
+.tz-calendar__step:disabled {
+  color: var(--bs-secondary-color);
+  opacity: 0.5;
+}
+
+.tz-calendar__title:focus-visible,
+.tz-calendar__step:focus-visible,
+.tz-calendar__grid td:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.tz-calendar__grid {
+  border-collapse: separate;
+  border-spacing: 0.125rem;
+  text-align: center;
+}
+
+.tz-calendar__weekday {
+  inline-size: var(--tz-calendar-cell);
+  block-size: 1.75rem;
+  padding: 0;
+  font-size: 0.875em;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+}
+
+.tz-calendar__day,
+.tz-calendar__period {
+  position: relative;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--bs-border-radius);
+  cursor: pointer;
+}
+
+.tz-calendar__day {
+  inline-size: var(--tz-calendar-cell);
+  block-size: var(--tz-calendar-cell);
+}
+
+.tz-calendar__period {
+  inline-size: calc(var(--tz-calendar-cell) * 2);
+  block-size: calc(var(--tz-calendar-cell) * 1.25);
+}
+
+.tz-calendar:not(.tz-calendar--disabled) :is(.tz-calendar__day, .tz-calendar__period):not([aria-disabled="true"]):hover {
+  background: var(--bs-tertiary-bg);
+}
+
+.tz-calendar [aria-disabled="true"] {
+  cursor: default;
+}
+
+.tz-calendar__day--inactive,
+.tz-calendar__day--disabled,
+.tz-calendar__period--disabled {
+  color: var(--bs-secondary-color);
+}
+
+.tz-calendar__day--inactive {
+  opacity: 0.6;
+}
+
+.tz-calendar__day--disabled:not(.tz-calendar__day--inactive),
+.tz-calendar__period--disabled {
+  text-decoration: line-through;
+}
+
+.tz-calendar__day--today,
+.tz-calendar__period--today {
+  border-color: var(--bs-primary);
+  font-weight: 600;
+}
+
+.tz-calendar__day--preview,
+.tz-calendar--range .tz-calendar__day--selected:not(.tz-calendar__day--range-start, .tz-calendar__day--range-end) {
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+}
+
+.tz-calendar__day--selected:not(.tz-calendar--range *),
+.tz-calendar__day--range-start,
+.tz-calendar__day--range-end,
+.tz-calendar__period--selected {
+  background: var(--bs-primary);
+  color: #fff;
+}
+
+.tz-calendar:not(.tz-calendar--disabled) :is(.tz-calendar__day--selected, .tz-calendar__period--selected):hover {
+  background: var(--bs-primary);
+  filter: brightness(0.92);
+}
+
+.tz-calendar--range .tz-calendar__day--selected:not(.tz-calendar__day--range-start, .tz-calendar__day--range-end):hover {
+  background: var(--bs-primary-bg-subtle);
+  filter: none;
+}
+
+/* Right to left: the step arrows point the way the months go. */
+.tz-calendar__step:dir(rtl) .bi {
+  transform: scaleX(-1);
+}

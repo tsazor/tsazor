@@ -38,7 +38,7 @@
         if (result === true) {
             this.NavigationManager.navigateTo("/");
         } else {
-            this.error = typeof result === "string" ? result.replace(/^\[tsazor-http\] \d+ [^:]*: /, "") : "Registration failed.";
+            this.error = typeof result === "string" ? result : "Registration failed.";
         }
     };
 }

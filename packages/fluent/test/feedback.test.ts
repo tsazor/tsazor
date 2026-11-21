@@ -5,6 +5,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { render, renderTree, type RenderResult } from "@tsazor/testing";
 import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { icon } from "@tsazor/ui";
 import {
   Icon,
   Indicator,
@@ -16,9 +17,9 @@ import {
 
 /** Waits out the microtask render queue plus the settle timer. */
 async function settle(result: RenderResult): Promise<void> {
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 }
 
 /** Renders a component with param attributes plus an optional child slot. */
@@ -45,9 +46,11 @@ afterAll(() => {
 });
 
 describe("Icon", () => {
-  it("renders the named inline path hidden from assistive tech", async () => {
+  const chevron = icon("chevron-right", '<path d="M8 3l7 7-7 7"/>', "0 0 20 20");
+
+  it("renders its value's inline path hidden from assistive tech", async () => {
     const result = await renderOne(Icon, (b) => {
-      b.addAttribute(1, "name", "chevron-right");
+      b.addAttribute(1, "value", chevron);
       b.addAttribute(2, "size", 20);
     });
     const svg = result.container.querySelector(".fui-icon")!;
@@ -58,9 +61,15 @@ describe("Icon", () => {
     result.dispose();
   });
 
+  it("renders nothing without a value", async () => {
+    const result = await renderOne(Icon, () => {});
+    expect(result.container.querySelector("svg")).toBeNull();
+    result.dispose();
+  });
+
   it("exposes role=img with an accessible label when one is given", async () => {
     const result = await renderOne(Icon, (b) => {
-      b.addAttribute(1, "name", "check");
+      b.addAttribute(1, "value", chevron);
       b.addAttribute(2, "ariaLabel", "Completed");
     });
     const svg = result.container.querySelector(".fui-icon")!;
@@ -71,11 +80,43 @@ describe("Icon", () => {
   });
 });
 
+describe("Icon with a value", () => {
+  it("draws an app's own icon: its viewBox and markup, in currentColor", async () => {
+    const bolt = icon("bolt", '<svg viewBox="0 0 16 16"><path d="M9 1L3 9h5l-1 6 6-8H8z"/></svg>');
+    const result = await renderOne(Icon, (b) => {
+      b.addAttribute(1, "value", bolt);
+      b.addAttribute(2, "size", 24);
+    });
+    const svg = result.container.querySelector("svg.fui-icon")!;
+    expect(svg.getAttribute("viewBox")).toBe("0 0 16 16");
+    expect(svg.getAttribute("fill")).toBe("currentColor");
+    expect(svg.getAttribute("width")).toBe("24");
+    // Parsed in the SVG namespace, so the browser draws it.
+    const path = svg.querySelector("path")!;
+    expect(path.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(path.getAttribute("d")).toBe("M9 1L3 9h5l-1 6 6-8H8z");
+    result.dispose();
+  });
+
+  it("a title names it (role=img), and color sets the CSS color", async () => {
+    const result = await renderOne(Icon, (b) => {
+      b.addAttribute(1, "value", icon("dot", '<circle cx="12" cy="12" r="4"/>'));
+      b.addAttribute(2, "title", "Saved");
+      b.addAttribute(3, "color", "green");
+    });
+    const svg = result.container.querySelector(".fui-icon")! as SVGElement;
+    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.getAttribute("aria-label")).toBe("Saved");
+    expect(svg.style.color).toBe("green");
+    result.dispose();
+  });
+});
+
 describe("Indicator", () => {
   it("renders a status chip with the semantic color", async () => {
     const result = await renderTree((b) => {
       b.openComponent(0, Indicator);
-      b.addAttribute(1, "color", "success");
+      b.addAttribute(1, "intent", "success");
       b.addAttribute(2, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Online"));
       b.closeComponent();
     });
@@ -95,21 +136,29 @@ describe("Indicator", () => {
 });
 
 describe("Alert", () => {
-  it("maps legacy variant names onto Fluent severities", async () => {
-    const primary = await renderOne(Alert, (b) => b.addAttribute(1, "variant", "primary"));
-    expect(primary.container.querySelector(".fui-alert")!.className).toContain("fui-alert--info");
-
-    const danger = await renderOne(Alert, (b) => b.addAttribute(1, "variant", "danger"));
-    expect(danger.container.querySelector(".fui-alert")!.className).toContain("fui-alert--danger");
-    primary.dispose();
-    danger.dispose();
+  it("renders the intents as status classes (primary reads as info)", async () => {
+    const rendered: string[] = [];
+    for (const variant of ["info", "success", "danger", "warning", "neutral", "primary", "secondary"]) {
+      const result = await renderOne(Alert, (b) => b.addAttribute(1, "intent", variant));
+      rendered.push(result.container.querySelector(".fui-alert")!.className);
+      result.dispose();
+    }
+    expect(rendered).toEqual([
+      "fui-alert fui-alert--info",
+      "fui-alert fui-alert--success",
+      "fui-alert fui-alert--danger",
+      "fui-alert fui-alert--warning",
+      "fui-alert fui-alert--neutral",
+      "fui-alert fui-alert--info",
+      "fui-alert fui-alert--neutral",
+    ]);
   });
 
   it("keeps role=alert and dismisses through the close button + callback", async () => {
     let dismissed = false;
     const result = await renderTree((b) => {
       b.openComponent(0, Alert);
-      b.addAttribute(1, "variant", "success");
+      b.addAttribute(1, "intent", "success");
       b.addAttribute(2, "dismissible", true);
       b.addAttribute(3, "onDismissed", EventCallback.unbound(async () => { dismissed = true; }));
       b.addAttribute(4, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Saved."));
@@ -172,6 +221,22 @@ describe("Breadcrumb", () => {
     result.dispose();
   });
 
+  it("renders an item with onClick as a button that raises it, without a link", async () => {
+    let clicks = 0;
+    const result = await renderOne(BreadcrumbItem, (b) => {
+      b.addAttribute(1, "onClick", EventCallback.unbound(() => { clicks++; }));
+      b.addAttribute(2, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "images"));
+    });
+    const button = result.container.querySelector("button.fui-breadcrumb__link")!;
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.textContent).toBe("images");
+    expect(result.container.querySelector("a")).toBeNull();
+    click(result.container, "button");
+    await settle(result);
+    expect(clicks).toBe(1);
+    result.dispose();
+  });
+
   it("renders an inactive item as a link without aria-current", async () => {
     const result = await renderOne(BreadcrumbItem, (b) => {
       b.addAttribute(1, "href", "/home");
@@ -189,7 +254,7 @@ describe("Pagination", () => {
   it("labels all controls accessibly and marks the current page", async () => {
     const result = await renderOne(Pagination, (b) => {
       b.addAttribute(1, "page", 2);
-      b.addAttribute(2, "totalPages", 10);
+      b.addAttribute(2, "pageCount", 10);
     });
     expect(result.container.querySelector("button[aria-label='First page']")).not.toBeNull();
     expect(result.container.querySelector("button[aria-label='Last page']")).not.toBeNull();
@@ -205,12 +270,12 @@ describe("Pagination", () => {
     result.dispose();
   });
 
-  it("fires onPageChange with the clicked page and never keeps its own state", async () => {
+  it("fires onPageChanged with the clicked page and never keeps its own state", async () => {
     const seen: number[] = [];
     const result = await renderOne(Pagination, (b) => {
       b.addAttribute(1, "page", 1);
-      b.addAttribute(2, "totalPages", 5);
-      b.addAttribute(3, "onPageChange", EventCallback.unbound(async (n: number) => { seen.push(n); }));
+      b.addAttribute(2, "pageCount", 5);
+      b.addAttribute(3, "onPageChanged", EventCallback.unbound(async (n: number) => { seen.push(n); }));
     });
     // First page: prev/first disabled, clicking does nothing on its own.
     click(result.container, "button[aria-label='First page']");

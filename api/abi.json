@@ -1,0 +1,40 @@
+{
+  "about": "The ABI (docs/support-policy.md, D-S7): what compiled .tsazor code calls in @tsazor/runtime. A library compiled with 1.x runs on every later 1.y runtime, so these only grow, and a changed protocol gets a new name. packages/compiler/test/abi.test.ts pins what the compiler emits against this list and checks the runtime has each.",
+  "imports": [
+    "addAnimate",
+    "addAttachment",
+    "addTransition",
+    "Bindable",
+    "bindMethod",
+    "CascadingParameter",
+    "CascadingTypeParameter",
+    "ComponentBase",
+    "decorateFields",
+    "EditorRequired",
+    "EventCallback",
+    "formatValue",
+    "inject",
+    "Parameter",
+    "parseBindValue",
+    "parseValue",
+    "RenderTreeBuilder",
+    "State"
+  ],
+  "builder": [
+    "addAttribute",
+    "addComponentReferenceCapture",
+    "addContent",
+    "addElementReferenceCapture",
+    "addEventHandler",
+    "addMarkupContent",
+    "addMultipleAttributes",
+    "closeComponent",
+    "closeElement",
+    "openComponent",
+    "openElement",
+    "reuseKeyed",
+    "setKey"
+  ],
+  "statics": ["EventCallback.bind", "EventCallback.bindWith"],
+  "overrides": ["buildRenderTree"]
+}

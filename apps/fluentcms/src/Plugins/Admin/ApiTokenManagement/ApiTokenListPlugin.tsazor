@@ -1,0 +1,79 @@
+@inherits BasePlugin
+@import type { ApiTokenDetailResponse } from "../../../api/models"
+@import { bffApiTokenKey, ensureOk } from "../../../api/api-result"
+@import { dateTime } from "../../../format"
+@inject TsazorHttp Http
+
+<PluginBody title="API Tokens">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create Api Token")" label="Add API Token" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.tokens" ariaLabel="API Tokens" responsive>
+            <PropertyColumn property="(token) => token.name" title="Name" />
+            <PropertyColumn property="(token) => token.description" title="Description" />
+            <TemplateColumn title="Enabled" Context="token"><YesNo value="@token.enabled" /></TemplateColumn>
+            <PropertyColumn property="(token) => token.expireAt" format="dateTime" title="Expire At" />
+            <TemplateColumn title="Token" Context="token">
+                <span class="token">@(this.shown === token.id ? `${token.key}:${token.secret}` : "***********************************")</span>
+            </TemplateColumn>
+            <TemplateColumn title="Actions" Context="token">
+                <ActionButtons>
+                    <ActionButton iconName="@(this.shown === token.id ? IconName.EyeSlash : IconName.Eye)" label="@(this.shown === token.id ? "Hide" : "Show")" aria-label="@(`${this.shown === token.id ? "Hide" : "Show"} the token of ${token.name}`)" @onclick="() => this.shown = this.shown === token.id ? undefined : token.id" />
+                    <ActionButton iconName="@IconName.Refresh" intent="success" label="Re-Generate" aria-label="@(`Re-Generate the token of ${token.name}`)" @onclick="() => this.confirm(token, 'regenerate')" />
+                    <ActionButtonEdit href="@this.getUrl("Update Api Token", { id: token.id })" />
+                    <ActionButtonDelete visible="@(token.key !== this.ownKey)" @onclick="() => this.confirm(token, 'delete')" aria-label="@(`Delete ${token.name}`)" />
+                </ActionButtons>
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.action === "delete")" onConfirm="@this.delete" onCancel="@this.done">
+    Are you sure to delete <b>"@this.selected?.name"</b> token?
+</Confirm>
+
+<Confirm visible="@(this.action === "regenerate")" onConfirm="@this.regenerate" onCancel="@this.done">
+    After regenerate, previous token will be invalidated and no longer works. Are you sure to re-generate token?
+</Confirm>
+
+@code {
+    private tokens: ApiTokenDetailResponse[] = [];
+    /** The token whose secret is shown. */
+    private shown?: string;
+    private selected?: ApiTokenDetailResponse;
+    private action?: "delete" | "regenerate";
+    /** The key of the token the app itself calls the API with: it can't be deleted here. */
+    private ownKey?: string;
+
+    protected override async onInitialized(): Promise<void> {
+        this.ownKey = await bffApiTokenKey(this.Http);
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        this.tokens = ensureOk(await this.api.apiTokenGetAll()) ?? [];
+    }
+
+    private confirm(token: ApiTokenDetailResponse, action: "delete" | "regenerate"): void {
+        this.selected = token;
+        this.action = action;
+    }
+
+    private done(): void {
+        this.selected = undefined;
+        this.action = undefined;
+    }
+
+    private async delete(): Promise<void> {
+        ensureOk(await this.api.apiTokenDelete(this.selected!.id));
+        this.done();
+        await this.load();
+    }
+
+    private async regenerate(): Promise<void> {
+        ensureOk(await this.api.apiTokenRegenerateSecret({ id: this.selected!.id }));
+        this.done();
+        await this.load();
+    }
+}

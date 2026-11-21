@@ -1,0 +1,57 @@
+@* components/list/select.tsx: the form-field single-select on the DropdownMenu — a full-width trigger with Input's
+   focus ring, a panel as wide as the trigger that scrolls for long lists; `emptyLabel` adds a leading "" option.
+   (The filter Select is components/ui's Select: two components can't share a name in one namespace.) The trigger
+   takes the Field's id, so the label names it; `invalid` is the form's aria-invalid. *@
+@import { Check, ChevronDown } from "lucide"
+@import type { SelectOption } from "@/components/ui/select-option"
+
+<div class="@cn("relative", additionalAttributes?.class as string)">
+    <DropdownMenu>
+        <DropdownMenuTrigger id="@id" disabled="@disabled" aria-invalid="@(invalid ? "true" : null)" aria-describedby="@describedBy"
+                             class="@cn("group inline-flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg", "border border-[var(--color-input)] bg-transparent px-3 py-1 text-sm font-sans shadow-xs outline-none", value !== "" ? "text-[var(--color-foreground)]" : "text-[var(--color-muted-foreground)]", "transition-[color,box-shadow,border-color,background-color] duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]", "dark:bg-[oklch(from_var(--color-input)_l_c_h_/_0.3)]", "hover:border-[var(--color-border-strong)]", "focus-visible:border-[var(--color-ring)] focus-visible:ring-[3px] focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]", "data-[state=open]:border-[var(--color-ring)] data-[state=open]:ring-[3px] data-[state=open]:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]", "aria-invalid:border-[var(--color-destructive)] aria-invalid:ring-[oklch(from_var(--color-destructive)_l_c_h_/_0.2)]", "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50")">
+            <span class="truncate">@displayLabel</span>
+            <Icon icon="@ChevronDown" class="h-4 w-4 shrink-0 text-[var(--color-muted-foreground)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)] group-data-[state=open]:rotate-180" />
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="start" style="width: var(--radix-dropdown-menu-trigger-width); min-width: var(--radix-dropdown-menu-trigger-width)">
+            @foreach (const option of allOptions) {
+                <DropdownMenuItem @key="@(option.value || "__empty__")" onSelect="@(() => valueChanged?.invokeAsync(option.value))"
+                                  class="@cn(option.value === value && ["bg-[oklch(from_var(--color-primary)_l_c_h_/_0.08)]", "text-[var(--color-primary)]", "data-[highlighted]:bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)]", "data-[highlighted]:text-[var(--color-primary)]"])">
+                    <span class="flex-1 truncate">
+                        @option.label
+                        @if (option.hint) {
+                            <span class="ml-1.5 text-xs text-[var(--color-muted-foreground)]">— @option.hint</span>
+                        }
+                    </span>
+                    @if (option.value === value) {
+                        <Icon icon="@Check" class="ml-auto h-3.5 w-3.5 shrink-0 text-[var(--color-primary)]" />
+                    }
+                </DropdownMenuItem>
+            }
+        </DropdownMenuContent>
+    </DropdownMenu>
+</div>
+
+@code {
+    @Parameter() value: string = "";
+    /** React's onValueChange. */
+    @Parameter() valueChanged?: EventCallback<string>;
+    @Parameter() options: readonly SelectOption[] = [];
+    /** Adds a leading "All" / "Any" / etc. option that maps to "". */
+    @Parameter() emptyLabel?: string;
+    @Parameter() id?: string;
+    @Parameter() disabled: boolean = false;
+    @Parameter() invalid: boolean = false;
+    @Parameter() describedBy?: string;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get allOptions(): SelectOption[] {
+        return this.emptyLabel !== undefined ? [{ value: "", label: this.emptyLabel }, ...this.options] : [...this.options];
+    }
+
+    private get displayLabel(): string {
+        const current = this.allOptions.find((option) => option.value === this.value);
+        if (current) return current.hint ? `${current.label} — ${current.hint}` : current.label;
+        return this.emptyLabel ?? this.allOptions[0]?.label ?? "Select…";
+    }
+}

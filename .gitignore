@@ -10,4 +10,12 @@ apps/bench/blazor/bin/
 apps/bench/blazor/obj/
 apps/bench/blazor/publish/
 apps/bench/*/dist/
+apps/bench/*/dist-router/
 apps/bench/*/node_modules/
+.probe/
+.probe-codemod/
+.claude/worktrees/
+# release.mjs pack: the tarballs
+.release/
+# runtime build: the migration guide, generated from docs/migration-guide.md
+packages/runtime/MIGRATION.md

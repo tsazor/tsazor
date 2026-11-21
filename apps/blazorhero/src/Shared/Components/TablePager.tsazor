@@ -1,0 +1,23 @@
+@* Client/Shared/Components/TablePager.razor: MudTablePager with the localized "Rows per page:" and
+   "{first_item}-{last_item} of {all_items}", as a Paginator on the table's PaginationState — without the page text MudTablePager doesn't have (B36). *@
+@import { PaginationState } from "@tsazor/fluent"
+
+<Paginator state="@state" pageSizeOptions="@pageSizes" pageSizeLabel="@L("RowsPerPageString")" showPageNumber="false">
+    <SummaryContent>@summary</SummaryContent>
+</Paginator>
+
+@code {
+    /** The table's paging state. */
+    @Parameter() state!: PaginationState;
+
+    private readonly L = localizerFor("TablePager");
+    /** MudTablePager's PageSizeOptions. */
+    private readonly pageSizes = [10, 25, 50, 100];
+
+    private get summary(): string {
+        const total = this.state.totalItemCount ?? 0;
+        const first = total === 0 ? 0 : this.state.currentPageIndex * this.state.itemsPerPage + 1;
+        const last = Math.min(total, (this.state.currentPageIndex + 1) * this.state.itemsPerPage);
+        return this.L("InfoFormat", { first_item: first, last_item: last, all_items: total });
+    }
+}

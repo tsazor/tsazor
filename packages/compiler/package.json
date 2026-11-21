@@ -1,6 +1,16 @@
 {
   "name": "@tsazor/compiler",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/compiler"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/compiler#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Tsazor (.tsazor) compiler: Razor-compatible markup + TypeScript code blocks.",
   "main": "./dist/index.js",
@@ -12,19 +22,29 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"
   },
   "dependencies": {
     "@jridgewell/gen-mapping": "^0.3.8",
-    "@jridgewell/trace-mapping": "^0.3.25"
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "typescript": "^5.9.2"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
-    "typescript": "^5.9.2",
     "vitest": "^3.2.4"
+  },
+  "tsazor": {
+    "internal": true
   }
 }

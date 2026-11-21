@@ -1,0 +1,30 @@
+@inject TutorialState State
+<header class="topbar">
+    <a class="brand" href="">
+        <span class="logo" aria-hidden="true">T</span>
+        <span>Tsazor <span class="brand-sub">tutorial</span></span>
+    </a>
+    <LessonMenu LessonTrack="@lessonTrack" Current="@current" Lessons="@lessons" />
+    <a class="index-link" href="index">Index</a>
+    <a class="index-link index-link--next" href="reference">Reference</a>
+    <nav class="tracks" aria-label="Track">
+        @foreach (const option of tracks) {
+            <a class="track @(option === lessonTrack ? "track--active" : null)"
+               href="@hrefFor(option)"
+               aria-current="@(option === lessonTrack ? "page" : null)">@TRACK_LABELS[option]</a>
+        }
+    </nav>
+</header>
+
+@code {
+    @Parameter() lessonTrack: Track = "ts";
+    @Parameter() current!: LessonRef;
+    @Parameter() lessons: LessonRef[] = [];
+
+    private readonly tracks: Track[] = ["blazor", "ts"];
+
+    /** The same lesson in the other track; from a track-only lesson, the next one that track has. */
+    private hrefFor(option: Track): string {
+        return `${option}/${this.State.counterpart(option, this.current.lesson)?.lesson.slug ?? ""}`;
+    }
+}

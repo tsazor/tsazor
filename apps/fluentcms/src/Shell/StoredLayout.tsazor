@@ -1,0 +1,91 @@
+@* A layout stored in the CMS (FluentCMS's RenderDynamicContent). Its Scriban expressions are filled in
+   from the view state, then its HTML is built with live components where its component tags stand
+   (layout-markup.ts). The head part goes into the document head; the scripts run once the page shows. *@
+@import { buildLayout, parseLayout, type LayoutScript, type ParsedLayout } from "./layout-markup"
+@import { runLayoutScripts } from "./layout-scripts"
+@import { renderTemplate } from "./scriban"
+@import PageHead from "./PageHead.tsazor"
+@import PluginsSection from "./PluginsSection.tsazor"
+@import type { LayoutDetailResponse } from "../api/models"
+@inject ViewState ViewState
+
+@if (this.problem !== undefined) {
+    <div class="cms-message"><Alert intent="danger">@this.problem</Alert></div>
+} else {
+    <HeadContent>
+        @this.head
+        @if (this.ViewState.type === "default") {
+            @* The sections' plugins in columns (FluentCMS's Default.razor links it for a page's own view). *@
+            <link rel="stylesheet" href="/_content/FluentCMS.Web.UI/css/sitebuilder-default.min.css" />
+        }
+    </HeadContent>
+    @this.body
+}
+
+@code {
+    /** The components a layout can name, by lower-cased name (FluentCMS finds the type by reflection). */
+    private static readonly COMPONENTS = new Map<string, ComponentType>([
+        ["pluginssection", PluginsSection],
+        ["pagehead", PageHead],
+    ]);
+
+    @Parameter() layout!: LayoutDetailResponse;
+
+    private head?: RenderFragment;
+    private body?: RenderFragment;
+    private scripts: LayoutScript[] = [];
+    /** Why the layout can't render: an expression the Scriban subset doesn't know. */
+    private problem?: string;
+    /** The filled-in HTML of each part and its parse: parsed again only when the HTML changed. */
+    private readonly parsed = new Map<"head" | "body", { html: string; layout: ParsedLayout }>();
+    /** The page the scripts last ran for: they run once per page shown. */
+    private scriptsRanFor?: object;
+
+    protected override onInitialized(): void {
+        this.observe(this.ViewState, () => this.prepare());
+    }
+
+    protected override onParametersSet(): void {
+        this.prepare();
+    }
+
+    protected override async onAfterRender(): Promise<void> {
+        if (this.problem !== undefined || this.scriptsRanFor === this.ViewState.page) return;
+        this.scriptsRanFor = this.ViewState.page;
+        await runLayoutScripts(this.scripts);
+    }
+
+    private prepare(): void {
+        try {
+            const head = this.part("head");
+            const body = this.part("body");
+            this.head = (b) => buildLayout(b, head.nodes, (name) => StoredLayout.COMPONENTS.get(name.toLowerCase()));
+            this.body = (b) => buildLayout(b, body.nodes, (name) => StoredLayout.COMPONENTS.get(name.toLowerCase()));
+            this.scripts = [...head.scripts, ...body.scripts];
+            this.problem = undefined;
+        } catch (error) {
+            this.problem = `The layout ${this.layout.name} can't be shown: ${error instanceof Error ? error.message : String(error)}`;
+        }
+    }
+
+    private part(part: "head" | "body"): ParsedLayout {
+        const html = renderTemplate(this.layout[part] ?? "", this.model());
+        const cached = this.parsed.get(part);
+        if (cached?.html === html) return cached.layout;
+        const layout = parseLayout(html);
+        this.parsed.set(part, { html, layout });
+        return layout;
+    }
+
+    /** What FluentCMS hands its templates: the user, site, page and plugins of the view state. */
+    private model(): Record<string, unknown> {
+        const user = this.ViewState.user;
+        return {
+            // FluentCMS's UserViewState: an anonymous user has an empty name.
+            user: { id: user.userId, userName: user.username ?? "", email: "", roles: user.roles ?? [], isSuperAdmin: user.isSuperAdmin },
+            site: this.ViewState.site,
+            page: this.ViewState.page,
+            plugins: this.ViewState.plugins,
+        };
+    }
+}

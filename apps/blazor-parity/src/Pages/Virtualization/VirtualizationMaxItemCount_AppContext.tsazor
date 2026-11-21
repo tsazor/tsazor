@@ -1,0 +1,33 @@
+@page "/virtualization/max-item-count-app-context"
+@import type { MyThing } from "./models"
+<p>
+    This is a variation of the VirtualizationMaxItemCount test case in which the max count is set using AppContext.
+    This E2E test exists only to verify back-compatibility.
+</p>
+
+<div id="virtualize-scroll-area" style="height: 600px; overflow-y: scroll; outline: 1px solid red; background: #eee;">
+    @* In .NET 8 and earlier, the E2E test uses an AppContext.SetData call to set MaxItemCount *@
+    @* In .NET 9 onwards, it's a Virtualize component parameter *@
+    @* Tsazor has no AppContext switch: MaxItemCount is only the parameter, so this list keeps the default (100). *@
+    <Virtualize ItemsProvider="getItems" ItemSize="30" OverscanCount="3">
+        <div class="my-item" @key="context" style="height: 30px; outline: 1px solid #ccc">
+            Id: @context.id; Name: @context.name
+        </div>
+    </Virtualize>
+</div>
+
+@code {
+    // Blazor's OnInitialized sets the AppContext switch
+    // "Microsoft.AspNetCore.Components.Web.Virtualization.Virtualize.MaxItemCount" to 10, and its Dispose
+    // resets it. That .NET 8 back-compat switch has no Tsazor counterpart, so neither method is ported.
+
+    private async getItems(request: VirtualizeItemsProviderRequest): Promise<VirtualizeItemsProviderResult<MyThing>> {
+        const numThings = 100000;
+
+        await delay(100);
+        return {
+            items: range(request.startIndex, request.count).map((i) => ({ id: i, name: `Thing ${i}` })),
+            totalItemCount: numThings,
+        };
+    }
+}

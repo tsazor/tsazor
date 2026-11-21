@@ -1,0 +1,37 @@
+@page "/"
+@import { otherSkin, skin, skinLabel } from "../skin"
+
+<Typography Variant="h1">One set of pages, two skins</Typography>
+<Typography>
+    You are looking at the <strong>@skinLabel(skin)</strong> build. Every page here is the same .tsazor
+    source in both builds — its <code>_Imports.tsazor</code> says <code>@@using @@tsazor/bootstrap</code>, and the
+    @skinLabel(otherSkin) build points that package at the other skin. In an app of your own, switching
+    is that line and the stylesheet. The components share their names and parameters
+    (<code>intent</code>, <code>appearance</code>, <code>size</code>, <code>help</code>, …) and their behavior, which comes
+    from <code>@@tsazor/ui</code> in both.
+</Typography>
+
+<Alert Intent="info">Use the link at the top right to see this page with @skinLabel(otherSkin).</Alert>
+
+<Grid MinChildWidth="220px" Gap="m">
+    <Card>
+        <CardHeader>Actions</CardHeader>
+        <CardBody>Buttons, a button group, a menu, a tooltip and a popover. <a href="/actions">Open</a></CardBody>
+    </Card>
+    <Card>
+        <CardHeader>Forms</CardHeader>
+        <CardBody>Every input with validation after the first submit. <a href="/forms">Open</a></CardBody>
+    </Card>
+    <Card>
+        <CardHeader>Data</CardHeader>
+        <CardBody>The DataGrid with sorting, paging and selection; a list and a progress bar. <a href="/data">Open</a></CardBody>
+    </Card>
+    <Card>
+        <CardHeader>Overlays</CardHeader>
+        <CardBody>Dialog, drawer and toasts. <a href="/overlays">Open</a></CardBody>
+    </Card>
+    <Card>
+        <CardHeader>Structure</CardHeader>
+        <CardBody>Tabs, accordion, breadcrumb, pagination, badges, spinners and skeletons. <a href="/structure">Open</a></CardBody>
+    </Card>
+</Grid>

@@ -1,0 +1,29 @@
+@inherits BaseContentPlugin
+@import { ensureOk } from "../../../api/api-result"
+@import { BaseContentPlugin, type ContentField } from "./BaseContentPlugin"
+@import { contentData, fieldValueOf } from "./field-values"
+
+<PluginForm model="@this.model" title="Update Content" onSubmit="@this.submit">
+    <ContentFields contentFields="@this.contentFields" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private contentFields: ContentField[] = [];
+    private model?: object;
+
+    protected override async onInitialized(): Promise<void> {
+        await super.onInitialized();
+        const content = ensureOk(await this.api.contentGetById(this.contentTypeSlug ?? "", this.id ?? "", { siteId: this.viewState.site.id }));
+        this.contentFields = this.formFields.map((field) => ({ field, value: fieldValueOf(field, content.data) }));
+        this.model = this.contentFields;
+    }
+
+    private async submit(): Promise<void> {
+        const data = contentData(this.contentFields.map((entry) => entry.value));
+        ensureOk(await this.api.contentUpdate(this.contentTypeSlug ?? "", this.id ?? "", data, { siteId: this.viewState.site.id }));
+        this.navigateBack();
+    }
+}

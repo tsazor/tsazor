@@ -1,0 +1,67 @@
+@page "/signup"
+@import { DataAnnotationsValidator, EditForm, InputNumber, InputText, ServerValidationErrors, ValidationMessage } from "@tsazor/runtime"
+@import { problemMessage } from "@tsazor/dotnet"
+@import { SignupRequest } from "../api/models"
+@import { ServerClient } from "../api/server"
+@inject TsazorHttp http
+
+<PageTitle>Sign up</PageTitle>
+
+<h1>Sign up</h1>
+
+<p>
+    The form checks the rules of the server's <code>SignupRequest</code> class before it sends: they come with the typed client
+    in <code>src/api</code>. The server checks them again, and one more that only it knows: try
+    <code>taken@@example.com</code>. Its errors show next to the fields.
+</p>
+
+<EditForm EditContext="@editContext" OnValidSubmit="@submit">
+    <DataAnnotationsValidator />
+    <div class="mb-3">
+        <label for="signup-name" class="form-label">Name</label>
+        <InputText id="signup-name" class="form-control" @bind="model.name" />
+        <ValidationMessage For="name" />
+    </div>
+    <div class="mb-3">
+        <label for="signup-email" class="form-label">Email</label>
+        <InputText id="signup-email" class="form-control" @bind="model.email" />
+        <ValidationMessage For="email" />
+    </div>
+    <div class="mb-3">
+        <label for="signup-age" class="form-label">Age</label>
+        <InputNumber id="signup-age" class="form-control" @bind="model.age" />
+        <ValidationMessage For="age" />
+    </div>
+    <button type="submit" class="btn btn-primary" disabled="@busy">Sign up</button>
+</EditForm>
+
+@if (message !== "") {
+    <p role="status">@message</p>
+}
+
+@code {
+    private model = new SignupRequest();
+    private editContext = new EditContext(this.model);
+    /** The server's errors at their fields: an edited field drops its own, a new submit all of them. */
+    private serverErrors = new ServerValidationErrors(this.editContext);
+    private busy = false;
+    private message = "";
+
+    private submit = EventCallback.bind(this, async () => {
+        this.busy = true;
+        this.message = "";
+        try {
+            const result = await new ServerClient(this.http).createSignup(this.model);
+            if (result.ok) {
+                this.message = result.body.message;
+            } else if (result.validationErrors) {
+                // ValidationProblemDetails: "Email" lands at the field email; a key it can't place, at the form.
+                this.serverErrors.apply(result.validationErrors);
+            } else {
+                this.message = problemMessage(result);
+            }
+        } finally {
+            this.busy = false;
+        }
+    });
+}

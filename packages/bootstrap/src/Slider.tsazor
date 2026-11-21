@@ -1,0 +1,168 @@
+@** A Bootstrap slider (`input[type=range].form-range`; Fluent UI Blazor's FluentSlider, MudBlazor's MudSlider;
+    InputBase<number> — bind it with @bind): the arrow keys, Page Up and Down, Home and End work as in any slider.
+    `min`, `max` and `step` (0, 100, 1); `orientation` vertical stands it up, `size` small makes it thin. The value
+    follows the drag once it pauses for immediateDelay ms, or only on release with `immediate` false. `tickMarks` draws
+    a mark per step, with `tickMarkLabels` under them (a screen reader hears the label of the tick the value sits on);
+    `valueLabel` shows the value, through `valueFormat` ("40 %"), which screen readers read too (aria-valuetext).
+    Validation state and message as with TextInput — the same parameters as the Fluent skin's Slider. *@
+@import { type Orientation } from "@tsazor/ui"
+@import { FieldState, ImmediateInput, sliderFraction, sliderTicks } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+@inherits InputBase<number>
+
+<div class="@this.wrapperClass">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <div class="tz-slider__control">
+        <div class="tz-slider__rail">
+            <input @ref="element" id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-readonly="@(readOnly ? "true" : null)" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@spokenValue" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @onmousedown:preventDefault="@readOnly" @ontouchstart:preventDefault="@readOnly" @onkeydown="keepValue" @oninput="handleInput" @onchange="handleChange" />
+            @if (tickMarks) {
+                <div class="tz-slider__ticks" aria-hidden="true">
+                    @foreach (const tick of ticks) {
+                        <span class="tz-slider__tick" style="@(`--tz-slider-tick: ${tick.at}`)">
+                            @if (tick.label !== undefined) {
+                                <span class="tz-slider__tick-label">@tick.label</span>
+                            }
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+        @if (valueLabel) {
+            <output class="tz-slider__value" for="@field.id(id)" aria-hidden="true">@valueText</output>
+        }
+    </div>
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** The lowest value; 0 by default. */
+    @Parameter() min: number = 0;
+    /** The highest value; 100 by default. */
+    @Parameter() max: number = 100;
+    /** The step between values; 1 by default. */
+    @Parameter() step: number = 1;
+    /** horizontal (default) | vertical. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** small (a thin track, a smaller thumb) | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** Disables the slider. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the slider says aria-readonly, a drag or a key moves nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** The value follows the drag (MudBlazor's `Immediate`, true by default); false updates it on release. */
+    @Parameter() immediate: boolean = true;
+    /** The pause in ms before an immediate update (`ImmediateDelay`, 60 as in Fluent UI Blazor). */
+    @Parameter() immediateDelay: number = 60;
+    /** A mark per step (MudBlazor's `TickMarks`). */
+    @Parameter() tickMarks: boolean = false;
+    /** The marks' labels, from the first mark on (`TickMarkLabels`). */
+    @Parameter() tickMarkLabels?: string[];
+    /** Shows the value beside the slider (`ValueLabel`). */
+    @Parameter() valueLabel: boolean = false;
+    /** The value as text, for the value label and screen readers (aria-valuetext): `(v) => \`${v} %\``. */
+    @Parameter() valueFormat?: (value: number) => string;
+    /** The slider's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-slider");
+    private immediateInput?: ImmediateInput;
+    /** The thumb's value while it moves, ahead of an immediate update that waits for a pause. */
+    private moving?: number;
+
+    protected override onParametersSet(): void {
+        if (this.immediateInput?.pending !== true) this.moving = undefined;
+    }
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    /** The value the thumb shows: the moving one, else the bound one, else min. */
+    private get shownValue(): number {
+        const value = this.moving ?? this.currentValue;
+        return typeof value === "number" && !Number.isNaN(value) ? value : this.min;
+    }
+
+    private get valueText(): string {
+        return this.valueFormat ? this.valueFormat(this.shownValue) : String(this.shownValue);
+    }
+
+    /**
+     * What a screen reader says for the value (aria-valuetext): the formatted value, else the label of the tick the
+     * value sits on ("Medium", not "2" — the tick labels themselves are hidden from it), else nothing (the number).
+     */
+    private get spokenValue(): string | undefined {
+        if (this.valueFormat) return this.valueText;
+        if (!this.tickMarks || this.tickMarkLabels === undefined) return undefined;
+        const index = sliderTicks(this.min, this.max, this.step).findIndex((tick) => Math.abs(tick - this.shownValue) < 1e-9);
+        return index === -1 ? undefined : this.tickMarkLabels[index];
+    }
+
+    /** The marks: where each sits on the track, and its label. */
+    private get ticks(): { at: number; label?: string }[] {
+        return sliderTicks(this.min, this.max, this.step).map((tick, index) => ({
+            at: sliderFraction(tick, this.min, this.max),
+            label: this.tickMarkLabels?.[index],
+        }));
+    }
+
+    private get wrapperClass(): string {
+        const parts = ["mb-3", "tz-slider", `tz-slider--${this.orientation}`];
+        if (this.size === "small") parts.push("tz-slider--small");
+        if (this.tickMarks && this.tickMarkLabels !== undefined) parts.push("tz-slider--labelled-ticks");
+        return parts.join(" ");
+    }
+
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-range is-invalid" : "form-range";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+    }
+
+    private handleInput(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLInputElement).value = String(this.shownValue);
+            return;
+        }
+        this.moving = Number((e.target as HTMLInputElement).value);
+        if (!this.immediate) return;
+        this.immediateInput ??= new ImmediateInput(this.disposeSignal);
+        this.immediateInput.input(e, this.immediateDelay, (value) => {
+            this.currentValue = Number(value);
+        });
+    }
+
+    private handleChange(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLInputElement).value = String(this.shownValue);
+            return;
+        }
+        this.immediateInput?.cancel();
+        this.moving = undefined;
+        this.currentValue = Number((e.target as HTMLInputElement).value);
+    }
+
+    /** readOnly: a key that would change the value does nothing; Tab, Escape and the browser's shortcuts still work. */
+    private keepValue(e: KeyboardEvent): void {
+        if (!this.readOnly || e.key === "Tab" || e.key === "Escape" || ((e.ctrlKey || e.metaKey) && !e.key.startsWith("Arrow"))) return;
+        e.preventDefault();
+    }
+}

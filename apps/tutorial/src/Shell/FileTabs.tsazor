@@ -1,0 +1,26 @@
+<div class="tabs" role="tablist" aria-label="Files">
+    @foreach (const file of files) {
+        <button type="button" role="tab" class="tab @(file === active ? "tab--active" : null)"
+                aria-selected="@(file === active)" @onclick="() => select(file)">
+            @file
+            @if (errorsIn(file) > 0) {
+                <span class="badge" title="@(`${errorsIn(file)} error(s)`)">@errorsIn(file)</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    @Parameter() files: string[] = [];
+    @Parameter() active = "";
+    @Parameter() diagnostics: Diagnostic[] = [];
+    @Parameter() onSelect?: EventCallback<string>;
+
+    private errorsIn(file: string): number {
+        return this.diagnostics.filter((d) => d.file === file && d.severity === "error").length;
+    }
+
+    private async select(file: string): Promise<void> {
+        await this.onSelect?.invokeAsync(file);
+    }
+}

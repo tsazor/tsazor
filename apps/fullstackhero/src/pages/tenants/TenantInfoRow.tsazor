@@ -1,0 +1,14 @@
+@* pages/tenants/detail.tsx's InfoRow: a key/value row inside the Details card — the label on the left (muted, small),
+   the value on the right — separated by a subtle half-opacity border. *@
+
+<div class="@cn("flex items-center justify-between gap-4 py-2.5", !isLast && "border-b border-[oklch(from_var(--color-border)_l_c_h_/_0.5)]")">
+    <span class="shrink-0 text-[11.5px] font-medium text-[var(--color-muted-foreground)]">@label</span>
+    <span class="@cn("min-w-0 truncate text-right text-[13px] text-[var(--color-foreground)]", mono && "font-mono text-[12px]")">@childContent</span>
+</div>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() mono: boolean = false;
+    @Parameter() isLast: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+}

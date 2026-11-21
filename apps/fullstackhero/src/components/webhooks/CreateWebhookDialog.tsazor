@@ -1,0 +1,192 @@
+@* components/webhooks/create-webhook-dialog.tsx: a new webhook subscription — the endpoint URL, an optional signing
+   secret, and the events as chips (type a name and press Enter or a comma; Backspace in the empty box removes the last
+   one; or pick a suggestion). react-hook-form + zodResolver become EditForm with a StandardSchemaValidator over the
+   original's zod schema (unchanged); the events are the dialog's own state, as in the original. The submit sends the
+   schema's parsed (trimmed) values, as handleSubmit does, and asks for at least one event first. *@
+@import { Plus, Webhook, X } from "lucide"
+@import { z } from "zod"
+@import { EditForm, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { uniqueId } from "@tsazor/ui"
+@import { SUGGESTED_EVENT_TYPES, createWebhookSubscription } from "@/api/webhooks"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { toast } from "@/lib/toast"
+@import { inputClass } from "@/components/ui/variants"
+
+<Dialog open="@open" openChanged="@this.requestOpen">
+    <DialogContent size="lg">
+        <DialogHeader>
+            <div class="flex items-center gap-2">
+                <span aria-hidden="true" class="grid h-7 w-7 place-items-center rounded-md bg-[var(--color-accent-signal)]/15 text-[var(--color-accent-signal)]">
+                    <Icon icon="@Webhook" class="h-4 w-4" />
+                </span>
+                <DialogTitle>New webhook subscription</DialogTitle>
+            </div>
+            <DialogDescription>
+                Your endpoint receives a JSON payload with the event details. We sign each request
+                with HMAC-SHA256 in the <code class="code-chip">X-FSH-Signature</code> header
+                using the secret below — store it on your side and verify before trusting the body.
+            </DialogDescription>
+        </DialogHeader>
+
+        <EditForm Model="@model" OnValidSubmit="@submit" OnInvalidSubmit="@(() => focusInvalid = true)" id="@formId">
+            <StandardSchemaValidator Schema="@schema" />
+            <DialogBody class="space-y-5">
+                <Field id="webhook-url" label="Endpoint URL" required for="url">
+                    <InputText id="webhook-url" type="url" placeholder="https://api.acme.com/webhooks/fsh" autocomplete="off" class="@monoInputClass" @bind-Value="model.url" />
+                </Field>
+
+                <Field id="webhook-secret" label="Signing secret" hint="Optional but recommended. At least 32 random characters. Used to compute the HMAC." for="secret">
+                    <InputText id="webhook-secret" type="password" autocomplete="new-password" placeholder="Leave blank to skip signing" class="@monoInputClass" @bind-Value="model.secret" />
+                </Field>
+
+                <div class="space-y-2">
+                    <div class="meta text-[var(--color-muted-foreground)]">
+                        Events (@(events.length))<span class="text-[var(--color-destructive)]" aria-hidden="true"> ·</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5 rounded-md border border-[var(--color-input)] bg-transparent p-2 min-h-10">
+                        @foreach (const e of events) {
+                            <span @key="e" class="inline-flex items-center gap-1 rounded-md bg-[var(--color-accent-signal)]/15 px-2 py-0.5 font-mono text-[11px] text-[var(--color-foreground)]">
+                                @e
+                                <button type="button" @onclick="() => removeEvent(e)" aria-label="@(`Remove ${e}`)"
+                                        class="text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]">
+                                    <Icon icon="@X" class="h-3 w-3" />
+                                </button>
+                            </span>
+                        }
+                        <input value="@draftEvent" @oninput="onDraftInput" @onkeydown="onDraftKeyDown"
+                               placeholder="@(events.length === 0 ? "type an event name then Enter…" : "add another…")"
+                               class="min-w-[10rem] flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-[var(--color-muted-foreground)]/70" />
+                    </div>
+                    @if (suggestionsToShow.length > 0) {
+                        <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span class="meta text-[var(--color-muted-foreground)]">suggested</span>
+                            @foreach (const s of suggestionsToShow) {
+                                <button @key="s" type="button" @onclick="() => addEvent(s)" class="@suggestionClass">
+                                    <Icon icon="@Plus" class="h-2.5 w-2.5" />
+                                    @s
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </DialogBody>
+
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick="@(() => openChanged?.invokeAsync(false))" disabled="@submitting">
+                    Cancel
+                </Button>
+                <Button type="submit" variant="signal" disabled="@submitting">
+                    @(submitting ? "Creating…" : "Create subscription")
+                </Button>
+            </DialogFooter>
+        </EditForm>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    /** Called with the new subscription's id. */
+    @Parameter() onCreated?: EventCallback<string>;
+
+    private readonly schema = z.object({
+        url: z
+            .string()
+            .trim()
+            .url("Must be a valid http(s) URL.")
+            .refine((u) => u.startsWith("https://") || u.startsWith("http://"), {
+                message: "Use http:// or https://",
+            }),
+        secret: z.string().trim().max(256).optional(),
+    });
+
+    private model = { url: "", secret: "" };
+    private events: string[] = [];
+    private draftEvent = "";
+    private submitting = false;
+
+    private readonly formId = uniqueId("create-webhook");
+    /** react-hook-form's shouldFocusError: a failed submit focuses the first invalid field (EditForm doesn't). */
+    private focusInvalid = false;
+
+    protected override onAfterRender(): void {
+        if (!this.focusInvalid) return;
+        this.focusInvalid = false;
+        document.getElementById(this.formId)?.querySelector<HTMLElement>("[aria-invalid='true']")?.focus();
+    }
+
+    private readonly monoInputClass = cn(inputClass, "font-mono");
+    private readonly suggestionClass = cn(
+        "inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)] transition-colors",
+        "hover:border-[var(--color-accent-signal)] hover:text-[var(--color-foreground)]",
+    );
+
+    private get suggestionsToShow(): string[] {
+        return SUGGESTED_EVENT_TYPES.filter((s) => !this.events.includes(s));
+    }
+
+    /** react-hook-form's reset(), and the chips. */
+    private reset(): void {
+        this.model = { url: "", secret: "" };
+        this.events = [];
+        this.draftEvent = "";
+    }
+
+    /** The Dialog's onOpenChange: closing it (Escape, a press outside, the X) resets the form. */
+    private requestOpen(open: boolean): Promise<void> | undefined {
+        if (!open) this.reset();
+        return this.openChanged?.invokeAsync(open);
+    }
+
+    private async submit(): Promise<void> {
+        const values = this.schema.parse(this.model);
+        if (this.events.length === 0) {
+            toast.warning("Pick at least one event", {
+                description: "Subscriptions with no events would never fire.",
+            });
+            return;
+        }
+        this.submitting = true;
+        try {
+            const id = await createWebhookSubscription({ url: values.url, secret: values.secret, events: this.events });
+            toast.success("Subscription created", {
+                description: "Use the Test button on the row to verify the endpoint accepts events.",
+            });
+            void this.onCreated?.invokeAsync(id);
+            this.reset();
+            await this.openChanged?.invokeAsync(false);
+        } catch (err) {
+            const detail = err instanceof ApiRequestError ? err.problem?.detail ?? err.problem?.title ?? err.message : (err as Error).message;
+            toast.error("Create failed", { description: detail });
+        } finally {
+            this.submitting = false;
+        }
+    }
+
+    private addEvent(raw: string): void {
+        const name = raw.trim().toLowerCase();
+        if (!name) return;
+        if (this.events.includes(name)) return;
+        this.events = [...this.events, name];
+        this.draftEvent = "";
+    }
+
+    private removeEvent(name: string): void {
+        this.events = this.events.filter((e) => e !== name);
+    }
+
+    private onDraftInput(event: Event): void {
+        this.draftEvent = (event.target as HTMLInputElement).value;
+    }
+
+    /** Enter or a comma adds the chip (and doesn't submit the form); Backspace in the empty box removes the last one.
+        The handler gets the DOM event while it is dispatched, so it decides per key — Blazor's `:preventDefault` can't. */
+    private onDraftKeyDown(event: KeyboardEvent): void {
+        if (event.key === "Enter" || event.key === ",") {
+            event.preventDefault();
+            this.addEvent(this.draftEvent);
+        } else if (event.key === "Backspace" && this.draftEvent === "" && this.events.length > 0) {
+            this.events = this.events.slice(0, -1);
+        }
+    }
+}

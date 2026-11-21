@@ -1,0 +1,53 @@
+@page "/worker"
+@import { CsvWorker } from "../workers/csv-worker"
+@inject CsvWorker csv
+
+<h1>Web Worker</h1>
+
+<p>
+    Parses an order list of @lineCount.toLocaleString("en") lines in a Web Worker with
+    <code>@@tsazor/worker</code>: the page stays responsive, progress arrives on the main thread,
+    and Cancel aborts the worker through an <code>AbortSignal</code>.
+</p>
+
+<div class="card">
+    <div>
+        <button type="button" class="btn btn-primary parse" disabled="@running" @onclick="parse">Parse in the worker</button>
+        <button type="button" class="btn btn-outline-secondary ms-2 cancel" disabled="@(!running)" @onclick="cancel">Cancel</button>
+    </div>
+    <progress class="mt-3 w-100" max="1" value="@done" aria-label="Parsing progress"></progress>
+    <p class="result" aria-live="polite">@status</p>
+</div>
+
+@code {
+    @State() accessor done = 0;
+    @State() accessor status = "Not started.";
+    running = false;
+    readonly lineCount = 1_000_000;
+    /** Built once: the parse itself is the only work that moves to the worker. */
+    private text = "";
+    private controller: AbortController | null = null;
+
+    override onInitialized() {
+        this.text = Array.from({ length: this.lineCount }, (_, i) => `${i + 1};customer ${i % 97};${(i % 5) + 1}`).join("\n");
+    }
+
+    async parse() {
+        this.running = true;
+        this.status = "Parsing…";
+        this.controller = new AbortController();
+        try {
+            const result = await this.csv.parseOrders(this.text, (d) => this.done = d, this.controller.signal);
+            this.status = `Parsed ${result.rows} rows, ${result.loaves} loaves; first: ${result.first?.customer}${result.inWorker ? " (in a worker)" : ""}.`;
+        } catch (error) {
+            this.status = (error as Error).name === "AbortError" ? "Cancelled." : `Failed: ${(error as Error).message}`;
+        } finally {
+            this.running = false;
+            this.controller = null;
+        }
+    }
+
+    cancel() {
+        this.controller?.abort();
+    }
+}

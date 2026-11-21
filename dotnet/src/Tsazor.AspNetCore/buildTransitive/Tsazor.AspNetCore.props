@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    Tsazor.AspNetCore: the client's build in the server's build (docs/design-aspnetcore.md, D-A6).
+
+    TsazorClientProject      the client's directory (package.json); empty: nothing below runs
+    TsazorNpmInstall         npm install when package.json changed or node_modules is missing (default true)
+    TsazorBuildClient        npm run build: true, false, or empty = on Release builds and on every publish
+    TsazorGenerateApiClient  tsazor-dotnet generate from the build-time OpenAPI document (default false)
+  -->
+  <PropertyGroup>
+    <TsazorClientProject Condition="'$(TsazorClientProject)' == ''"></TsazorClientProject>
+    <TsazorNpmInstall Condition="'$(TsazorNpmInstall)' == ''">true</TsazorNpmInstall>
+    <TsazorNpmInstallCommand Condition="'$(TsazorNpmInstallCommand)' == ''">npm install</TsazorNpmInstallCommand>
+    <TsazorBuildCommand Condition="'$(TsazorBuildCommand)' == ''">npm run build</TsazorBuildCommand>
+    <TsazorClientDistFolder Condition="'$(TsazorClientDistFolder)' == ''">dist</TsazorClientDistFolder>
+    <TsazorWebRootFolder Condition="'$(TsazorWebRootFolder)' == ''">wwwroot</TsazorWebRootFolder>
+    <TsazorGenerateApiClient Condition="'$(TsazorGenerateApiClient)' == ''">false</TsazorGenerateApiClient>
+    <TsazorApiClientOutput Condition="'$(TsazorApiClientOutput)' == ''">src/api</TsazorApiClientOutput>
+  </PropertyGroup>
+</Project>

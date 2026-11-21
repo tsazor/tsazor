@@ -1,0 +1,39 @@
+@* components/auth/inactivity-guard.tsx: mounted once inside the authenticated shell. Watches for inactivity while
+   signed in, shows the warning modal in the final window, and signs the user out (with an "inactivity" reason for
+   the login page) when the countdown elapses. Durations come from the runtime config (/config.json). *@
+@import { env } from "@/env"
+@import { markSignedOut } from "@/auth/inactivity"
+@import { InactivityTimer } from "@/auth/inactivity-timer"
+@inject AuthService auth
+
+<InactivityDialog open="@(auth.isAuthenticated && timer.phase === "warning")" secondsLeft="@timer.secondsLeft"
+                  totalSeconds="@Math.round(env.inactivityWarningMs / 1000)" onStay="@(() => timer.dismiss())" onSignOut="@signOut" />
+
+@code {
+    private readonly timer = new InactivityTimer({
+        idleMs: env.inactivityIdleMs,
+        warningMs: env.inactivityWarningMs,
+        onExpire: () => this.signOut(),
+    });
+
+    protected override onInitialized(): void {
+        this.observe(this.timer);
+        this.observe(this.auth.changes, () => this.follow());
+        this.follow();
+    }
+
+    /** The hook's `enabled: isAuthenticated`. */
+    private follow(): void {
+        if (this.auth.isAuthenticated) this.timer.start();
+        else this.timer.stop();
+    }
+
+    private signOut(): void {
+        markSignedOut("inactivity");
+        this.auth.logout();
+    }
+
+    dispose(): void {
+        this.timer.stop();
+    }
+}

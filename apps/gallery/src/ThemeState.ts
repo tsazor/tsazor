@@ -15,7 +15,7 @@ export class ThemeState {
     return () => this.listeners.delete(listener);
   }
 
-  get theme(): string {
+  get theme(): FluentTheme {
     return this.current;
   }
 
@@ -31,11 +31,9 @@ export class ThemeState {
   }
 
   /** OS preference until the user picks explicitly. */
-  private initial(): string {
+  private initial(): FluentTheme {
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 }
 
-// @inject resolves services as default exports of a file named exactly like
-// the type (Blazor: file name = type name).
-export default ThemeState;
+export type FluentTheme = "light" | "dark";

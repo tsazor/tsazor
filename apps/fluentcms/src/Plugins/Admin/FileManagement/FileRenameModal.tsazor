@@ -1,0 +1,12 @@
+@* Renames a file (FluentCMS's FileRenameModal); the extension isn't part of the name edited here. *@
+@import type { FileRenameRequest } from "../../../api/models"
+
+<FormModal visible title="Rename File" model="@model" onSubmit="() => this.onSubmit?.invokeAsync(this.model)" onCancel="@onCancel">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter File Name" required />
+</FormModal>
+
+@code {
+    @Parameter() model!: FileRenameRequest;
+    @Parameter() onSubmit?: EventCallback<FileRenameRequest>;
+    @Parameter() onCancel?: EventCallback;
+}

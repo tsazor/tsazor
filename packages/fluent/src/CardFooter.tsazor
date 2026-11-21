@@ -1,5 +1,16 @@
-<footer class="fui-card-footer">@childContent</footer>
+@** The footer row (footer element) of a Card, typically for action buttons. Use inside Card,
+    after the body. *@
+@import { withAttributes } from "./attributes"
+
+<footer @attributes="@this.footerAttributes">@childContent</footer>
 
 @code {
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The footer content (e.g. action buttons). */
     @Parameter() childContent?: RenderFragment;
+
+    private get footerAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-card-footer" }, this.additionalAttributes);
+    }
 }

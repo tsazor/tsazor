@@ -1,8 +1,15 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.lib.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "stripInternal": true
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ],
+  "references": [
+    { "path": "../primitives" }
+  ]
 }

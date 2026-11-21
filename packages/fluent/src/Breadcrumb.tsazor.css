@@ -20,6 +20,13 @@
     text-decoration: none;
     border-radius: var(--fui-radius-sm);
 }
+.fui-breadcrumb__button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
 .fui-breadcrumb__link:hover {
     color: var(--fui-accent);
     text-decoration: underline;

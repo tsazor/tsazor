@@ -1,0 +1,65 @@
+@* Client/Pages/Identity/Reset.razor(.cs): the page the reset mail links to (account/reset-password?Token=…): the token
+   from the query (any case of "Token", as QueryHelpers reads it), Base64Url-decoded (WebEncoders), then the email
+   and the new password. The original's route ends in a slash; Blazor's router ignores it. Without a token the page
+   says so — in the original its validator's Token rule kept Reset Password disabled instead, with no field to show
+   why (U15). *@
+@page "/account/reset-password"
+@allowAnonymous
+@import { Toaster } from "@tsazor/fluent"
+@import { ResetPasswordRequest } from "../../Application/Identity"
+@import { resetPasswordRequestValidators } from "../../Application/Validators/Identity"
+@inject UserManager userManager
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<FluentForm model="@resetPasswordModel" validators="@validators" onValidSubmit="@submitAsync" novalidate class="bh-login">
+    <Icon value="@BlazorHeroLogo" size="100" class="bh-login__logo" />
+    <Typography variant="h1" class="bh-login__title">@L("Reset password")</Typography>
+    <p class="bh-login__text">@L("Enter email for password reset")</p>
+    <TextInput label="@L("E-mail")" type="email" @bind-Value="resetPasswordModel.email" />
+    <TextInput label="@L("Password")" type="@(passwordVisible ? "text" : "password")" @bind-Value="resetPasswordModel.password">
+        <ContentAfter>
+            <Button appearance="transparent" size="small" iconStart="@(passwordVisible ? Icons.Eye : Icons.EyeOff)" ariaLabel="@(passwordVisible ? "Hide password" : "Show password")" onClick="@togglePasswordVisibility" />
+        </ContentAfter>
+    </TextInput>
+    <TextInput label="@L("Confirm Password")" type="password" @bind-Value="resetPasswordModel.confirmPassword" />
+    @* No resource has "Reset Password" (only "Reset password"): .NET shows the key. *@
+    <Button type="submit" intent="primary" size="large" class="bh-login__submit">Reset Password</Button>
+</FluentForm>
+
+@code {
+    private readonly L = localizerFor("Reset");
+    private readonly validators = resetPasswordRequestValidators(localizerFor("ResetPasswordRequestValidator"));
+    private readonly resetPasswordModel = new ResetPasswordRequest();
+    private passwordVisible = false;
+
+    protected override onInitialized(): void {
+        const query = new URL(this.navigation.uri).searchParams;
+        const token = [...query].find(([name]) => name.toLowerCase() === "token")?.[1];
+        if (token !== undefined) this.resetPasswordModel.token = Reset.base64UrlDecode(token);
+    }
+
+    private async submitAsync(): Promise<void> {
+        if (this.resetPasswordModel.token === "") {
+            this.toaster.show({ message: this.L("Token Not Found!"), intent: "danger" });
+            return;
+        }
+        const result = await this.userManager.resetPasswordAsync(this.resetPasswordModel);
+        if (result.succeeded) {
+            this.toaster.show({ message: result.messages[0]!, intent: "success" });
+            this.navigation.navigateTo("/");
+        } else {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private togglePasswordVisibility(): void {
+        this.passwordVisible = !this.passwordVisible;
+    }
+
+    /** `Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(text))`: base64 with "-" and "_", without padding. */
+    private static base64UrlDecode(text: string): string {
+        const base64 = text.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(text.length / 4) * 4, "=");
+        return new TextDecoder().decode(Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)));
+    }
+}

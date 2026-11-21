@@ -1,56 +1,181 @@
-import { compile, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
-import { transformSync } from "esbuild";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { Plugin, ViteDevServer } from "vite";
-import { hmrAppendix } from "./hmr";
-import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes";
-import { processScopedCss, scopeHashFor } from "./scoped-css";
-import { chainSourceMaps } from "./sourcemap";
-import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tsazor/workspace";
+import { CHECK_CODES, compactFieldDecorators, compile, shareHelpers, type TszDiagnostic } from "@tsazor/compiler";
+import { defaultMetadataCache } from "@tsazor/workspace";
+import { type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
+import { isImportsFile, TransformRegistry } from "./invalidate.js";
+import { tsazorHotUpdate } from "./hot-update.js";
+import { lazyRouteFilter } from "./lazy-routes.js";
+import { generateRoutesModule, listTsazorFilesUnder, scanRoutes, scanRootOf, scanTsazorModules } from "./routes.js";
+import { processScopedCss, scopeHashFor } from "./scoped-css.js";
+import { sharedDecoratorHelpers, transformTsazor } from "./transform.js";
+import { tsazorBareImports } from "./deps-scan.js";
+
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
+/** esbuild's decorator helpers, once for the app (each component imports them; they were a copy per component). */
+const DECORATORS_MODULE_ID = "virtual:tsazor-decorators";
+const RESOLVED_DECORATORS_MODULE_ID = "\0virtual:tsazor-decorators";
 
+/** Options of the `tsazor()` Vite plugin. */
 export interface TsazorPluginOptions {
   /** Project root; defaults to the Vite config root. */
   root?: string;
+  /** Runs `tsazor check` (2.4): compiler diagnostics plus the typed shadow
+   *  checks. A build runs it at the end and fails on errors. The dev server
+   *  runs it in the background (at start and after each change) and prints
+   *  the findings without blocking anything (S3). */
+  check?: boolean;
+  /** Every invisible compiler optimization (default true): static subtrees as markup blocks (F1a) and stable
+   *  event handlers (H1), and later ones. `false` turns them off — the generated
+   *  code is then what Razor would generate: a diagnostic and emergency
+   *  switch (A/B measurements, a suspected optimizer bug), not a recommended mode.
+   *  It also caches no child content (H4), so section content is rebuilt on
+   *  every render of its component. */
+  optimize?: boolean;
+  /**
+   * E5: pages loaded on the first navigation to them — `true` for every
+   * page, or globs relative to the project root (`["src/Pages/Admin/**"]`).
+   * Each lazy page becomes its own chunk (its layout loads with it); the
+   * router shows `<Navigating>` meanwhile. Default: every page is eager.
+   */
+  lazyRoutes?: boolean | string[];
 }
 
+/**
+ * The Tsazor Vite plugin (also the default export): compiles `.tsazor` files
+ * to JS modules with sourcemaps and HMR, scopes `.tsazor.css` sidecars,
+ * serves the `virtual:tsazor-routes` manifest of the app's `@page` routes,
+ * and lets esbuild lower the standard decorators of the app's `.ts` files.
+ * Compile errors fail the module (Vite's error overlay in dev); with
+ * `check: true` the type checks run as well.
+ *
+ * ```ts
+ * // vite.config.ts
+ * import { defineConfig } from "vite";
+ * import tsazor from "@tsazor/vite-plugin";
+ *
+ * export default defineConfig({ plugins: [tsazor()] });
+ * ```
+ */
 export function tsazor(options: TsazorPluginOptions = {}): Plugin {
   let projectRoot = options.root ?? process.cwd();
+  /** 4.1: per-file dependency edges recorded by transform, consumed by the hot-update handler. */
+  const registry = new TransformRegistry();
 
-  return {
+  const plugin: Plugin = {
     name: "tsazor",
     enforce: "pre",
+
+    config(userConfig) {
+      // Tsazor's build target, ES2022 (docs/browser-support.md), unless the app names one: Vite's default (Safari 16)
+      // lacks static blocks, and esbuild then lowers each class that has one with all its private members — WeakMap
+      // lookups instead of fields, in the runtime's components too.
+      const build: Record<string, unknown> = userConfig.build?.target === undefined ? { build: { target: "es2022" } } : {};
+      // One copy of each @tsazor package the app depends on, the app's: a library linked with `file:` and its own
+      // node_modules brought a second runtime, and its components rendered with a renderer, cascades and services the
+      // app's don't know. Only the app's own dependencies — Vite resolves a deduped package from the app's root.
+      const dedupe = tsazorDependencies(path.resolve(options.root ?? userConfig.root ?? process.cwd()));
+      if (dedupe.length > 0) build.resolve = { dedupe };
+      // Packages imported only from .tsazor files, which Vite's dependency scan can't read: optimized at startup, not
+      // on the first page load (deps-scan.ts). Vite merges the list with the app's own optimizeDeps.include.
+      const include = userConfig.optimizeDeps?.noDiscovery === true ? [] : tsazorBareImports(path.resolve(options.root ?? userConfig.root ?? process.cwd()));
+      if (include.length > 0) build.optimizeDeps = { include };
+      // The app's own .ts files (code-behind, hand-written components) use
+      // the runtime's standard decorators too. Vite's dev transform targets
+      // esnext, which leaves decorators as written — no engine runs them
+      // natively yet, so have esbuild lower them (dev and build).
+      if (userConfig.esbuild === false) return build;
+      return { ...build, esbuild: { supported: { decorators: false } } };
+    },
 
     configResolved(config) {
       projectRoot = path.resolve(options.root ?? config.root);
     },
 
     configureServer(server) {
+      // S3: type errors are reported in the background, never as a failed module.
+      if (options.check === true) {
+        void import("./dev-check.js").then(({ startDevCheck }) =>
+          startDevCheck(server.watcher, { root: projectRoot, log: (line) => server.config.logger.warn(`[tsazor] ${line}`) }),
+        );
+      }
       // Eager compile: dev transforms are lazy, so @code errors would only
       // surface when the browser requests the module. Warm every .tsazor at
       // startup — vite logs pre-transform errors to the terminal immediately.
       void warmupTsazorModules(server, projectRoot);
+      // 4.1: watch every .tsazor (plus sidecars) explicitly so create/delete
+      // events reach the hot-update handler even before the file is imported.
+      void (async () => {
+        try {
+          server.watcher.add(await listTsazorFilesUnder(scanRootOf(projectRoot)));
+        } catch {
+          // The default watch set covers the project; explicit adds are best-effort.
+        }
+      })();
+    },
+
+    // Vite ≥ 6 prefers hotUpdate; Vite 5 only knows handleHotUpdate (the
+    // legacy path below). One shared handler, both signatures.
+    async hotUpdate(options): Promise<EnvironmentModuleNode[] | undefined> {
+      if ((this.environment?.name ?? "client") !== "client") return undefined;
+      return tsazorHotUpdate(
+        { event: options.type, file: options.file, read: options.read, server: options.server, registry, projectRoot },
+        options.modules,
+      ) as Promise<EnvironmentModuleNode[] | undefined>;
+    },
+
+    async handleHotUpdate(ctx): Promise<ModuleNode[] | undefined> {
+      // Vite 5's hook has no event type; add/unlink of watched files surface
+      // as plain updates there (Vite 7 users get the proper hotUpdate path).
+      return tsazorHotUpdate(
+        { event: "update", file: ctx.file, read: ctx.read, server: ctx.server, registry, projectRoot },
+        ctx.modules,
+      ) as Promise<ModuleNode[] | undefined>;
+    },
+
+    async closeBundle() {
+      // 2.4: the optional gate — build end (after write) so the produced
+      // output exists; the check runs lazily (@tsazor/lsp is loaded only on
+      // builds that opt in).
+      if (options.check !== true) return;
+      const { runBuildCheck } = await import("./check-hook.js");
+      const diagnostics = await runBuildCheck(projectRoot, (line) =>
+        // eslint-disable-next-line no-console
+        console.warn(`[tsazor] ${line}`),
+      );
+      const errors = diagnostics.filter((d) => d.severity === "error").length;
+      if (errors > 0) this.error(`tsazor check failed: ${errors} error(s)`);
     },
 
     resolveId(id) {
       if (id === ROUTES_MODULE_ID) return RESOLVED_ROUTES_MODULE_ID;
+      if (id === DECORATORS_MODULE_ID) return RESOLVED_DECORATORS_MODULE_ID;
       return null;
     },
 
     async load(id) {
+      if (id === RESOLVED_DECORATORS_MODULE_ID) return sharedDecoratorHelpers().code;
       if (id !== RESOLVED_ROUTES_MODULE_ID) return null;
       const routes = await scanRoutes(projectRoot);
-      return generateRoutesModule(projectRoot, routes);
+      return generateRoutesModule(projectRoot, routes, lazyRouteFilter(options.lazyRoutes, projectRoot));
     },
 
     async transform(code, id) {
       const filePath = stripQuery(id);
-      if (filePath.includes("node_modules") || filePath.startsWith("\0")) {
-        return null;
+      if (filePath.startsWith("\0")) return null;
+      // `X.tsazor?raw` (a gallery showing a component's source), `?url`, a worker: Vite loads the file as something
+      // else — its text as a string module, its URL — so it isn't Tsazor's to compile (that was a 500 and a failed build).
+      if (isAssetRequest(id)) return null;
+
+      // A built library's decorator helpers (its _decorators.js, or the copy in a component built before it had one)
+      // become the app's, where they are the same text: one copy for the app, not one per library.
+      if (/\.m?js$/.test(filePath) && code.includes("var __decorateElement")) {
+        const shared = shareHelpers(code, sharedDecoratorHelpers(), DECORATORS_MODULE_ID);
+        return shared === code ? null : { code: shared, map: null };
       }
+      if (filePath.includes("node_modules")) return null;
 
       // Scoped CSS sidecar (Blazor mechanism): rewrite selectors to the scope
       // attribute of the owning .tsazor file, then hand back to Vite's CSS
@@ -62,90 +187,56 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         return { code: css, map: null };
       }
 
+      // The app's own TypeScript with Tsazor's field decorators (models with validation rules, component base classes,
+      // code-behind): the compact form a component gets, before Vite's esbuild lowers what is left. Positions stay.
+      if (/\.m?ts$/.test(filePath) && !filePath.endsWith(".d.ts") && options.optimize !== false) {
+        const compact = compactFieldDecorators(code, filePath);
+        return compact === code ? null : { code: compact, map: null };
+      }
+
       if (!filePath.endsWith(".tsazor")) {
         return null;
       }
 
-      const chain = await collectImports(path.dirname(filePath), projectRoot);
-      if (path.basename(filePath) === "_Imports.tsazor") {
+      if (isImportsFile(filePath)) {
         // _Imports.tsazor contributes directives only; it is never a component.
+        // Its @layout feeds route-manifest invalidation (4.1) — recording is
+        // best-effort: the file keeps compiling to an empty module on errors.
+        try {
+          const compiled = compile(code, { className: "_Imports", fileName: filePath, generateSourceMap: false });
+          registry.recordDynamic(filePath, compiled.metadata, true);
+        } catch {
+          // The importing modules throw the real diagnostics; nothing to record.
+        }
         return { code: "export default null;\n", map: null };
       }
-      const context = createFileContext(filePath, chain);
-
-      // Runtime enums/values referenced in markup (e.g. NavLinkMatch.All) are
-      // imported by collectCodeImports — they must not be baked to this.*.
-      const knownGlobals = new Set<string>();
-      for (const match of code.matchAll(/\b[A-Z][A-Za-z0-9_$]*\b/g)) {
-        if (RUNTIME_TYPES.has(match[0])) knownGlobals.add(match[0]);
-      }
-
-      // Pass 1 compiles without extra imports so we can see which bindings
-      // the compiler emitted itself; the scan then adds import lines for
-      // identifiers used inside verbatim @code blocks (pass 2).
-      const first = compile(code, {
-        className: context.className,
-        fileName: filePath,
-        resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-        resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-        generateSourceMap: false,
+      const result = await transformTsazor(code, filePath, projectRoot, {
+        ...(options.optimize === false ? { optimize: false } : {}),
+        sharedHelpers: DECORATORS_MODULE_ID,
       });
-      const extraImports = collectCodeImports(code, first.code, context);
-
-      // Code-behind: when a sibling X.tsazor.ts exists (the compiled module's
-      // own default import), the generated class extends its default export.
-      // The .ts sidecar itself is compiled by Vite's normal TS pipeline.
-      const codeBehindPath = `${filePath}.ts`;
-      const codeBehindClass = existsSync(codeBehindPath) ? `${context.className}Base` : undefined;
-      if (codeBehindClass) {
-        extraImports.push(`import ${codeBehindClass} from "./${path.basename(codeBehindPath)}";`);
-      }
-
-      // Scoped CSS: when a sidecar exists, emit its import into the module
-      // and let the compiler stamp the scope attribute on this file's markup.
-      const sidecarPath = `${filePath}.css`;
-      const sidecar = existsSync(sidecarPath);
-      const scopeHash = sidecar ? scopeHashFor(projectRoot, filePath) : undefined;
-      if (sidecar) {
-        extraImports.push(`import "./${path.basename(sidecarPath)}";`);
-      }
-
-      const compiled = compile(code, {
-        className: context.className,
-        fileName: filePath,
-        resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-        resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-        knownGlobals,
-        imports: extraImports,
-        codeBehindClass,
-        scopeHash,
-        generateSourceMap: true,
-      });
-      reportDiagnostics(first.diagnostics, filePath);
-
-      const transpiled = transformSync(compiled.code, {
-        loader: "ts",
-        sourcemap: true,
-        sourcefile: `${filePath}.ts`,
-        tsconfigRaw: {
-          compilerOptions: {
-            experimentalDecorators: true,
-            useDefineForClassFields: false,
-            target: "es2022",
-          },
-        },
-      });
-
-      const map = chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`);
-      const js = transpiled.code + hmrAppendix(context.className);
-      return { code: js, map };
+      registry.recordTransform(filePath, result.metadata, result.componentFiles);
+      reportImportsDiagnostics(projectRoot, result.importsDiagnostics);
+      reportDiagnostics(projectRoot, result.diagnostics, filePath);
+      reportManifestProblems();
+      return { code: result.code, map: result.map };
     },
   };
-}
 
-function stripQuery(id: string): string {
-  const query = id.indexOf("?");
-  return query >= 0 ? id.slice(0, query) : id;
+  function stripQuery(id: string): string {
+    const query = id.indexOf("?");
+    return query >= 0 ? id.slice(0, query) : id;
+  }
+
+  /** Vite's queries that load a file as something else: `raw`, `url`, `worker`, and `inline` for anything but CSS. */
+  function isAssetRequest(id: string): boolean {
+    const query = id.indexOf("?");
+    if (query < 0) return false;
+    const params = new URLSearchParams(id.slice(query + 1));
+    if (params.has("raw") || params.has("url") || params.has("worker") || params.has("sharedworker")) return true;
+    return params.has("inline") && !id.slice(0, query).endsWith(".css");
+  }
+
+  return plugin;
 }
 
 async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): Promise<void> {
@@ -157,25 +248,94 @@ async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): 
   }
 }
 
+/** Manifest problems already printed (TZS036): once per manifest file and message. */
+/** The @tsazor packages the app's package.json depends on (dev dependencies too); none without one. */
+function tsazorDependencies(root: string): string[] {
+  try {
+    const manifest = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    return Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).filter((name) => name.startsWith("@tsazor/"));
+  } catch {
+    return [];
+  }
+}
+
+const reportedManifestProblems = new Set<string>();
+
+/** A package's component manifest that is unreadable or newer than this Tsazor: said once, as the check says it. */
+function reportManifestProblems(): void {
+  for (const problem of defaultMetadataCache.manifestProblems()) {
+    const key = `${problem.file}\n${problem.message}`;
+    if (reportedManifestProblems.has(key)) continue;
+    reportedManifestProblems.add(key);
+    // eslint-disable-next-line no-console
+    console.warn(`[tsazor] ${problem.file.replace(/\\/g, "/")}(1,1) ${CHECK_CODES.manifest} ${problem.message}`);
+  }
+}
+
+/** A compiler diagnostic. */
+interface LocatedDiagnostic {
+  code: string;
+  message: string;
+  severity: string;
+  /** 1-based line, 0-based column (the compiler's). */
+  pos: { line: number; column: number };
+}
+
+/**
+ * A diagnostic as `tsazor check` writes it — `src/Pages/Home.tsazor(4,12) TZS005 message`: the path relative to the
+ * project, line and column 1-based — so the dev server, the build and the check read alike.
+ */
+function diagnosticLine(root: string, file: string, diagnostic: LocatedDiagnostic): string {
+  const relative = path.relative(root, file).replace(/\\/g, "/");
+  return `${relative}(${diagnostic.pos.line},${diagnostic.pos.column + 1}) ${diagnostic.code} ${diagnostic.message}`;
+}
+
+/** _Imports warnings already printed (every file in the folder shares them). */
+const reportedImportsWarnings = new Set<string>();
+
+/**
+ * _Imports.tsazor is never transformed itself, so its diagnostics surface
+ * through the files that inherit it: errors (e.g. an invalid @import) fail
+ * the importing module, warnings are printed once per location.
+ */
+function reportImportsDiagnostics(root: string, entries: ReadonlyArray<{ file: string; diagnostic: TszDiagnostic }>): void {
+  const errors = entries.filter((entry) => entry.diagnostic.severity === "error");
+  for (const { file, diagnostic } of entries) {
+    if (diagnostic.severity !== "warning") continue;
+    const key = `${file}:${diagnostic.pos.line}:${diagnostic.pos.column}:${diagnostic.message}`;
+    if (reportedImportsWarnings.has(key)) continue;
+    reportedImportsWarnings.add(key);
+    // eslint-disable-next-line no-console
+    console.warn(`[tsazor] ${diagnosticLine(root, file, diagnostic)}`);
+  }
+  if (errors.length === 0) return;
+  const first = errors[0]!;
+  const details = errors.map(({ file, diagnostic }) => `  ${diagnosticLine(root, file, diagnostic)}`).join("\n");
+  const error = new Error(`[tsazor] compile errors\n${details}`);
+  (error as unknown as { id: string }).id = first.file;
+  (error as unknown as { loc: { file: string; line: number; column: number } }).loc = {
+    file: first.file,
+    line: first.diagnostic.pos.line,
+    column: first.diagnostic.pos.column,
+  };
+  throw error;
+}
+
 /**
  * The compiler never fails silently: errors are thrown as a located error
  * (Vite's dev-server overlay picks it up), warnings go to the console.
  */
-function reportDiagnostics(diagnostics: { all: readonly { code: string; message: string; severity: string; pos: { line: number; column: number } }[] }, filePath: string): void {
+function reportDiagnostics(root: string, diagnostics: { all: readonly LocatedDiagnostic[] }, filePath: string): void {
   for (const diagnostic of diagnostics.all) {
     if (diagnostic.severity === "warning") {
       // eslint-disable-next-line no-console
-      console.warn(
-        `[tsazor] warning ${diagnostic.code} (${filePath}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`,
-      );
+      console.warn(`[tsazor] ${diagnosticLine(root, filePath, diagnostic)}`);
     }
   }
   const errors = diagnostics.all.filter((diagnostic) => diagnostic.severity === "error");
   if (errors.length === 0) return;
-  const details = errors
-    .map((diagnostic) => `  ${diagnostic.code} (${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`)
-    .join("\n");
-  const error = new Error(`[tsazor] compile errors in ${filePath}\n${details}`);
+  const details = errors.map((diagnostic) => `  ${diagnosticLine(root, filePath, diagnostic)}`).join("\n");
+  const error = new Error(`[tsazor] compile errors\n${details}`);
   (error as unknown as { id: string; loc: { file: string; line: number; column: number } }).id = filePath;
   (error as unknown as { loc: { file: string; line: number; column: number } }).loc = {
     file: filePath,

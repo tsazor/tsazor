@@ -1,10 +1,10 @@
 @page "/"
-@inherits PizzaComponentBase
 @inject OrderState OrderState
+@inject OrdersClient OrdersClient
 
 <div class="main">
     <ul class="pizza-cards">
-        @foreach (var special in this.specials) {
+        @foreach (const special of this.specials) {
             <li style="@this.cardStyle(special)" @onclick="@(() => this.OrderState.showConfigurePizzaDialog(special))">
                 <div class="pizza-info">
                     <span class="title">@special.name</span>
@@ -21,7 +21,7 @@
         <div class="order-contents">
             <h2>Your order</h2>
 
-            @foreach (var configuredPizza in this.order.pizzas) {
+            @foreach (const configuredPizza of this.order.pizzas) {
                 <ConfiguredPizzaItem Pizza="@configuredPizza" OnRemoved="@(() => this.removePizza(configuredPizza))" />
             }
         </div>
@@ -39,7 +39,7 @@
 </div>
 
 @if (this.OrderState.showingConfigureDialog) {
-    <ConfigurePizzaDialog Pizza="@this.OrderState.configuringPizza" OnCancel="@(() => this.OrderState.cancelConfigurePizzaDialog())" OnConfirm="@(() => this.OrderState.confirmConfigurePizzaDialog())" />
+    <ConfigurePizzaDialog Pizza="@this.OrderState.configuringPizza!" OnCancel="@(() => this.OrderState.cancelConfigurePizzaDialog())" OnConfirm="@(() => this.OrderState.confirmConfigurePizzaDialog())" />
 }
 
 @code {
@@ -50,15 +50,8 @@
     }
 
     protected override async onInitialized(): Promise<void> {
-        const http = new TsazorHttp();
-        try {
-            this.specials = await http.getJson<PizzaSpecial[]>("/specials");
-        } catch {
-            this.specials = [];
-        }
-        // Async load after the render pass → explicit re-render
-        // (original: StateHasChanged after the await).
-        this.stateHasChanged();
+        const result = await this.OrdersClient.getSpecials();
+        this.specials = result.ok ? result.body : [];
     }
 
     private cardStyle(special: PizzaSpecial): string {

@@ -1,0 +1,4 @@
+@import { StringLocalizer } from "@tsazor/runtime"
+@inject StringLocalizer L
+<h1>@L.get("Title")</h1>
+<p class="greeting">@L.get("Greeting", { name: "Marta" })</p>

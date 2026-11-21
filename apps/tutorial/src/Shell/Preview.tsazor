@@ -1,0 +1,95 @@
+@import { PreviewHost } from "../preview/preview-host"
+@import type { PreviewMessage } from "../preview/preview-host"
+
+<div class="preview">
+    <div class="bar">
+        <span class="title">Preview</span>
+        @if (pageTitle) {
+            <span class="page-title" title="The app's document title (PageTitle)">@pageTitle</span>
+        }
+        @if (pageUrl) {
+            <span class="page-url" title="The app's URL (in-memory history — the preview itself is a sandboxed document)">@pageUrl</span>
+        }
+        <span class="status status--@status">@statusText</span>
+    </div>
+    <div class="frames @(stale ? "frames--stale" : null)" @ref="frames"></div>
+    @if (stale) {
+        <p class="stale-note">Fix the problems above to update the preview.</p>
+    }
+    @if (messages.length > 0) {
+        <ul class="console" aria-label="Console">
+            @foreach (const message of messages) {
+                <li class="line line--@message.kind"><pre>@message.text</pre></li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    @Parameter() build?: ProjectBuild;
+    /** The latest edit does not compile: the preview shows the last good build. */
+    @Parameter() stale = false;
+
+    private frames?: HTMLElement;
+    private host?: PreviewHost;
+    private shown?: ProjectBuild;
+    private status: "idle" | "running" | "ready" | "failed" = "idle";
+    private messages: PreviewMessage[] = [];
+    /** The running app's document title, shown like a browser tab. */
+    private pageTitle = "";
+    /** The running app's URL (path + query), shown like an address bar (routing lessons). */
+    private pageUrl = "";
+
+    private get statusText(): string {
+        switch (this.status) {
+            case "running": return "starting…";
+            case "ready": return "running";
+            case "failed": return "error";
+            default: return "";
+        }
+    }
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender && this.frames) {
+            // Callbacks arrive from postMessage, outside any Tsazor event: re-render explicitly.
+            this.host = new PreviewHost(this.frames, {
+                onStatus: (status) => {
+                    // An error during mount (caught and logged by the renderer) outranks "ready".
+                    this.status = status === "ready" && this.status === "failed" ? "failed" : status;
+                    this.stateHasChanged();
+                },
+                onMessage: (message) => {
+                    if (message.kind === "error") this.status = "failed";
+                    this.messages = [...this.messages.slice(-49), message];
+                    this.stateHasChanged();
+                },
+                onTitle: (title) => {
+                    this.pageTitle = title;
+                    this.stateHasChanged();
+                },
+                onUrl: (url) => {
+                    // The full URL, but the bar shows the route: path + query, and
+                    // the fragment, where hash routing keeps the route (`/#/orders`).
+                    try {
+                        const parsed = new URL(url);
+                        this.pageUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+                    } catch {
+                        this.pageUrl = url;
+                    }
+                    this.stateHasChanged();
+                },
+            });
+        }
+        if (this.host && this.build && this.build !== this.shown) {
+            this.shown = this.build;
+            if (this.build.entry) {
+                this.messages = [];
+                void this.host.show(this.build);
+            }
+        }
+    }
+
+    dispose(): void {
+        this.host?.dispose();
+    }
+}

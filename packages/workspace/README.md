@@ -1,0 +1,9 @@
+# @tsazor/workspace
+
+How a [Tsazor](https://github.com/tsazor/tsazor#readme) project resolves its components: the `_Imports.tsazor` chain, `@using` directories,
+components and types from packages, and the runtime's built-ins. Shared by [`@tsazor/vite-plugin`](https://www.npmjs.com/package/@tsazor/vite-plugin),
+[`@tsazor/cli`](https://www.npmjs.com/package/@tsazor/cli) and the language server so that the build and the editor see the same project.
+
+An internal building block: apps don't depend on it directly. Its programmatic API is for Tsazor's own tools:
+released in lockstep with them, it may change in any release and is not covered by the stability promise
+([support policy](https://github.com/tsazor/tsazor/blob/main/docs/support-policy.md), D-S7).

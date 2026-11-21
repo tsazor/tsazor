@@ -1,0 +1,57 @@
+@inherits BasePlugin
+@import type { LayoutDetailResponse, PageDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginBody title="Pages">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create Page")" label="Add Page" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.pages" ariaLabel="Pages">
+            <PropertyColumn property="(page) => page.title" title="Title" />
+            <PropertyColumn property="(page) => page.fullPath" title="Full Path" />
+            <PropertyColumn property="(page) => this.layoutName(page.layoutId)" title="Layout" />
+            <TemplateColumn title="Locked" Context="page"><YesNo value="@page.locked" /></TemplateColumn>
+            <TemplateColumn title="Actions" Context="page">
+                <ActionButtons>
+                    @if (!page.locked) {
+                        <ActionButtonEdit href="@this.getUrl("Update Page", { id: page.id })" />
+                        <ActionButtonDelete visible="@(page.path !== "/")" @onclick="() => this.selected = page" aria-label="@(`Delete ${page.title}`)" />
+                    }
+                    <ActionButton iconName="@IconName.Eye" intent="success" label="Open" href="@(page.fullPath ?? "/")" target="_blank" aria-label="@(`Open ${page.title}`)" />
+                </ActionButtons>
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete <b>"@this.selected?.title"</b> page?
+</Confirm>
+
+@code {
+    private pages: PageDetailResponse[] = [];
+    private layouts: LayoutDetailResponse[] = [];
+    private selected?: PageDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        this.layouts = ensureOk(await this.api.layoutGetBySiteId({ siteId: this.viewState.site.id })) ?? [];
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        const pages = ensureOk(await this.api.pageGetAll(this.viewState.site.id)) ?? [];
+        this.pages = pages.toSorted((a, b) => (a.fullPath ?? "").localeCompare(b.fullPath ?? ""));
+    }
+
+    private layoutName(id: string | null | undefined): string {
+        return this.layouts.find((layout) => layout.id === id)?.name ?? "(default)";
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.pageDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

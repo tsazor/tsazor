@@ -1,0 +1,73 @@
+@inherits BasePlugin
+@import { UserRoleUpdateRequest, UserSetPasswordRequest, UserUpdateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.updateModel" title="Update User" onSubmit="@this.updateUser">
+    <Grid columns="2" gap="m">
+        <TextInput Value="@this.username" label="Username" disabled />
+        <TextInput @bind-Value="this.updateModel!.email" label="Email" placeholder="Enter Email" required type="email" />
+        <TextInput @bind-Value="this.updateModel!.firstName" label="First Name" placeholder="Enter First Name" />
+        <TextInput @bind-Value="this.updateModel!.lastName" label="Last Name" placeholder="Enter Last Name" />
+        <TextInput @bind-Value="this.updateModel!.phoneNumber" label="Phone Number" placeholder="Enter Phone Number" type="tel" />
+        <Checkbox @bind-Value="this.updateModel!.enabled" label="Enabled" help="Enable/disable user account" />
+    </Grid>
+    <FormActions cancel submit />
+</PluginForm>
+
+<PluginForm model="@this.rolesModel" onSubmit="@this.updateRoles">
+    <CheckboxGroup @bind-Value="this.rolesModel!.roleIds" label="Roles" options="@this.roleOptions()" />
+    <FormActions cancel submit />
+</PluginForm>
+
+<PluginForm model="@this.passwordModel" title="Set New Password" onSubmit="@this.setPassword">
+    <TextInput @bind-Value="this.passwordModel.password" label="New Password" placeholder="Enter Password" required type="password" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private username = "";
+    private updateModel?: UserUpdateRequest;
+    private rolesModel?: UserRoleUpdateRequest;
+    private passwordModel = new UserSetPasswordRequest();
+
+    protected override async onInitialized(): Promise<void> {
+        const userId = this.id ?? "";
+        const user = ensureOk(await this.api.userGet(userId));
+        this.username = user.username ?? "";
+        this.updateModel = Object.assign(new UserUpdateRequest(), {
+            id: user.id,
+            email: user.email ?? "",
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber,
+            enabled: user.enabled,
+        });
+        this.passwordModel.userId = userId;
+        const roles = ensureOk(await this.api.userRoleGetUserRoles({ userId, siteId: this.viewState.site.id })) ?? [];
+        this.rolesModel = Object.assign(new UserRoleUpdateRequest(), { userId, siteId: this.viewState.site.id, roleIds: roles.map((role) => role.id) });
+    }
+
+    /** The roles a user can be given here: the site's own and the administrators. */
+    private roleOptions(): { value: string; label: string }[] {
+        return (this.viewState.site.allRoles ?? [])
+            .filter((role) => role.type === "UserDefined" || role.type === "Administrators")
+            .map((role) => ({ value: role.id, label: role.name ?? "" }));
+    }
+
+    private async updateUser(): Promise<void> {
+        ensureOk(await this.api.userUpdate(this.updateModel!));
+        this.navigateBack();
+    }
+
+    private async updateRoles(): Promise<void> {
+        ensureOk(await this.api.userRoleUpdate(this.rolesModel!));
+        this.navigateBack();
+    }
+
+    private async setPassword(): Promise<void> {
+        ensureOk(await this.api.userSetPassword(this.passwordModel));
+        this.navigateBack();
+    }
+}

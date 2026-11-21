@@ -5,7 +5,7 @@
     <input class="new-todo" placeholder="What needs to be done?" @onkeydown="newTodoKey" />
     @if (this.todos.length > 0) {
         <ul class="todo-list">
-            @foreach (var todo in this.visible) {
+            @foreach (const todo of this.visible) {
                 <li class="@this.rowClass(todo)">
                     @if (this.editingId === todo.id) {
                         <input class="edit-todo" value="@todo.title"

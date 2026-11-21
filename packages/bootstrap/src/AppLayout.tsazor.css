@@ -1,0 +1,69 @@
+/* AppLayout: header across the top, the navigation column beside the content (a grid). */
+.tz-app-layout {
+  --tz-app-layout-header-height: 56px;
+  --tz-app-layout-nav-width: 240px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "header header"
+    "nav main";
+  min-height: 100vh;
+  background: var(--bs-tertiary-bg);
+}
+
+.tz-app-layout__header {
+  grid-area: header;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--tz-app-layout-header-height);
+  padding: 0 1rem;
+  color: var(--bs-body-color);
+  box-shadow: var(--bs-box-shadow-sm);
+  box-sizing: border-box;
+}
+
+.tz-app-layout__nav {
+  grid-area: nav;
+  position: sticky;
+  top: var(--tz-app-layout-header-height);
+  width: var(--tz-app-layout-nav-width);
+  height: calc(100vh - var(--tz-app-layout-header-height));
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.tz-app-layout__nav[hidden] {
+  display: none;
+}
+
+.tz-app-layout__main {
+  grid-area: main;
+  min-width: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Narrow: the column lies over the content (MudBlazor's responsive drawer). */
+@media (max-width: 959.98px) {
+  .tz-app-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "main";
+  }
+
+  .tz-app-layout__nav {
+    position: fixed;
+    top: var(--tz-app-layout-header-height);
+    bottom: 0;
+    inset-inline-start: 0;
+    z-index: 19;
+    height: auto;
+    box-shadow: var(--bs-box-shadow);
+  }
+}

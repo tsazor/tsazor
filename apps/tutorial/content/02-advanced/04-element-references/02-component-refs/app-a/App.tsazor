@@ -1,0 +1,11 @@
+<div class="toolbar">
+    <button @onclick="sign">Insert signature</button>
+</div>
+
+<Editor />
+
+@code {
+    sign() {
+        // Ask the editor to insert "— Ada".
+    }
+}

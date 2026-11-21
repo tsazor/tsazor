@@ -1,0 +1,59 @@
+@** One section of a Fluent Accordion: a header button with the title and `aria-expanded`, and a
+    panel (`role="region"`, labelled by the header) rendered only while the item is open. Place it
+    inside an Accordion; clicking the header toggles it through the parent. *@
+@import type Accordion from "./Accordion.tsazor"
+@import { ChevronRight20Regular } from "./core-icons"
+
+<div class="fui-accordion__item">
+    <h3 class="fui-accordion__header">
+        <button class="fui-accordion__button" type="button" id="@headerId" aria-expanded="@expandedText" aria-controls="@panelId" @onclick="toggle">
+            <Icon value="@ChevronRight20Regular" class="fui-accordion__chevron" />
+            @title
+        </button>
+    </h3>
+    @if (isOpen) {
+        <div class="fui-accordion__panel" role="region" id="@panelId" aria-labelledby="@headerId">@childContent</div>
+    }
+</div>
+
+@code {
+    /** Label shown in the item's header button. */
+    @Parameter() title: string = "";
+    /** The item's content, shown while the item is open. */
+    @Parameter() childContent?: RenderFragment;
+
+    /** Resolved from the nearest Accordion ancestor (by cascade name). */
+    @CascadingParameter({ name: "FluentAccordion" }) accordion?: Accordion;
+
+    /** Assigned by the parent Accordion at registration time. */
+    private index = -1;
+
+    /** @internal Called once by the parent Accordion at registration. */
+    setIndex(index: number): void {
+        this.index = index;
+    }
+
+    private get isOpen(): boolean {
+        return this.accordion?.openIndex === this.index;
+    }
+
+    private get expandedText(): string {
+        return this.isOpen ? "true" : "false";
+    }
+
+    private get headerId(): string | null {
+        return this.accordion?.headerId(this.index) ?? null;
+    }
+
+    private get panelId(): string | null {
+        return this.isOpen ? (this.accordion?.panelId(this.index) ?? null) : null;
+    }
+
+    private toggle(): void {
+        this.accordion?.toggle(this.index);
+    }
+
+    protected override onInitialized(): void {
+        this.accordion?.registerItem(this);
+    }
+}

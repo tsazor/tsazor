@@ -1,0 +1,47 @@
+@** One entry of a Dropdown menu (Bootstrap's `.dropdown-item`, `role="menuitem"`). Place it inside a
+    Dropdown; choosing it (click, Enter or Space) raises onSelect, then closes the menu and returns
+    focus to the toggle. `iconStart`/`iconEnd` put an icon before or after the label. *@
+@import type { IconValue } from "@tsazor/ui"
+@import type Dropdown from "./Dropdown.tsazor"
+<li role="none">
+    @if (href !== undefined && !disabled) {
+        <a class="@itemClass" role="menuitem" tabindex="-1" href="@href" target="@target" rel="@rel" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</a>
+    } else {
+        <button class="@(disabled ? `${itemClass} disabled` : itemClass)" type="button" role="menuitem" tabindex="-1" aria-disabled="@(disabled ? "true" : null)" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</button>
+    }
+</li>
+
+@code {
+    /** Fired when the item is chosen. */
+    @Parameter() onSelect?: EventCallback<MouseEvent>;
+    /** Greys the item out: it does nothing, and stays focusable (`aria-disabled`) so a screen reader still hears it. */
+    @Parameter() disabled: boolean = false;
+    /** The item's label. */
+    @Parameter() childContent?: RenderFragment;
+    /** An icon before the label (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the label (`IconEnd`), at the item's far end. */
+    @Parameter() iconEnd?: IconValue;
+    /** Makes the item a link (MudMenuItem's `Href`): choosing it follows the address; disabled, it stays a button. */
+    @Parameter() href?: string;
+    /** Where the link opens (`_blank`: a new tab, with `rel="noopener"`). */
+    @Parameter() target?: string;
+
+    /** Resolved from the nearest Dropdown ancestor; selection closes the menu. */
+    @CascadingParameter({ name: "Dropdown" }) dropdown?: Dropdown;
+
+    private get itemClass(): string {
+        return this.iconStart || this.iconEnd ? "dropdown-item d-flex align-items-center gap-2" : "dropdown-item";
+    }
+
+    private get rel(): string | undefined {
+        return this.target === "_blank" ? "noopener" : undefined;
+    }
+
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        if (this.disabled) return undefined;
+        const selected = this.onSelect?.invokeAsync(e);
+        this.dropdown?.close(true);
+        return selected;
+    }
+}

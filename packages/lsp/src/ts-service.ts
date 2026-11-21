@@ -1,10 +1,11 @@
-import { buildShadowModule, isShadowPath, shadowPathFor, type ShadowModule } from "./shadow-module";
-import { TsazorGenMap } from "./ts-mapping";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { buildShadowModule, isShadowPath, shadowPathFor, type ShadowModule } from "./shadow-module.js";
+import { TsazorGenMap } from "./ts-mapping.js";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as ts from "typescript";
+import { inferTypeArgument, type SourcePos, type TypedTagInferenceRequest } from "@tsazor/compiler";
 
 /**
  * The TypeScript type layer (v2): one `ts.LanguageService` per workspace over
@@ -22,6 +23,8 @@ export interface ShadowEntry {
   version: number;
   /** .tsazor mtime when built from disk (on-demand cache for closed files). */
   mtimeMs?: number;
+  /** .tsazor files this shadow imports (shadow graph edges for dependents). */
+  importedTsazor?: readonly string[];
 }
 
 /** A single-line .tsazor patch producing the completion anchor (`this.<prefix>`). */
@@ -53,6 +56,29 @@ interface VariantModule {
 
 const toKey = (modulePath: string): string => modulePath.replace(/\\/g, "/").toLowerCase();
 
+/** Case-insensitive containment test: is `child` `parent` or below it? */
+export function pathWithin(child: string, parent: string): boolean {
+  const c = toKey(path.resolve(child));
+  const p = toKey(path.resolve(parent));
+  return c === p || c.startsWith(`${p}/`);
+}
+
+/** The `tsconfig.json` nearest above `dir`, walking up to (and including)
+ *  `bound` — per-app options for a file, instead of one config for the whole
+ *  workspace folder. */
+export function findNearestTsconfig(dir: string, bound: string): string | undefined {
+  let current = path.resolve(dir);
+  const limit = path.resolve(bound);
+  for (;;) {
+    const candidate = path.join(current, "tsconfig.json");
+    if (existsSync(candidate)) return candidate;
+    if (toKey(current) === toKey(limit)) return undefined;
+    const parent = path.dirname(current);
+    if (parent === current || !pathWithin(parent, limit)) return undefined;
+    current = parent;
+  }
+}
+
 function fallbackCompilerOptions(): ts.CompilerOptions {
   return {
     ...ts.getDefaultCompilerOptions(),
@@ -67,8 +93,10 @@ function fallbackCompilerOptions(): ts.CompilerOptions {
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     // The generated code imports the real sidecar as `./X.tsazor.ts`.
     allowImportingTsExtensions: true,
-    experimentalDecorators: true,
-    useDefineForClassFields: false,
+    // Same emit as the Vite plugin: standard (TC39) decorators, [[Define]]
+    // class fields.
+    experimentalDecorators: false,
+    useDefineForClassFields: true,
     allowJs: true,
     skipLibCheck: true,
     // NOTE: do not set `types: []` here — combined with an explicit `lib` it
@@ -102,20 +130,52 @@ function resolveLibDir(): string {
   }
 }
 
-function loadProjectOptions(projectRoot: string): ts.CompilerOptions {
+/**
+ * The tsconfig's own declaration files (`include`d `env.d.ts`, `vite-env.d.ts`,
+ * global augmentations): the program's roots are the shadows, so these would
+ * be missing — and with them every ambient module/global they declare.
+ */
+function loadAmbientDeclarations(projectRoot: string, configPath?: string): string[] {
+  try {
+    const config = configPath ?? ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+    if (!config) return [];
+    const parsed = ts.readConfigFile(config, ts.sys.readFile);
+    if (parsed.error) return [];
+    return ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(config)).fileNames.filter((name) => name.endsWith(".d.ts"));
+  } catch {
+    return [];
+  }
+}
+
+/** The tsconfig's own sources (`.ts`, no declarations): `tsazor check`'s extra roots (includeProjectSources). */
+function loadProjectSources(projectRoot: string, configPath?: string): string[] {
+  try {
+    const config = configPath ?? ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+    if (!config) return [];
+    const parsed = ts.readConfigFile(config, ts.sys.readFile);
+    if (parsed.error) return [];
+    return ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(config)).fileNames.filter((name) => /\.(ts|tsx|mts|cts)$/.test(name) && !/\.d\.[mc]?ts$/.test(name));
+  } catch {
+    return [];
+  }
+}
+
+function loadProjectOptions(projectRoot: string, configPath?: string): ts.CompilerOptions {
   const fallback = fallbackCompilerOptions();
   try {
-    const configPath = ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
-    if (!configPath) return fallback;
-    const parsed = ts.readConfigFile(configPath, ts.sys.readFile);
+    const config = configPath ?? ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+    if (!config) return fallback;
+    const parsed = ts.readConfigFile(config, ts.sys.readFile);
     if (parsed.error) return fallback;
-    const cmd = ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(configPath));
+    const cmd = ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(config));
     return {
       ...fallback,
       ...cmd.options,
-      // Non-negotiable for shadow modules and LSP responsiveness:
-      experimentalDecorators: true,
-      useDefineForClassFields: false,
+      // Non-negotiable for shadow modules and LSP responsiveness (the
+      // runtime's decorators are standard ones; a legacy setting in the
+      // project would type-check every @Parameter() as an error):
+      experimentalDecorators: false,
+      useDefineForClassFields: true,
       allowImportingTsExtensions: true,
       libReplacement: false,
       skipLibCheck: true,
@@ -126,21 +186,80 @@ function loadProjectOptions(projectRoot: string): ts.CompilerOptions {
   }
 }
 
+/**
+ * A peer lookup the host consults for shadow paths it does not own — with
+ * per-app projects (2.5), a shadow imports another project's shadow
+ * (`@tsazor/fluent` sources under a different tsconfig), and the language
+ * service of *this* project must still see its content. The ProjectRegistry
+ * provides the hook (over all its services).
+ */
+export interface ShadowLookup {
+  entryOf(fileName: string): ShadowEntry | undefined;
+}
+
 export class TsazorTypeService {
   private readonly projectRoot: string;
   private readonly ls: ts.LanguageService;
   private readonly entries = new Map<string, ShadowEntry>();
   private readonly variants = new Map<string, VariantModule & { path: string }>();
   private nextVersion = 1;
+  /** `.tsazor` keys currently building — cycle guard for the shadow cascade. */
+  private readonly building = new Set<string>();
+  private readonly lookup?: ShadowLookup;
+  /** The tsconfig's .d.ts files — extra program roots next to the shadows. */
+  private readonly ambientDeclarations: readonly string[];
+  /** The tsconfig's `.ts` sources, roots too once `includeProjectSources` asked for them (`tsazor check`). */
+  private projectSources: readonly string[] = [];
+  private readonly configPath: string | undefined;
 
-  constructor(projectRoot: string) {
+  /** The program's compiler options; `declarationOf` turns declaration emit on. */
+  private options: ts.CompilerOptions;
+  /** Whether `declarationOf` has turned declaration emit on (`noEmit` off) yet. */
+  private emitsDeclarations = false;
+
+  constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup) {
     this.projectRoot = path.resolve(projectRoot);
-    const options = loadProjectOptions(this.projectRoot);
-    this.ls = ts.createLanguageService(this.createHost(options));
+    this.lookup = lookup;
+    this.configPath = configPath;
+    this.options = loadProjectOptions(this.projectRoot, configPath);
+    this.ambientDeclarations = loadAmbientDeclarations(this.projectRoot, configPath);
+    this.ls = ts.createLanguageService(this.createHost());
+  }
+
+  /**
+   * The declaration TypeScript emits for a real `.ts` source of the program, with the shadows in view: for a helper
+   * whose declaration the file alone can't give (an inferred return type, a component's type through `./X.tsazor`)
+   * — `tsazor build-lib`'s fallback. `errors` says why there is none.
+   */
+  declarationOf(fileName: string): { text?: string; errors: string[] } {
+    // Always once, whatever the tsconfig says: its own `declaration: true` still left `noEmit` on, and nothing came out.
+    if (!this.emitsDeclarations) {
+      this.emitsDeclarations = true;
+      this.options = { ...this.options, noEmit: false, declaration: true, emitDeclarationOnly: true, declarationMap: false, sourceMap: false, inlineSourceMap: false };
+    }
+    const program = this.ls.getProgram();
+    const sourceFile = program?.getSourceFile(fileName);
+    if (!program || !sourceFile) return { errors: ["not part of the project's program"] };
+    const errors = program.getDeclarationDiagnostics(sourceFile).map((diagnostic) => {
+      const { line, character } = sourceFile.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
+      return `(${line + 1},${character + 1}) TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`;
+    });
+    if (errors.length > 0) return { errors };
+    const text = this.ls.getEmitOutput(fileName, true).outputFiles.find((file) => file.name.endsWith(".d.ts"))?.text;
+    return text === undefined ? { errors: ["TypeScript emitted no declaration"] } : { text, errors: [] };
   }
 
   dispose(): void {
     this.ls.dispose();
+  }
+
+  /**
+   * Makes every `.ts` source the tsconfig includes part of the program — not only those a component imports — so
+   * `projectSourceFiles` covers a library's helpers that only its index exports (`tsazor check`; the editor
+   * keeps the smaller program).
+   */
+  includeProjectSources(): void {
+    this.projectSources = loadProjectSources(this.projectRoot, this.configPath);
   }
 
   /* ------------------------------------------------------------------ */
@@ -148,15 +267,12 @@ export class TsazorTypeService {
   /* ------------------------------------------------------------------ */
 
   /** Unified entry point: builds (and caches) the shadow for a .tsazor file.
-   *  `source` (open document) wins over disk; without it the file is read
-   *  from disk and cached by mtime. */
+   *  `source` (open document) wins over disk and always rebuilds — stale
+   *  open-document shadows would freeze diagnostics at the first version;
+   *  without it the file is read from disk and cached by mtime. */
   async ensureTsazor(tsazorPath: string, source?: string): Promise<ShadowEntry | null> {
     const key = shadowKey(tsazorPath);
-    if (source !== undefined) {
-      const cached = this.entries.get(key);
-      if (cached?.mtimeMs === undefined && cached) return cached; // open doc wins
-      return this.openTsazor(tsazorPath, source);
-    }
+    if (source !== undefined) return this.openTsazor(tsazorPath, source);
     let mtimeMs: number | undefined;
     try {
       mtimeMs = statSync(tsazorPath).mtimeMs;
@@ -165,7 +281,6 @@ export class TsazorTypeService {
     }
     const cached = this.entries.get(key);
     if (cached && cached.mtimeMs === mtimeMs) return cached;
-    if (cached?.mtimeMs === undefined && cached) return cached; // open doc wins
     try {
       const diskSource = readFileSync(tsazorPath, "utf8");
       return await this.openFromDisk(tsazorPath, diskSource, mtimeMs);
@@ -176,36 +291,131 @@ export class TsazorTypeService {
 
   /** (Re)builds the shadow from an open document's source. */
   async openTsazor(tsazorPath: string, source: string): Promise<ShadowEntry | null> {
-    const key = shadowKey(tsazorPath);
-    const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot);
-    if (!shadow) {
-      this.entries.delete(key);
-      return null;
-    }
-    const entry: ShadowEntry = { shadow, version: this.nextVersion++ };
-    this.entries.set(key, entry);
-    return entry;
+    return this.buildEntry(tsazorPath, source);
   }
 
   /** (Re)builds the shadow from disk, remembering the mtime for the cache. */
   private async openFromDisk(tsazorPath: string, source: string, mtimeMs: number): Promise<ShadowEntry | null> {
+    return this.buildEntry(tsazorPath, source, mtimeMs);
+  }
+
+  /** Builds the shadow entry, running the `TItem` inference passes (2.4):
+   *  pass one without resolved type arguments; per still-unresolved type
+   *  parameter the attribute value's real type is queried from the shadow
+   *  program and the shadow recompiled with the substitution (until no new
+   *  tags resolve). The entry is registered provisionally on every pass —
+   *  the program query needs the module in the registry. */
+  private async buildEntry(tsazorPath: string, source: string, mtimeMs?: number): Promise<ShadowEntry | null> {
     const key = shadowKey(tsazorPath);
-    const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot);
-    if (!shadow) {
-      this.entries.delete(key);
-      return null;
+    if (this.building.has(key)) return this.entries.get(key) ?? null;
+    this.building.add(key);
+    try {
+      let typeArguments: ReadonlyMap<string, ReadonlyMap<string, string>> | undefined;
+      let entry: ShadowEntry | null = null;
+      for (let pass = 0; pass < 4; pass++) {
+        const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot, typeArguments);
+        if (!shadow) {
+          this.entries.delete(key);
+          return null;
+        }
+        entry = { shadow, version: this.nextVersion++, ...(mtimeMs !== undefined ? { mtimeMs } : {}) };
+        this.entries.set(key, entry);
+        const requests = shadow.typedInference ?? [];
+        if (requests.length === 0) break;
+        const resolved = this.inferTypeArguments(entry, requests);
+        const fresh = [...resolved].filter(([tagId]) => typeArguments?.get(tagId) === undefined);
+        if (fresh.length === 0) break;
+        typeArguments = this.mergeTypeArguments(typeArguments, resolved);
+      }
+      // 2.4: shadows the graph reaches outside the project root (rewrite B —
+      // bare-package components like `@tsazor/fluent`) must exist too, or the
+      // consumer reports TS2307 for the package's `.tsazor.gen` shadow path.
+      // (With per-app projects, the registry routes those to *their* project
+      // and consults this entry's imported-tsazor edges.)
+      if (entry) await this.ensureImportedShadows(entry);
+      return entry;
+    } finally {
+      this.building.delete(key);
     }
-    const entry: ShadowEntry = { shadow, version: this.nextVersion++, mtimeMs };
-    this.entries.set(key, entry);
-    return entry;
+  }
+
+  /** Ensures shadows for every `.tsazor` component source the shadow imports
+   *  by absolute or relative shadow path (`X.tsazor.gen`) — recursion stops
+   *  at files already being built (cycles) or already registered. The edges
+   *  stay on the entry (`importedTsazor`) for dependent re-checks (2.5). */
+  private async ensureImportedShadows(entry: ShadowEntry): Promise<void> {
+    const imported = importedTsazorOf(entry.shadow.code, entry.shadow.virtualPath);
+    entry.importedTsazor = imported;
+    await Promise.all(imported.map((candidate) => (existsSync(candidate) ? this.ensureTsazor(candidate) : Promise.resolve())));
+  }
+
+  /** Merges newly inferred tag type arguments into `previous` (later values win). */
+  private mergeTypeArguments(
+    previous: ReadonlyMap<string, ReadonlyMap<string, string>> | undefined,
+    additions: ReadonlyMap<string, ReadonlyMap<string, string>>,
+  ): ReadonlyMap<string, ReadonlyMap<string, string>> {
+    if (previous === undefined) return additions;
+    const merged = new Map(previous);
+    for (const [tagId, args] of additions) merged.set(tagId, new Map([...(merged.get(tagId) ?? []), ...args]));
+    return merged;
+  }
+
+  /** Resolves the requested type parameters from the shadow program: the
+   *  attribute value's real type, unifying against the parameter's declared
+   *  type — exactly (`Items: TItem`) or through the array element (`Items:
+   *  TItem[]` ← `Person[]`) or the awaited type (`For: PromiseLike<T> | T`
+   *  ← `Promise<User>`). Unresolvable requests stay absent. */
+  private inferTypeArguments(entry: ShadowEntry, requests: readonly TypedTagInferenceRequest[]): Map<string, Map<string, string>> {
+    const result = new Map<string, Map<string, string>>();
+    const program = this.ls.getProgram();
+    if (!program) return result;
+    const sourceFile = program.getSourceFile(entry.shadow.virtualPath);
+    if (!sourceFile) return result;
+    const checker = program.getTypeChecker();
+
+    for (const request of requests) {
+      const gen = entry.shadow.map.srcToGen(request.value.line - 1, request.value.column);
+      if (!gen) continue;
+      const argument = inferTypeArgument(sourceFile, checker, offsetIn(entry.shadow.code, gen.line, gen.column), request);
+      if (argument === undefined) continue;
+      const args = result.get(request.tagId) ?? new Map<string, string>();
+      args.set(request.typeParameter, argument);
+      result.set(request.tagId, args);
+    }
+    return result;
+  }
+
+  /** Scans the project for every `.tsazor` file (T4) and builds its shadow
+   *  — so types flow across files not currently open too. Returns the
+   *  scanned file count. */
+  async scanProject(): Promise<number> {
+    const files = findTsazorFiles(this.projectRoot);
+    for (const file of files) void this.ensureTsazor(file);
+    return files.length;
   }
 
   closeTsazor(tsazorPath: string): void {
     this.entries.delete(shadowKey(tsazorPath));
   }
 
-  /** The shadow/graph entry behind a generated module path. */
+  /** Every currently registered entry (the registry walks these for
+   *  dependent re-checks). */
+  allEntries(): Array<{ file: string; entry: ShadowEntry }> {
+    return [...this.entries.values()].map((entry) => ({ file: entry.shadow.realPath, entry }));
+  }
+
+  /** The shadow/graph entry behind a generated module path. Falls back to the
+   *  registry lookup (2.5: cross-project shadow imports map their targets too). */
   entryOf(modulePath: string): ShadowEntry | undefined {
+    return (
+      this.entries.get(toKey(modulePath)) ??
+      this.entries.get(toKey(modulePath + ".ts")) ??
+      this.lookup?.entryOf(modulePath)
+    );
+  }
+
+  /** Own entries only (the registry's lookup uses this to avoid cycles). */
+  ownEntryOf(modulePath: string): ShadowEntry | undefined {
     return this.entries.get(toKey(modulePath)) ?? this.entries.get(toKey(modulePath + ".ts"));
   }
 
@@ -256,10 +466,83 @@ export class TsazorTypeService {
     return this.ls.getSemanticDiagnostics(entry.shadow.virtualPath) as ts.DiagnosticWithLocation[];
   }
 
+  /**
+   * B46 (TZS040): the element value binds — a text input, a textarea, a select — whose bound expression is declared a
+   * number, a `Decimal` or a `Date` that can be null. The runtime converts by the current value (K.7/K.8), so once
+   * the value is null the field gets the text. Blazor converts by the declared type, which only the checker knows.
+   */
+  textBindWarnings(entry: ShadowEntry): { start: SourcePos; end: SourcePos; message: string }[] {
+    const requests = entry.shadow.textBinds ?? [];
+    if (requests.length === 0) return [];
+    const program = this.ls.getProgram();
+    const sourceFile = program?.getSourceFile(entry.shadow.virtualPath);
+    if (program === undefined || sourceFile === undefined) return [];
+    const checker = program.getTypeChecker();
+    const warnings: { start: SourcePos; end: SourcePos; message: string }[] = [];
+    for (const request of requests) {
+      const gen = entry.shadow.map.srcToGen(request.value.line - 1, request.value.column);
+      if (!gen) continue;
+      const node = expressionStartingAt(sourceFile, offsetIn(entry.shadow.code, gen.line, gen.column));
+      if (node === undefined) continue;
+      const kind = nullableConvertedKind(checker.getTypeAtLocation(node));
+      if (kind === undefined) continue;
+      warnings.push({ start: request.start, end: request.end, message: textBindMessage(request.element, node.getText(sourceFile), kind) });
+    }
+    return warnings;
+  }
+
+  /** TypeScript's own code fixes for a diagnostic span of the shadow (S4: "infer from usage"). */
+  codeFixesOnShadow(entry: ShadowEntry, start: number, end: number, errorCodes: readonly number[]): readonly ts.CodeFixAction[] {
+    try {
+      return this.ls.getCodeFixesAtPosition(entry.shadow.virtualPath, start, end, errorCodes, {}, {});
+    } catch {
+      return [];
+    }
+  }
+
   /** Parse errors (e.g. from a typo like `private pass word`) come as
    *  syntactic diagnostics — a bucket the semantic query never includes. */
   syntacticDiagnosticsOnShadow(entry: ShadowEntry): readonly ts.DiagnosticWithLocation[] {
     return this.ls.getSyntacticDiagnostics(entry.shadow.virtualPath) as ts.DiagnosticWithLocation[];
+  }
+
+  /**
+   * The real TypeScript sources the shadow graph pulls in below `root` —
+   * code-behind classes (`X.tsazor.ts`) and the `.ts` modules they and the
+   * markup import — without shadows, declaration files and node_modules.
+   * Checked in the same program as the shadows, so `.tsazor` imports in them
+   * resolve to the real component types (plain `tsc` only sees the ambient
+   * `*.tsazor` declaration).
+   */
+  projectSourceFiles(root: string): string[] {
+    const program = this.ls.getProgram();
+    if (!program) return [];
+    const prefix = `${path.resolve(root).replace(/\\/g, "/").toLowerCase()}/`;
+    return program
+      .getSourceFiles()
+      .map((file) => file.fileName)
+      .filter((name) => {
+        const normalized = name.replace(/\\/g, "/");
+        return (
+          normalized.toLowerCase().startsWith(prefix) &&
+          !normalized.includes("/node_modules/") &&
+          !normalized.endsWith(".d.ts") &&
+          !normalized.endsWith(".tsazor.gen.ts") &&
+          /\.(ts|tsx|mts|cts)$/.test(normalized)
+        );
+      });
+  }
+
+  /** Syntactic + semantic diagnostics of a real source file of the program, with 0-based positions. */
+  sourceFileDiagnostics(fileName: string): { line: number; character: number; code: number; message: string }[] {
+    const program = this.ls.getProgram();
+    const sourceFile = program?.getSourceFile(fileName);
+    if (!sourceFile) return [];
+    const diagnostics = [...this.ls.getSyntacticDiagnostics(fileName), ...this.ls.getSemanticDiagnostics(fileName)];
+    return diagnostics.map((diagnostic) => {
+      const { line, character } = sourceFile.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
+      return { line, character, code: diagnostic.code, message: ts.flattenDiagnosticMessageText(diagnostic.messageText, " ") };
+    });
   }
 
   /**
@@ -321,10 +604,13 @@ export class TsazorTypeService {
   /* Host                                                                */
   /* ------------------------------------------------------------------ */
 
-  private createHost(options: ts.CompilerOptions): ts.LanguageServiceHost {
+  private createHost(): ts.LanguageServiceHost {
+    const options = this.options;
     const base: ts.LanguageServiceHost = {
-      getCompilationSettings: () => options,
+      getCompilationSettings: () => this.options,
       getScriptFileNames: () => [
+        ...this.ambientDeclarations,
+        ...this.projectSources,
         ...[...this.entries.values()].map((entry) => entry.shadow.virtualPath),
         ...[...this.variants.values()].map((v) => v.path),
       ],
@@ -346,8 +632,60 @@ export class TsazorTypeService {
     // TS itself calls these even though the public LanguageServiceHost type
     // omits them (observed at createProgram time); on Windows, case-folded
     // canonical names keep the lowercase shadow-registry keys consistent.
+    const moduleHost: ts.ModuleResolutionHost = {
+      fileExists: (fileName) => this.exists(fileName),
+      readFile: (fileName) => this.snapshotCode(fileName) ?? undefined,
+      directoryExists: (dir) => ts.sys.directoryExists(dir),
+      getDirectories: (dir) => ts.sys.getDirectories(dir),
+      realpath: ts.sys.realpath,
+    };
+    // Shadows register incrementally: a miss cached before a sibling shadow
+    // existed would stick, so the cache is dropped whenever the set of
+    // registered modules changed.
+    const resolutionCache = ts.createModuleResolutionCache(this.projectRoot, (name) => name.toLowerCase(), options);
+    let registeredModules = -1;
+    const currentCache = (): ts.ModuleResolutionCache => {
+      const count = this.entries.size + this.variants.size;
+      if (count !== registeredModules) {
+        registeredModules = count;
+        resolutionCache.clear();
+      }
+      return resolutionCache;
+    };
     return {
       ...base,
+      // A real .ts source (code-behind, a service) importing a component —
+      // `import type Child from "./Child.tsazor"` for a typed @ref — resolves
+      // to the component's shadow, as the shadows' own imports do; otherwise
+      // only the ambient `*.tsazor` declaration (a ComponentType value) is
+      // seen and the class cannot be used as a type.
+      resolveModuleNameLiterals: (literals, containingFile, redirectedReference, compilerOptions, containingSourceFile) =>
+        literals.map((literal) => {
+          const name = literal.text;
+          if (name.endsWith(".tsazor") && name.startsWith(".") && !isShadowPath(containingFile)) {
+            const shadow = shadowPathFor(path.resolve(path.dirname(containingFile), name));
+            if (this.exists(shadow)) {
+              return { resolvedModule: { resolvedFileName: shadow, extension: ts.Extension.Ts, isExternalLibraryImport: false } };
+            }
+          }
+          // A shadow's import of another component's shadow (`./Icon.tsazor.gen`, written without an extension):
+          // resolved here, as `bundler` would — `nodenext` requires the extension of a relative ESM import (TS2307).
+          if (name.endsWith(".gen") && name.startsWith(".")) {
+            const shadow = `${path.resolve(path.dirname(containingFile), name)}.ts`;
+            if (this.exists(shadow)) {
+              return { resolvedModule: { resolvedFileName: shadow, extension: ts.Extension.Ts, isExternalLibraryImport: false } };
+            }
+          }
+          return ts.resolveModuleName(
+            name,
+            containingFile,
+            compilerOptions,
+            moduleHost,
+            currentCache(),
+            redirectedReference,
+            ts.getModeForUsageLocation(containingSourceFile, literal, compilerOptions),
+          );
+        }),
       // getDefaultLibLocation is also off the public type but read by
       // createProgram (defaultLibraryPath honors it before the fallback).
       getDefaultLibLocation: () => resolveLibDir(),
@@ -362,6 +700,9 @@ export class TsazorTypeService {
     if (variant) return variant.version;
     const entry = this.entries.get(key) ?? this.entries.get(key.replace(/\.variant\.ts$/, ".tsazor.gen.ts"));
     if (entry) return entry.version;
+    // A peer project's shadow: its mtime stands (the registry keeps entries
+    // current, the program rebuilds when the stamp moves).
+    if (isShadowPath(fileName) && this.lookup?.entryOf(fileName)) return this.lookup.entryOf(fileName)!.version;
     try {
       return statSync(fileName).mtimeMs;
     } catch {
@@ -372,6 +713,7 @@ export class TsazorTypeService {
   private exists(fileName: string): boolean {
     const key = toKey(fileName);
     if (this.variants.has(key) || this.entries.has(key)) return true;
+    if (isShadowPath(fileName)) return this.lookup?.entryOf(fileName) !== undefined;
     return existsSync(fileName);
   }
 
@@ -382,7 +724,10 @@ export class TsazorTypeService {
     if (variant) return variant.code;
     const entry = this.entries.get(key);
     if (entry) return entry.shadow.code;
-    if (isShadowPath(fileName)) return undefined;
+    if (isShadowPath(fileName)) {
+      const peer = this.lookup?.entryOf(fileName);
+      return peer?.shadow.code;
+    }
     try {
       return readFileSync(fileName, "utf8");
     } catch {
@@ -393,11 +738,94 @@ export class TsazorTypeService {
 
 /* Registry helpers -------------------------------------------------------- */
 
+/** The .tsazor files a shadow imports (specifier → absolute .tsazor path):
+ *  relative `./X.tsazor.gen` specifiers resolve next to the shadow module,
+ *  absolute ones (rewrite B, package shadows) pass through as written. */
+export function importedTsazorOf(shadowCode: string, virtualPath: string): string[] {
+  const fileDir = path.dirname(virtualPath);
+  const imported = new Set<string>();
+  for (const match of shadowCode.matchAll(/from\s*["']([^"']+)["']/g)) {
+    const specifier = match[1];
+    if (specifier === undefined) continue;
+    // Windows path.resolve turns "D:/a/x.tsazor.gen" and "./x.tsazor.gen" alike.
+    const resolved = path.resolve(fileDir, specifier.replace(/\\/g, "/"));
+    if (/\.tsazor\.gen(\.ts)?$/.test(resolved)) imported.add(resolved.replace(/\.gen(\.ts)?$/, ""));
+  }
+  return [...imported];
+}
+
+/** Every `.tsazor` under `root` in source-tree order (node_modules, .git,
+ *  dist/bin/obj excluded) — the T4 project scan and `tsazor check` share it. */
+export function findTsazorFiles(root: string): string[] {
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    let names: string[];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return;
+    }
+    names.sort();
+    for (const name of names) {
+      if (name === "node_modules" || name === ".git" || name === "dist" || name === "bin" || name === "obj") continue;
+      const entry = path.join(dir, name);
+      let stat;
+      try {
+        stat = statSync(entry);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) walk(entry);
+      else if (name.endsWith(".tsazor")) files.push(entry);
+    }
+  };
+  walk(path.resolve(root));
+  return files;
+}
+
 function shadowKey(tsazorPath: string): string {
   return toKey(shadowPathFor(tsazorPath));
 }
 
 /** 0-based line/column → text offset inside a generated module's code. */
+/** The outermost expression that starts at `offset` (the bound expression, not a member of it). */
+function expressionStartingAt(sourceFile: ts.SourceFile, offset: number): ts.Expression | undefined {
+  let found: ts.Expression | undefined;
+  const visit = (node: ts.Node): void => {
+    if (found !== undefined || offset < node.getStart(sourceFile) || offset >= node.getEnd()) return;
+    if (ts.isExpression(node) && node.getStart(sourceFile) === offset) {
+      found = node;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sourceFile, visit);
+  return found;
+}
+
+/** A number, a Decimal or a Date (all of the union's other members) that can be null or undefined; else undefined. */
+function nullableConvertedKind(type: ts.Type): "number" | "Decimal" | "Date" | undefined {
+  if (!type.isUnion()) return undefined;
+  const empty = ts.TypeFlags.Null | ts.TypeFlags.Undefined;
+  if (!type.types.some((member) => (member.flags & empty) !== 0)) return undefined;
+  const rest = type.types.filter((member) => (member.flags & empty) === 0);
+  if (rest.length === 0) return undefined;
+  if (rest.every((member) => (member.flags & ts.TypeFlags.NumberLike) !== 0)) return "number";
+  for (const name of ["Decimal", "Date"] as const) {
+    if (rest.every((member) => member.getSymbol()?.getName() === name)) return name;
+  }
+  return undefined;
+}
+
+/** TZS040's message: what goes wrong, and the bind or the component that converts by itself. */
+function textBindMessage(element: string, expression: string, kind: "number" | "Decimal" | "Date"): string {
+  const typed = kind === "number" ? '<input type="number">, a NumberInput' : kind === "Decimal" ? "a DecimalInput" : '<input type="date">, a DateInput or a DatePicker';
+  const instead = element === "select" ? "the skins' Select with items, which hands the option back typed" : typed;
+  return `@bind on <${element}> converts the text by the value's type at run time, and '${expression}' is a ${kind} that can be null: ` +
+    `while it is null — from the start, or set so by code (a reset, an API's null) — the next text goes in as a string (Blazor converts by the declared type). ` +
+    `Bind ${instead} instead, or keep the field from null.`;
+}
+
 function offsetIn(code: string, line0: number, col: number): number {
   let offset = 0;
   let line = 0;

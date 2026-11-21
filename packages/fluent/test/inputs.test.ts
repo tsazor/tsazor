@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { EventCallback, type EditContext, type RenderTreeBuilder } from "@tsazor/runtime";
 import {
   Checkbox,
   FluentForm,
@@ -17,13 +17,13 @@ import {
 } from "../dist/index.js";
 
 /** The renderer type returned by renderTree. */
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 
 /** Waits out the microtask render queue plus the settle timer. */
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 /** The small contact model every form test binds to. */
@@ -58,14 +58,14 @@ async function renderForm(
   child: (b: RenderTreeBuilder) => void,
   onValidSubmit?: () => void,
 ): Promise<{ container: HTMLElement; renderer: Renderer }> {
-  const { container, renderer } = await renderTree(b => {
+  const { container, ...renderer } = await renderTree(b => {
     b.openComponent(0, FluentForm);
     b.addAttribute(1, "model", model);
     b.addAttribute(2, "validators", formValidators());
     if (onValidSubmit) {
       b.addAttribute(3, "onValidSubmit", EventCallback.unbound(onValidSubmit));
     }
-    b.addAttribute(4, "childContent", child);
+    b.addAttribute(4, "childContent", ((ctx: EditContext) => (b: RenderTreeBuilder) => child(b)) as never);
     b.closeComponent();
   });
   await settle(renderer);
@@ -99,7 +99,7 @@ describe("TextInput inside FluentForm", () => {
     expect(input.className).toBe("fui-input");
   });
 
-  it("binds, validates, and restores through the EditContext", async () => {
+  it("binds, validates, and restores through the EditContext — the error row waits for the submit", async () => {
     const model = emptyModel();
     const { container, renderer } = await renderForm(model, b => {
       b.openComponent(0, TextInput);
@@ -111,15 +111,26 @@ describe("TextInput inside FluentForm", () => {
     });
     const wrapper = container.querySelector(".fui-input-wrapper")!;
     const input = wrapper.querySelector("input")! as HTMLInputElement;
+    const form = container.querySelector("form")!;
 
-    // Invalid edit: blank string violates the name validator.
+    // Invalid edit: the field marks itself — for a screen reader too — but the message row waits for a submit.
     input.value = "  ";
     input.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
 
-    expect(wrapper.querySelector(".fui-input__message")!.textContent).toBe("Name is required.");
+    expect(wrapper.querySelector(".fui-input__message")).toBeNull();
     expect(wrapper.className).toContain("fui-input-wrapper--invalid");
     expect(input.className).toContain("fui-input--invalid");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBeNull();
+
+    // Submit: now the alert row appears (aria-describedby points at it, role="alert").
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    const row = wrapper.querySelector(".fui-input__message")!;
+    expect(row.textContent).toBe("Name is required.");
+    expect(row.getAttribute("role")).toBe("alert");
+    expect(row.id).toBe("name-input-message");
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.getAttribute("aria-describedby")).toBe("name-input-message");
 
@@ -128,8 +139,23 @@ describe("TextInput inside FluentForm", () => {
     input.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
     expect(wrapper.querySelector(".fui-input__message")).toBeNull();
+    expect(input.getAttribute("aria-invalid")).toBeNull();
     expect(input.className).toBe("fui-input fui-input--valid");
     expect(model.name).toBe("Holger");
+  });
+
+  it("generates a stable id when the app gives none (label + message association)", async () => {
+    const model = emptyModel();
+    const { container } = await renderForm(model, b => {
+      b.openComponent(0, TextInput);
+      b.addAttribute(1, "label", "Street");
+      b.addAttribute(4, "valueExpression", "name");
+      b.closeComponent();
+    });
+    const wrapper = container.querySelector(".fui-input-wrapper")!;
+    const input = wrapper.querySelector("input")!;
+    expect(input.id).toMatch(/^fui-input-\d+/);
+    expect(wrapper.querySelector(".fui-input__label")!.getAttribute("for")).toBe(input.id);
   });
 });
 
@@ -156,9 +182,31 @@ describe("NumberInput inside FluentForm", () => {
 });
 
 describe("Switch", () => {
+  it("shows the field's message once a submit was attempted, as a Checkbox does", async () => {
+    const model = emptyModel();
+    const { container, renderer } = await renderForm(model, b => {
+      b.openComponent(0, Switch);
+      b.addAttribute(1, "value", model.agree);
+      b.addAttribute(2, "valueChanged", EventCallback.unbound((v: boolean) => { model.agree = v; }));
+      b.addAttribute(3, "valueExpression", "agree");
+      b.addAttribute(4, "label", "I agree");
+      b.addAttribute(5, "id", "agree-switch");
+      b.closeComponent();
+    });
+    const input = container.querySelector<HTMLInputElement>("input[role=switch]")!;
+    expect(container.querySelector(".fui-input__message")).toBeNull();
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    const row = container.querySelector(".fui-input__message")!;
+    expect(row.textContent).toBe("Please confirm.");
+    expect(row.getAttribute("role")).toBe("alert");
+    expect(input.getAttribute("aria-describedby")).toBe("agree-switch-message");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+  });
+
   it("toggles through the role=switch native control", async () => {
     const captured: boolean[] = [];
-    const { container, renderer } = await renderTree(b => {
+    const { container, ...renderer } = await renderTree(b => {
       b.openComponent(0, Switch);
       b.addAttribute(1, "label", "Auto theme");
       b.addAttribute(2, "value", false);
@@ -261,6 +309,11 @@ describe("TextArea inside FluentForm", () => {
 });
 
 describe("FluentForm submit flow", () => {
+  it("is novalidate: the browser's own check doesn't block EditForm's validation", async () => {
+    const { container } = await renderForm(emptyModel(), () => {});
+    expect(container.querySelector("form")!.hasAttribute("novalidate")).toBe(true);
+  });
+
   it("blocks an invalid submit and fires onValidSubmit once valid", async () => {
     const model = emptyModel();
     let submitted = 0;

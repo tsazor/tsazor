@@ -1,0 +1,70 @@
+@* Client/Shared/NavMenu.razor: MudNavMenu with MudListSubheaders as a SidebarNav with sections; a link shows when
+   the user's permissions allow it (AuthorizeAsync per policy, as the original). The links to Hangfire, the guide
+   and Swagger open in a new tab, on the backend. "Hangfire" has no entry in the original's resources, so it reads
+   "Hangfire" in every language there too. *@
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+
+<SidebarNav ariaLabel="@L("Home")" links="@links" sections="@sections" />
+
+@code {
+    private readonly L = localizerFor("NavMenu");
+    /** The policies the links ask for; the original awaits AuthorizeAsync for each before it renders them. */
+    private static readonly policies = [
+        Permissions.Hangfire.View,
+        Permissions.Dashboards.View,
+        Permissions.AuditTrails.View,
+        Permissions.Documents.View,
+        Permissions.DocumentTypes.View,
+        Permissions.Users.View,
+        Permissions.Roles.View,
+        Permissions.Communication.Chat,
+        Permissions.Products.View,
+        Permissions.Brands.View,
+    ];
+    private granted = new Set<string>();
+
+    protected override async onParametersSet(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        const granted = new Set<string>();
+        for (const policy of NavMenu.policies) {
+            if (await this.authorization.isAuthorized(user, { policy })) granted.add(policy);
+        }
+        this.granted = granted;
+    }
+
+    private get links() {
+        const can = (policy: string) => this.granted.has(policy);
+        return [
+            { href: "/", label: this.L("Home"), match: NavLinkMatch.All, icon: Icons.Home },
+            ...(can(Permissions.Hangfire.View) ? [{ href: "/jobs", label: "Hangfire", icon: Icons.Briefcase, target: "_blank" }] : []),
+            { href: "https://codewithmukesh.com/blog/blazor-hero-quick-start-guide/", label: this.L("Quick Start Guide"), icon: Icons.BookOpen, target: "_blank" },
+            { href: "/swagger/index.html", label: this.L("Swagger"), icon: Icons.QuestionCircle, target: "_blank" },
+        ];
+    }
+
+    private get sections() {
+        const can = (policy: string) => this.granted.has(policy);
+        const section = (heading: string, links: { href: string; label: string; icon: typeof Icons.Home }[]) => links.length > 0 ? [{ heading, links }] : [];
+        return [
+            ...section(this.L("Personal"), [
+                ...(can(Permissions.Dashboards.View) ? [{ href: "/dashboard", label: this.L("Dashboard"), icon: Icons.Board }] : []),
+                { href: "/account", label: this.L("Account"), icon: Icons.PeopleTeam },
+                ...(can(Permissions.AuditTrails.View) ? [{ href: "/audit-trails", label: this.L("Audit Trails"), icon: Icons.Shield }] : []),
+            ]),
+            ...section(this.L("Document Management"), [
+                ...(can(Permissions.Documents.View) ? [{ href: "/document-store", label: this.L("Document Store"), icon: Icons.Attach }] : []),
+                ...(can(Permissions.DocumentTypes.View) ? [{ href: "/document-types", label: this.L("Document Types"), icon: Icons.DocumentCopy }] : []),
+            ]),
+            ...section(this.L("Administrator"), [
+                ...(can(Permissions.Users.View) ? [{ href: "/identity/users", label: this.L("Users"), icon: Icons.Person }] : []),
+                ...(can(Permissions.Roles.View) ? [{ href: "/identity/roles", label: this.L("Roles"), icon: Icons.PeopleSettings }] : []),
+            ]),
+            ...section(this.L("Communication"), can(Permissions.Communication.Chat) ? [{ href: "/chat", label: this.L("Chat"), icon: Icons.Chat }] : []),
+            ...section(this.L("Catalog Management"), [
+                ...(can(Permissions.Products.View) ? [{ href: "/catalog/products", label: this.L("Products"), icon: Icons.Box }] : []),
+                ...(can(Permissions.Brands.View) ? [{ href: "/catalog/brands", label: this.L("Brands"), icon: Icons.Tag }] : []),
+            ]),
+        ];
+    }
+}

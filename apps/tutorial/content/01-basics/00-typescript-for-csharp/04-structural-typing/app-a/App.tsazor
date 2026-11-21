@@ -1,0 +1,8 @@
+@import { greetings, longest, customer, product } from "./greetings"
+
+<ul>
+    @foreach (const greeting of greetings) {
+        <li>@greeting</li>
+    }
+</ul>
+<p>Longest name: @longest([customer, product])?.name</p>

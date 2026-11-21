@@ -1,0 +1,53 @@
+@* pages/audits/detail.tsx's ContextGrid: 3. who, where and when as fact tiles. React's tile list holds ReactNodes (the
+   tags as chips); here the text tiles are a list and the Tags tile follows it with its chips in the ValueContent slot. *@
+@import { AlertTriangle } from "lucide"
+@import type { AuditDetailDto } from "@/api/audits"
+@import { formatTimestamp, tagNamesOf } from "./audit-detail-format"
+@import FactTile from "./FactTile.tsazor"
+
+<div class="px-6 py-4">
+    <div class="mb-2 flex items-center gap-1.5">
+        <Icon icon="@AlertTriangle" class="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+        <span class="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+            Context
+        </span>
+    </div>
+    <div class="grid gap-2" style="grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr))">
+        @foreach (const tile of tiles) {
+            <FactTile @key="tile.label" label="@tile.label" value="@tile.value" mono="@tile.mono" />
+        }
+        <FactTile label="Tags">
+            <ValueContent>
+                @if (tags.length === 0) {
+                    <span class="text-[var(--color-muted-foreground)]">—</span>
+                } else {
+                    <span class="flex flex-wrap items-center gap-1.5">
+                        @foreach (const tag of tags) {
+                            <code @key="tag" class="code-chip text-[11px]">@tag</code>
+                        }
+                    </span>
+                }
+            </ValueContent>
+        </FactTile>
+    </div>
+</div>
+
+@code {
+    @Parameter() event!: AuditDetailDto;
+
+    private get tiles(): Array<{ label: string; value: string; mono: boolean }> {
+        const event = this.event;
+        const userLine = event.userName ? `${event.userName} (${event.userId})` : event.userId ?? "—";
+        return [
+            { label: "Occurred at", value: formatTimestamp(event.occurredAtUtc), mono: true },
+            { label: "Received at", value: formatTimestamp(event.receivedAtUtc), mono: true },
+            { label: "Tenant", value: event.tenantId ?? "—", mono: true },
+            { label: "User", value: userLine, mono: true },
+            { label: "Source", value: event.source ?? "—", mono: true },
+        ];
+    }
+
+    private get tags(): string[] {
+        return tagNamesOf(this.event.tags as number);
+    }
+}

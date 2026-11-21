@@ -1,0 +1,121 @@
+@** A tree view in Bootstrap's variables (Fluent UI Blazor's FluentTreeView): `items` in nested levels, one of
+    them selected (`@bind-selectedItem`). The ARIA tree pattern: one node takes Tab; the arrow keys
+    move between the visible nodes and open or close them, Home and End jump, Enter and Space
+    select. A click selects a node; its chevron opens and closes it. The selected node's ancestors
+    start open, so the selection is in view — the same parameters as the Fluent skin's TreeView. *@
+@import { type TreeViewItem } from "@tsazor/ui"
+@import { initiallyExpanded, isRightToLeft, logicalArrowKey, treeKeyAction, treePath, treeTabStop, visibleTreeItems } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+<ul role="tree" aria-label="@this.ariaLabel" @attributes="@withClass("tz-tree", this.additionalAttributes)" @ref="root" @onkeydown="handleKeydown">
+    @foreach (const item of items) {
+        <TreeViewNode @key="item.id" item="@item" level="1" tree="@this" />
+    }
+</ul>
+
+@code {
+    /** The top-level nodes; each may have `items` of its own. */
+    @Parameter() items: TreeViewItem[] = [];
+    /** The selected node (two-way with @bind-selectedItem). */
+    @Parameter() selectedItem?: TreeViewItem | null;
+    /** Raised when the user selects a node. */
+    @Parameter() selectedItemChanged?: EventCallback<TreeViewItem | null>;
+    /** The tree's accessible name. */
+    @Parameter() ariaLabel?: string;
+    /** Further attributes for the tree element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private root?: HTMLUListElement;
+    private expanded?: Set<string>;
+    private focusedId?: string;
+    /** Move the DOM focus to the focused node after the next render (keyboard moves). */
+    private pendingFocus = false;
+
+    protected override onParametersSet(): void {
+        // The first items decide what starts open: their `expanded` ones and the selection's ancestors.
+        if (this.expanded === undefined && this.items.length > 0) {
+            this.expanded = initiallyExpanded(this.items);
+            for (const id of this.selectedItem ? treePath(this.items, this.selectedItem.id) ?? [] : []) this.expanded.add(id);
+        }
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.pendingFocus || this.focusedId === undefined) return;
+        this.pendingFocus = false;
+        this.root?.querySelector<HTMLElement>(`[data-tree-id="${CSS.escape(this.focusedId)}"]`)?.focus();
+    }
+
+    /** @internal TreeViewNode asks whether its item is open. */
+    isExpanded(item: TreeViewItem): boolean {
+        return this.expanded?.has(item.id) ?? false;
+    }
+
+    /** @internal TreeViewNode asks whether its item is the selected one. */
+    isSelected(item: TreeViewItem): boolean {
+        return this.selectedItem?.id === item.id;
+    }
+
+    /** @internal TreeViewNode asks whether its item is the tree's tab stop. */
+    isFocusable(item: TreeViewItem): boolean {
+        return this.tabStop === item.id;
+    }
+
+    /** Bumped when `expanded` changes in place, so the tab stop is worked out again. */
+    private expandedVersion = 0;
+    private tabStopMemo?: { key: readonly unknown[]; id: string | undefined };
+
+    /**
+     * The node that takes Tab, once per render (every node asks): the focused node, else the selected one, else the
+     * first — or the visible ancestor of one hidden in a closed node. The tree never loses its tab stop.
+     */
+    private get tabStop(): string | undefined {
+        const key = [this.items, this.expanded, this.expandedVersion, this.focusedId, this.selectedItem?.id];
+        const memo = this.tabStopMemo;
+        if (memo && memo.key.every((part, i) => part === key[i])) return memo.id;
+        const id = treeTabStop(this.items, this.expanded ?? new Set(), [this.focusedId, this.selectedItem?.id]);
+        this.tabStopMemo = { key, id };
+        return id;
+    }
+
+    /** @internal TreeViewNode opens or closes its item. */
+    toggle(item: TreeViewItem): void {
+        const expanded = (this.expanded ??= new Set());
+        if (expanded.has(item.id)) expanded.delete(item.id);
+        else expanded.add(item.id);
+        this.expandedVersion++;
+        this.focusedId = item.id;
+        this.stateHasChanged();
+    }
+
+    /** @internal TreeViewNode selects its item. */
+    select(item: TreeViewItem): Promise<void> | undefined {
+        if (item.disabled) return undefined;
+        this.focusedId = item.id;
+        this.selectedItem = item;
+        this.stateHasChanged();
+        return this.selectedItemChanged?.invokeAsync(item);
+    }
+
+    private handleKeydown(e: KeyboardEvent): Promise<void> | undefined {
+        const focused = this.tabStop;
+        if (focused === undefined) return undefined;
+        // Right to left: ArrowLeft opens an item, ArrowRight closes it (WAI-ARIA APG).
+        const action = treeKeyAction(this.items, this.expanded ?? new Set(), focused, logicalArrowKey(e.key, isRightToLeft(e.target as Element)));
+        if (action === null) return undefined;
+        e.preventDefault();
+        const item = visibleTreeItems(this.items, this.expanded ?? new Set()).find((node) => node.item.id === action.id)?.item;
+        switch (action.kind) {
+            case "focus":
+                this.focusedId = action.id;
+                this.pendingFocus = true;
+                this.stateHasChanged();
+                return undefined;
+            case "expand":
+            case "collapse":
+                if (item !== undefined) this.toggle(item);
+                return undefined;
+            case "select":
+                return item === undefined ? undefined : this.select(item);
+        }
+    }
+}

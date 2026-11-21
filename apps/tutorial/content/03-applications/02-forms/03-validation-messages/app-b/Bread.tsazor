@@ -1,0 +1,31 @@
+@page "/bread"
+@import { BreadOrder } from "./BreadOrder.ts"
+<h2>Pre-order bread</h2>
+<p>Reserve today's loaf — we hold it until noon.</p>
+<EditForm Model="@order" OnValidSubmit="handleOrder" class="order">
+    <ValidationSummary />
+    <DataAnnotationsValidator />
+    <label>Name<InputText @bind="order.name" /><ValidationMessage For="name" /></label>
+    <label>How many<InputNumber @bind="order.quantity" /><ValidationMessage For="quantity" /></label>
+    <label>Bread
+        <InputSelect @bind="order.bread">
+            <option value="sourdough">Sourdough</option>
+            <option value="rye">Rye</option>
+            <option value="ciabatta">Ciabatta</option>
+        </InputSelect>
+    </label>
+    <label class="pickup"><InputCheckbox @bind="order.pickup" /> Pick up at eight</label>
+    <button type="submit">Reserve</button>
+    @if (submitted) {
+        <p class="success">Reserved: @order.quantity × @order.bread for @order.name.</p>
+    }
+</EditForm>
+
+@code {
+    order = new BreadOrder();
+    submitted = false;
+
+    handleOrder() {
+        this.submitted = true;
+    }
+}

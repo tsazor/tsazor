@@ -1,0 +1,107 @@
+@** A pivot over a DataGrid (design-extended-library.md §2.5): the rows by a row field's values,
+    the columns by a column field's, the measure's aggregate per cell; the matrix's column values
+    become the grid's columns, each sortable; the row totals are a column, the column totals are
+    the footer, and the grand total closes the corner. The measure's format shapes the cells. *@
+@typeparam TRow
+@import { PivotModel, GridSort, libraryTexts, type PivotMatrix, type PivotMeasure, type PivotRow } from "@tsazor/ui"
+
+<DataGrid Items="@lineItems" AriaLabel="@ariaLabel">
+    <TemplateColumn Title="@(rowTitle ?? t("pivot.rows"))" Context="line" Sortable="@true" SortBy="@byRowValue">
+        @this.rowText(line)
+    </TemplateColumn>
+    @foreach (const column of this.matrix.columns) {
+        const index = this.matrix.columns.indexOf(column) as number;
+        <TemplateColumn Title="@this.columnTitleOf(column)" Context="line" Sortable="@true" SortBy="@this.byCell(index)" Aggregate="@(() => this.matrix.totals.cells[index])" AggregateFormat="@(value => this.formatAggregate(value))">
+            @this.cellText(line, index)
+        </TemplateColumn>
+    }
+    <TemplateColumn Title="@(totalTitle ?? t("pivot.total"))" Context="line" Sortable="@true" SortBy="@byTotal" Aggregate="@(() => this.matrix.totals.grand)" AggregateFormat="@(value => this.formatAggregate(value))">
+        @this.cellText(line.line.total === undefined ? undefined : line, -1)
+    </TemplateColumn>
+</DataGrid>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The app's data. */
+    @Parameter() data?: readonly TRow[];
+    /** The row field's values (a dimension); the rows order by them. */
+    @Parameter() rowField!: (row: TRow) => unknown;
+    /** The row dimension's column's title ("Rows" by default). */
+    @Parameter() rowTitle?: string;
+    /** The column field's values (a dimension); without one, the pivot is one column wide. */
+    @Parameter() columnField?: (row: TRow) => unknown;
+    /** Names a column by its value (default: the value as text). */
+    @Parameter() columnName?: (value: unknown) => string;
+    /** The measure: the values, their aggregate, the format. */
+    @Parameter() measure!: PivotMeasure<TRow>;
+    /** The totals' column's title ("Total" by default). */
+    @Parameter() totalTitle?: string;
+    /** Names the grid for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Further attributes for the grid (class adds to its classes). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The matrix, cached while the data and the field lambdas stay (a fresh inline lambda re-computes). */
+    private cached: { data: ReadonlyArray<TRow> | undefined; sources: string; matrix: PivotMatrix } | undefined;
+
+    private get matrix(): PivotMatrix {
+        if (this.rowField === undefined || this.measure === undefined) {
+            throw new Error("PivotDataGrid: a rowField and a measure are required.");
+        }
+        const sources = `${String(this.rowField)}|${String(this.columnField)}|${String(this.measure.value)}|${this.measure.aggregate === undefined ? "sum" : String(this.measure.aggregate)}`;
+        if (this.cached !== undefined && this.cached.data === this.data && this.cached.sources === sources) return this.cached.matrix;
+        const matrix = new PivotModel<TRow>({ rows: this.rowField, columns: this.columnField, measure: this.measure }).compute(this.data ?? []);
+        this.cached = { data: this.data, sources, matrix };
+        return matrix;
+    }
+
+    /** The matrix's row lines for the grid (its sort and paging run over them). */
+    private get lineItems(): { line: PivotRow }[] {
+        return this.matrix.rows.map((line) => ({ line }));
+    }
+
+    /** The row dimension's order (its header sorts by it). */
+    private readonly byRowValue = GridSort.byAscending((line: { line: PivotRow }) => line.line.value);
+    private readonly byTotal = GridSort.byAscending((line: { line: PivotRow }) => line.line.total ?? Number.NEGATIVE_INFINITY);
+
+    /** A cell column's order: the cells' numbers ascending (an empty cell sorts first with them). */
+    private byCell(index: number): GridSort<{ line: PivotRow }> {
+        return GridSort.byAscending((line: { line: PivotRow }) => line.line.cells[index] ?? Number.NEGATIVE_INFINITY);
+    }
+
+    /** A row cell's text: the row dimension's value. */
+    private rowText(entry: { line: PivotRow }): string {
+        return String(entry.line.value);
+    }
+
+    /** A cell's text (-1: the row's total); the measure's format shapes it, an empty cell says nothing. */
+    private cellText(entry: { line: PivotRow } | undefined, index: number): string {
+        if (entry === undefined) return "";
+        const value = index === -1 ? entry.line.total : entry.line.cells[index];
+        // The parameters are the shadow's accessors: their narrowing holds on a local only (X4);
+        // the measure's format is optional as well.
+        const measure = this.measure;
+        if (value === undefined || measure === undefined) return "";
+        return measure.format === undefined ? String(value) : measure.format(value as number);
+    }
+
+    /** A column's title (the value; the app's columnName shapes it). */
+    private columnTitleOf(value: unknown): string {
+        const name = this.columnName;
+        return name === undefined ? String(value) : name(value);
+    }
+
+    /** The footers' texts run through the measure's format. */
+    private formatAggregate(value: unknown): string {
+        const measure = this.measure;
+        if (value === undefined || measure === undefined) return "";
+        return measure.format === undefined ? String(value) : measure.format(value as number);
+    }
+
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

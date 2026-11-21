@@ -1,0 +1,50 @@
+/* SidebarNav — Bootstrap's vertical pills, with an icon before the label (the active one on the current page) and
+   the icon rail. */
+
+.tz-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.tz-nav__icon {
+  flex: none;
+}
+
+.tz-nav__icon--active,
+.tz-nav__link.active .tz-nav__icon--rest {
+  display: none;
+}
+
+.tz-nav__link.active .tz-nav__icon--active {
+  display: inline-block;
+}
+
+.tz-nav--compact .tz-nav__link:has(.tz-nav__icon) {
+  justify-content: center;
+  width: 2.5rem;
+  padding-inline: 0;
+}
+
+/* The rail: a link with an icon shows only the icon; its label stays for screen readers. */
+.tz-nav--compact .tz-nav__link:has(.tz-nav__icon) .tz-nav__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A section's heading (sections), a quiet caption above its links. */
+.tz-nav__heading {
+  margin: 1rem 0.75rem 0.25rem;
+  font-size: 0.875em;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+}
+
+.tz-nav--compact .tz-nav__heading {
+  display: none;
+}

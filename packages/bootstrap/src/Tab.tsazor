@@ -1,0 +1,61 @@
+@** One panel of a Tabs component (Bootstrap's `.tab-pane`, `role="tabpanel"`). Place it inside
+    Tabs: its title appears in the parent's nav, and its content is rendered only while it is the
+    active tab. *@
+@import type { IconValue, Intent } from "@tsazor/ui"
+@import type Tabs from "./Tabs.tsazor"
+@import { withClass } from "./attributes"
+@if (isActive) {
+    <div role="tabpanel" id="@panelId" aria-labelledby="@tabId" tabindex="0" @attributes="@withClass("tab-pane fade show active", additionalAttributes)">@childContent</div>
+}
+
+@code {
+    /** Label shown in the parent Tabs' nav. */
+    @Parameter() title: string = "";
+    /** An icon before the title in the parent's nav (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** A badge after the title in the tab list (MudTabPanel's `BadgeData`): a count, "3/5". */
+    @Parameter() badge?: string;
+    /** The badge's color (MudTabPanel's `BadgeColor`). */
+    @Parameter() badgeIntent: Intent = "neutral";
+    /** The panel content, shown while the tab is active. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** Resolved from the nearest Tabs ancestor (by cascade name). */
+    @CascadingParameter({ name: "Tabs" }) tabs?: Tabs;
+
+    /** Assigned by the parent Tabs at registration time. */
+    private index = -1;
+
+    /** @internal Called by the parent Tabs at registration, and again when a tab before it goes. */
+    setIndex(index: number): void {
+        this.index = index;
+    }
+
+    private get isActive(): boolean {
+        return this.tabs?.activeIndex === this.index;
+    }
+
+    private get panelId(): string | null {
+        return this.tabs?.panelId(this.index) ?? null;
+    }
+
+    private get tabId(): string | null {
+        return this.tabs?.tabId(this.index) ?? null;
+    }
+
+    protected override onInitialized(): void {
+        this.tabs?.registerTab(this);
+        this.disposeSignal.addEventListener("abort", () => this.tabs?.unregisterTab(this));
+    }
+
+    private shown = "";
+
+    /** A changed title, icon or badge shows in the parent's nav. */
+    protected override onParametersSet(): void {
+        const shown = `${this.title}\u0000${this.badge ?? ""}\u0000${this.badgeIntent}\u0000${this.iconStart === undefined ? "" : "icon"}`;
+        if (this.shown !== "" && shown !== this.shown) this.tabs?.tabChanged();
+        this.shown = shown;
+    }
+}

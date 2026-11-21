@@ -1,0 +1,23 @@
+@inherits BasePlugin
+@import { BlockCreateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Create Block" onSubmit="@this.submit">
+    <Grid columns="2" gap="m">
+        <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter Name" required />
+        <TextInput @bind-Value="this.model.category" label="Category" placeholder="Enter Category" required />
+    </Grid>
+    <TextArea @bind-Value="this.model.description" rows="5" label="Description" placeholder="Enter Description" required />
+    <TextArea @bind-Value="this.model.content" rows="20" label="Content" placeholder="Enter Content as HTML" required help="Use data-inline-editable attribute for text elements to enable Inline edit!" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = new BlockCreateRequest();
+
+    private async submit(): Promise<void> {
+        this.model.siteId = this.viewState.site.id;
+        ensureOk(await this.api.blockCreate(this.model));
+        this.navigateBack();
+    }
+}

@@ -1,0 +1,58 @@
+@* Client/Pages/Catalog/AddEditBrandModal.razor(.cs): shown by the DialogService with the brand to edit, or a new
+   one. The form wraps the dialog as the original's EditForm wrapped MudDialog, so Save submits it; a saved brand
+   closes the dialog with its id. The page tells the hub (UpdateDashboard): the dialog sits in the DialogProvider,
+   outside MainBody's cascade, where the original opened a second connection. *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { AddEditBrandCommand } from "../../Application/Catalog"
+@import { addEditBrandValidators } from "../../Application/Validators/Catalog"
+@inject BrandManager brandManager
+@inject Toaster toaster
+
+<FluentForm model="@addEditBrandModel" validators="@validators" onValidSubmit="@saveAsync" novalidate>
+    <Dialog title="@(isNew ? L("Add Brand") : L("Update Brand"))">
+        <ChildContent>
+            <div class="bh-form-grid">
+                @if (!isNew) {
+                    <NumberInput label="@L("Id")" @bind-Value="addEditBrandModel.id" disabled />
+                }
+                <TextInput label="@L("Name")" @bind-Value="addEditBrandModel.name" />
+                <TextInput label="@L("Description")" @bind-Value="addEditBrandModel.description" />
+                <NumberInput label="@L("Tax")" @bind-Value="addEditBrandModel.tax" step="0.01" />
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            @if (isNew) {
+                <Button type="submit" intent="success">@L("Save")</Button>
+            } else {
+                <Button type="submit" intent="secondary">@L("Update")</Button>
+            }
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() addEditBrandModel = new AddEditBrandCommand();
+
+    private readonly L = localizerFor("AddEditBrandModal");
+    private readonly validators = addEditBrandValidators(localizerFor("AddEditBrandCommandValidator"));
+
+    private get isNew(): boolean {
+        return this.addEditBrandModel.id === 0;
+    }
+
+    private async saveAsync(): Promise<void> {
+        const response = await this.brandManager.saveAsync(this.addEditBrandModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close(response.data);
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

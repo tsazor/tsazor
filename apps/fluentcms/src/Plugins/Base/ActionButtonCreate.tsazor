@@ -1,0 +1,12 @@
+@* The "add" button above a list (FluentCMS's ActionButtonCreate): a link with `href`, otherwise its @onclick goes onto the button. *@
+
+@if (visible) {
+    <Button href="@href" intent="primary" iconStart="@IconName.Plus" @attributes="@additionalAttributes">@label</Button>
+}
+
+@code {
+    @Parameter() href?: string;
+    @Parameter() label = "Add";
+    @Parameter() visible = true;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

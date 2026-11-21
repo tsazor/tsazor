@@ -1,0 +1,13 @@
+<button @onclick="toggle">@(showTimer ? "Hide" : "Show") the timer</button>
+
+@if (showTimer) {
+    <Timer />
+}
+
+@code {
+    showTimer = true;
+
+    toggle() {
+        this.showTimer = !this.showTimer;
+    }
+}

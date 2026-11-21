@@ -1,0 +1,29 @@
+@** A scheduler whose appointments are edited in place: a drag on an empty column's time creates
+    (the handle grows; the app adds the appointment), a drag on a chip moves it (its grab point
+    stays), the handle at its end resizes. The events hand the drafts over — here to a list the
+    app rebuilds; the chips' arrow keys move the same way, 15 minutes with Shift at 60. The
+    appointment count under the grid shows the list. *@
+@import { Typography } from "@tsazor/bootstrap"
+@import { type ScheduleAppointment, type IsoDate, type IsoDateTime } from "@tsazor/ui"
+
+<Scheduler Appointments="@appointments" View="week" Anchor="2026-10-14" OnAppointmentCreated="@this.add" OnAppointmentMoved="@this.move" AriaLabel="A week you can edit" />
+
+@code {
+    private appointments: ScheduleAppointment[] = [
+        { title: "Standup", start: "2026-10-14T09:00", end: "2026-10-14T09:30" },
+        { title: "Review", start: "2026-10-14T13:00", end: "2026-10-14T14:00", intent: "success" },
+        { title: "Release", start: "2026-10-16T10:00", end: "2026-10-16T11:00", intent: "danger" },
+    ];
+
+    /** A drag's new range: the app adds the appointment (its name to change later, e.g. in a Dialog). */
+    private add(value: { date: IsoDate; start: IsoDateTime; end: IsoDateTime }): void {
+        this.appointments = [...this.appointments, { title: "New meeting", start: value.start, end: value.end }];
+    }
+
+    /** A move's draft: the app rewrites the moved appointment; the re-render sets the chip. */
+    private move(value: { appointment: ScheduleAppointment; start: IsoDateTime; end: IsoDateTime }): void {
+        this.appointments = this.appointments.map((appointment) =>
+            appointment === value.appointment ? { ...appointment, start: value.start, end: value.end } : appointment,
+        );
+    }
+}

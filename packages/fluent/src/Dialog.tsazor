@@ -1,10 +1,22 @@
-@if (this.isOpen) {
-    <div class="fui-dialog-overlay" tabindex="-1" @onclick="this.handleBackdrop" @onkeydown="this.handleKeydown" @ref="overlayElement">
-        <div class="fui-dialog" role="dialog" aria-modal="true" aria-label="@this.ariaLabel" aria-labelledby="@this.labelledBy">
-            @if (this.title) {
+@** A Fluent UI 2 modal dialog (role="dialog", aria-modal) over a backdrop, rendered while isOpen.
+    On open it locks body scroll and moves focus into the overlay; Tab wraps within the dialog and
+    focus returns to the previous element on close. Escape, a backdrop click or the header's Close
+    button raise onClosed; the parent then sets isOpen to false. In a component the DialogService shows
+    (MudBlazor's MudDialog), leave isOpen unset: the dialog is open until it closes, takes its title, size and
+    closing rules from `show`, and Escape, the backdrop and Close cancel it. *@
+@import { withAttributes } from "./attributes"
+@import { Dismiss20Regular } from "./core-icons"
+@import { createLayer, DialogReference, dismissible, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+
+@if (this.shown) {
+    <div class="fui-dialog-overlay" @attach:top="topLayer()" @attach="trap" @attach:lock="lock">
+        <div role="dialog" aria-modal="true" @attributes="@this.dialogAttributes" @attach="dismiss">
+            @if (this.shownTitle) {
                 <div class="fui-dialog__header">
-                    <h2 class="fui-dialog__title" id="@this.labelledBy">@this.title</h2>
-                    <button type="button" class="fui-dialog__close" aria-label="Close" @onclick="this.requestClose">&times;</button>
+                    <h2 class="fui-dialog__title" id="@this.labelledBy">@this.shownTitle</h2>
+                    <button type="button" class="fui-dialog__close" aria-label="@t("close")" @onclick="this.requestClose"><Icon value="@Dismiss20Regular" /></button>
                 </div>
             }
             <div class="fui-dialog__body">@childContent</div>
@@ -16,116 +28,83 @@
 }
 
 @code {
-    /** Whether the dialog is visible; the parent flips this in response to onClosed. */
-    @Parameter() isOpen: boolean = false;
+    private readonly t = libraryTexts();
+
+    /** Whether the dialog is visible; the parent flips this in response to onClosed. Unset in a component the DialogService shows. */
+    @Parameter() isOpen?: boolean;
+    /** The DialogService's dialog this one is the frame of (when isOpen is unset). */
+    @CascadingParameter({ type: DialogReference }) hosted?: DialogReference;
     /** Optional heading; omitting it hides the header row. */
     @Parameter() title?: string;
+    /** The width: small 400px, medium 560px, large 800px, xlarge 1140px (at most the viewport's); Bootstrap's sizes. */
+    @Parameter() size: "small" | "medium" | "large" | "xlarge" = "medium";
     /** Overrides the dialog's accessible name (when unheaded). */
     @Parameter() ariaLabel?: string;
-    /** Element id; the title element becomes `${id}-title`. */
+    /** Element id (the title's id for aria-labelledby); generated automatically when omitted. */
     @Parameter() id?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Closes when the backdrop itself is clicked (not the dialog). */
     @Parameter() closeOnBackdrop: boolean = true;
     /** Closes when the user presses Escape. */
     @Parameter() closeOnEscape: boolean = true;
-    /** Fired when the user requests a close (Esc, backdrop or X button). */
-    @Parameter() onClosed?: EventCallback<MouseEvent>;
+    /** Fired when the user asks to close (Escape, the backdrop or the close button). It carries no event: Escape and the backdrop have none to give. */
+    @Parameter() onClosed?: EventCallback;
     /** Dialog body. */
     @Parameter() childContent?: RenderFragment;
     /** Footer content (e.g. Cancel/Confirm buttons). */
     @Parameter() footer?: RenderFragment;
 
-    /** Keeps body scroll locked across nested dialogs. */
-    private static scrollLocks = 0;
-    private static scrollLockRestore = "";
+    /** The trap and the dismiss handling are one overlay layer (nested dialogs close one at a time). */
+    private readonly layer = createLayer();
+    private readonly trap = focusTrap({ layer: this.layer });
+    private readonly lock = scrollLock();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
-    private overlayElement?: HTMLElement;
-    private restoreFocusTo: HTMLElement | null = null;
-    private wasOpen = false;
-    private escapeHandler?: (e: KeyboardEvent) => void;
+    private generatedId?: string;
+
+    private get elementId(): string {
+        return this.id ?? (this.generatedId ??= uniqueId("fui-dialog"));
+    }
+
+    /** The service's dialog, when this is its frame: isOpen unset (a dialog inside one sets it). */
+    private get hostedBy(): DialogReference | undefined {
+        return this.isOpen === undefined ? this.hosted : undefined;
+    }
+
+    private get shown(): boolean {
+        return this.isOpen ?? this.hostedBy !== undefined;
+    }
+
+    private get shownTitle(): string | undefined {
+        return this.title ?? this.hostedBy?.options.title;
+    }
+
+    private get shownSize(): "small" | "medium" | "large" | "xlarge" {
+        return this.hostedBy?.options.size ?? this.size;
+    }
 
     private get labelledBy(): string | null {
-        return this.id && this.title ? `${this.id}-title` : null;
+        return this.shownTitle ? `${this.elementId}-title` : null;
     }
 
-    protected override onAfterRender(firstRender: boolean): void {
-        if (this.isOpen && !this.wasOpen) {
-            this.wasOpen = true;
-            this.attachOpen();
-        } else if (!this.isOpen && this.wasOpen) {
-            this.wasOpen = false;
-            this.detachOpen();
-        }
+    private get dialogAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.shownSize === "medium" ? "fui-dialog" : `fui-dialog fui-dialog--${this.shownSize}`,
+            "aria-label": this.ariaLabel,
+            "aria-labelledby": this.labelledBy,
+        }, this.additionalAttributes);
     }
 
-    dispose(): void {
-        this.detachOpen();
+    private dismissed(reason: DismissReason): void {
+        // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
+        const options = this.hostedBy?.options;
+        const closes = reason === "escape" ? (options?.closeOnEscape ?? this.closeOnEscape) : (options?.closeOnBackdrop ?? this.closeOnBackdrop);
+        if (closes) this.requestClose()?.catch((error) => this.dispatchExceptionAsync(error));
     }
 
-    /** @internal Wires Escape, focus and the scroll lock when the dialog opens. */
-    private attachOpen(): void {
-        this.restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        Dialog.scrollLocks++;
-        if (Dialog.scrollLocks === 1) {
-            Dialog.scrollLockRestore = document.body.style.overflow;
-            document.body.style.overflow = "hidden";
-        }
-        if (this.closeOnEscape) {
-            document.addEventListener("keydown", this.handleDocumentKeydown, true);
-        }
-        this.overlayElement?.focus();
-    }
-
-    /** @internal Unwires one open's listeners; the last unlock restores scroll. */
-    private detachOpen(): void {
-        document.removeEventListener("keydown", this.handleDocumentKeydown, true);
-        if (this.wasOpen || this.overlayElement) {
-            Dialog.scrollLocks = Math.max(0, Dialog.scrollLocks - 1);
-            if (Dialog.scrollLocks === 0) {
-                document.body.style.overflow = Dialog.scrollLockRestore;
-            }
-        }
-        const target = this.restoreFocusTo;
-        if (target && target.isConnected) target.focus();
-        this.restoreFocusTo = null;
-        this.overlayElement = undefined;
-    }
-
-    private handleDocumentKeydown = (e: KeyboardEvent): void => {
-        if (e.key === "Escape") this.requestClose();
-    };
-
-    private handleKeydown(e: KeyboardEvent): void {
-        if (e.key !== "Tab") return;
-        const overlay = this.overlayElement;
-        if (!overlay) return;
-        const focusables = [...overlay.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        )].filter((el) => !el.hasAttribute("disabled"));
-        if (focusables.length === 0) {
-            e.preventDefault();
-            return;
-        }
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        const active = document.activeElement;
-        if (active === last) {
-            first.focus();
-            e.preventDefault();
-        } else if (e.shiftKey && (active === first || active === overlay)) {
-            last.focus();
-            e.preventDefault();
-        } else if (active === overlay) {
-            first.focus();
-            e.preventDefault();
-        }
-    }
-
-    private handleBackdrop(e: MouseEvent): void {
-        if (this.closeOnBackdrop && e.target === e.currentTarget) this.requestClose();
-    }
-
-    private requestClose(): void {
-        this.onClosed?.invokeAsync();
+    private requestClose(): Promise<void> | undefined {
+        this.hostedBy?.cancel();
+        return this.onClosed?.invokeAsync();
     }
 }

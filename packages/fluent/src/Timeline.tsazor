@@ -1,0 +1,31 @@
+@** A timeline (MudBlazor's MudTimeline): TimelineItems along a line — a decision log, an order's history. An ordered
+    list. `orientation` vertical (default) | horizontal; `position` is where the items' content sits: alternate (the
+    default: the sides take turns), start or end (all on one side, the opposite content on the other); `align` puts
+    each dot at the start (default), center or end of its content; `reverse` starts the alternation on the other side. *@
+@import type { Orientation } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<CascadingValue Value="@this.align" Name="FluentTimelineAlign">
+    <ol @attributes="@this.timelineAttributes">@childContent</ol>
+</CascadingValue>
+
+@code {
+    /** vertical (default) | horizontal. */
+    @Parameter() orientation: Orientation = "vertical";
+    /** Where the content sits: alternate (default), start or end (MudBlazor's TimelinePosition). */
+    @Parameter() position: "alternate" | "start" | "end" = "alternate";
+    /** Where each dot sits along its content: start (default), center or end. */
+    @Parameter() align: "start" | "center" | "end" = "start";
+    /** The alternation starts on the other side. */
+    @Parameter() reverse = false;
+    /** The TimelineItems. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get timelineAttributes(): Record<string, unknown> {
+        let cls = `fui-timeline fui-timeline--${this.orientation} fui-timeline--${this.position}`;
+        if (this.reverse) cls += " fui-timeline--reverse";
+        return withAttributes({ class: cls }, this.additionalAttributes);
+    }
+}

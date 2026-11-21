@@ -1,0 +1,206 @@
+@page "/quickgrid/anchor-mode"
+@import type { DataGrid, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult } from "@tsazor/fluent"
+@import type { AnchorItem } from "./models"
+
+<h3>QuickGrid Virtualize anchoring test</h3>
+
+<p>
+    Exercises QuickGrid's <code>AnchorMode</code> and <code>ItemComparer</code> parameters
+    (prepend/append at various scroll positions) so viewport-stability behavior can be verified for
+    QuickGrid, in both <code>Items</code> and <code>ItemsProvider</code> modes.
+</p>
+
+<div style="margin-bottom: 10px;">
+    <label>Anchor Mode:
+        <select id="qg-anchor-mode-select" @onchange="onAnchorModeChanged">
+            <option value="0" selected="@(anchorMode === VirtualizeAnchorMode.None)">None</option>
+            <option value="1" selected="@(anchorMode === VirtualizeAnchorMode.Start)">Start</option>
+            <option value="2" selected="@(anchorMode === VirtualizeAnchorMode.End)">End</option>
+        </select>
+    </label>
+</div>
+
+<p>
+    <button id="qg-toggle-provider" @onclick="toggleProvider">Source: @(useItemsProvider ? "ItemsProvider" : "Items")</button>
+    <button id="qg-toggle-delay" @onclick="toggleDelay">Provider delay for QuickGrid: @(slowProvider ? "150ms" : "off")</button>
+    <button id="qg-toggle-comparer" @onclick="toggleComparer">Comparer: @(useDefaultComparer ? "Default" : "Custom")</button>
+    <button id="qg-prepend-items" @onclick="prependItems">Prepend 10 Items</button>
+    <button id="qg-append-items" @onclick="appendItems">Append 10 Items</button>
+    <button id="qg-append-many-items" @onclick="appendManyItems">Append 100 Items</button>
+    <button id="qg-toggle-provider-gate" @onclick="toggleProviderGate">Gate: @(useProviderGate ? "On" : "Off")</button>
+    <button id="qg-release-provider-gate" @onclick="releaseProviderGate">Release gate</button>
+</p>
+
+<style>
+    .qg-anchor-cell .item { height: 50px; line-height: 50px; box-sizing: border-box; }
+</style>
+
+<div id="qg-anchor-container" style="height: 300px; overflow-y: auto; border: 1px solid black;">
+    @if (useItemsProvider)
+    {
+        <DataGrid @ref="providerGrid" ItemsProvider="@itemsProvider" Virtualize="@true" ItemSize="50" AnchorMode="@anchorMode" ItemComparer="@(useDefaultComparer ? undefined : itemComparer)">
+            <TemplateColumn Title="Item" Class="qg-anchor-cell">
+                <div class="item" data-index="@context.index">Item @context.index</div>
+            </TemplateColumn>
+        </DataGrid>
+    }
+    else
+    {
+        <DataGrid Items="@items" Virtualize="@true" ItemSize="50" AnchorMode="@anchorMode" ItemComparer="@(useDefaultComparer ? undefined : itemComparer)">
+            <TemplateColumn Title="Item" Class="qg-anchor-cell">
+                <div class="item" data-index="@context.index">Item @context.index</div>
+            </TemplateColumn>
+        </DataGrid>
+    }
+</div>
+
+<p id="qg-status">@statusMessage</p>
+<p id="qg-current-mode">@anchorMode</p>
+<p id="qg-provider-call-index" data-value="@providerCallIndex">@providerCallIndex</p>
+<p id="qg-provider-events" data-value="@(providerEvents.join('|'))">@(providerEvents.join('|'))</p>
+
+@code {
+    private items: AnchorItem[] = [];
+    private statusMessage = "Ready";
+    private useItemsProvider = false;
+    private slowProvider = false;
+    private useDefaultComparer = false;
+    private anchorMode = VirtualizeAnchorMode.Start;
+    private providerGrid?: DataGrid<AnchorItem>;
+    private itemsProvider!: GridItemsProvider<AnchorItem>;
+
+    /** The grid's `ItemComparer`: two rows are the same row when their indices match. */
+    private readonly itemComparer = (a: AnchorItem, b: AnchorItem): boolean => a.index === b.index;
+
+    private nextPrependIndex = -1;
+    private nextAppendIndex = 1000;
+
+    // Pending mutations applied inside the provider (simulates DB-backed data).
+    private pendingPrepend: AnchorItem[] | null = null;
+    private pendingAppend: AnchorItem[] | null = null;
+
+    // Deterministic gate: when armed, the provider blocks until the test releases it.
+    private useProviderGate = false;
+    private providerGate: Deferred = deferred();
+    private providerCallIndex = 0;
+    private readonly providerEvents: string[] = [];
+
+    protected override onInitialized(): void {
+        this.items = range(0, 1000).map((i) => ({ index: i }));
+        this.itemsProvider = (request) => this.getItems(request);
+    }
+
+    private toggleProvider(): void {
+        this.useItemsProvider = !this.useItemsProvider;
+        this.statusMessage = this.useItemsProvider ? "Switched to ItemsProvider" : "Switched to Items";
+    }
+
+    private toggleDelay(): void {
+        this.slowProvider = !this.slowProvider;
+        this.statusMessage = this.slowProvider ? "Provider delay for QuickGrid on (150ms)" : "Provider delay for QuickGrid off";
+    }
+
+    private toggleComparer(): void {
+        this.useDefaultComparer = !this.useDefaultComparer;
+        this.statusMessage = this.useDefaultComparer ? "Comparer: Default" : "Comparer: Custom";
+    }
+
+    private toggleProviderGate(): void {
+        this.useProviderGate = !this.useProviderGate;
+        this.statusMessage = this.useProviderGate ? "Provider gate: On" : "Provider gate: Off";
+    }
+
+    private releaseProviderGate(): void {
+        const old = this.providerGate;
+        this.providerGate = deferred();
+        old.resolve();
+    }
+
+    private onAnchorModeChanged(e: Event): void {
+        const value = Number.parseInt((e.target as HTMLSelectElement).value, 10);
+        if (Number.isInteger(value)) {
+            this.anchorMode = value as VirtualizeAnchorMode;
+            this.statusMessage = `AnchorMode changed to ${VirtualizeAnchorMode[this.anchorMode]}`;
+        }
+    }
+
+    private async prependItems(): Promise<void> {
+        const newItems = range(0, 10)
+            .map((i) => ({ index: this.nextPrependIndex - i }))
+            .reverse();
+        this.nextPrependIndex -= 10;
+        if (this.useItemsProvider && this.providerGrid !== undefined) {
+            this.pendingPrepend = newItems;
+            await this.providerGrid.refreshDataAsync();
+        } else {
+            this.items.splice(0, 0, ...newItems);
+        }
+        this.statusMessage = `Prepended 10 items (indices ${newItems[0]!.index}..${newItems[newItems.length - 1]!.index})`;
+    }
+
+    private async appendItems(): Promise<void> {
+        const startIndex = this.nextAppendIndex;
+        const newItems = range(startIndex, 10).map((i) => ({ index: i }));
+        this.nextAppendIndex += 10;
+        if (this.useItemsProvider && this.providerGrid !== undefined) {
+            this.pendingAppend = newItems;
+            await this.providerGrid.refreshDataAsync();
+        } else {
+            this.items.push(...newItems);
+        }
+        this.statusMessage = `Appended 10 items (indices ${startIndex}..${startIndex + 9})`;
+    }
+
+    private async appendManyItems(): Promise<void> {
+        const startIndex = this.nextAppendIndex;
+        const newItems = range(startIndex, 100).map((i) => ({ index: i }));
+        this.nextAppendIndex += 100;
+        if (this.useItemsProvider && this.providerGrid !== undefined) {
+            this.pendingAppend = newItems;
+            await this.providerGrid.refreshDataAsync();
+        } else {
+            this.items.push(...newItems);
+        }
+        this.statusMessage = `Appended 100 items (indices ${startIndex}..${startIndex + 99})`;
+    }
+
+    private async getItems(request: GridItemsProviderRequest<AnchorItem>): Promise<GridItemsProviderResult<AnchorItem>> {
+        await yieldToEventLoop();
+        if (this.slowProvider) {
+            await delay(150);
+        }
+
+        if (this.useProviderGate) {
+            const n = ++this.providerCallIndex;
+            const gate = this.providerGate;
+            this.providerEvents.push(`p${n}-enter`);
+            this.stateHasChanged();
+            try {
+                await waitAsync(gate.promise, request.signal);
+                this.providerEvents.push(`p${n}-return`);
+                this.stateHasChanged();
+            } catch (error) {
+                if (isAbortError(error)) {
+                    this.providerEvents.push(`p${n}-cancel`);
+                    this.stateHasChanged();
+                }
+                throw error;
+            }
+        }
+
+        if (this.pendingPrepend !== null) {
+            this.items.splice(0, 0, ...this.pendingPrepend);
+            this.pendingPrepend = null;
+        }
+        if (this.pendingAppend !== null) {
+            this.items.push(...this.pendingAppend);
+            this.pendingAppend = null;
+        }
+
+        const count = request.count ?? this.items.length;
+        const result = this.items
+            .slice(request.startIndex, request.startIndex + count)
+            .map((i) => ({ index: i.index }));
+        return { items: result, totalItemCount: this.items.length };
+    }
+}

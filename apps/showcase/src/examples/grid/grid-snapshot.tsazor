@@ -1,0 +1,29 @@
+@** Persistence and export: the grid's state (the columns' order and widths by their key, the
+    sort, the filters) goes out as plain data and comes back — the app stores it where it wants
+    (a user setting, the server), the core touches no storage. The rows export as CSV text
+    (RFC 4180) from the columns' texts; the button here starts the browser's download. *@
+@import { DataGrid } from "@tsazor/bootstrap"
+@import { orders, type Order } from "./orders"
+
+<DataGrid @ref="grid" Items="@orders" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" Sortable="@true" Filterable="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" Sortable="@true" />
+    <PropertyColumn Property="(o) => o.paid" Title="Paid" />
+</DataGrid>
+<Button Appearance="outline" Size="small" OnClick="@this.download" AriaLabel="Download the grid's rows as CSV">Download CSV</Button>
+
+@code {
+    private grid?: DataGrid<Order>;
+
+    /** The current view's CSV as a file download (the app owns the download; the grid owns the text). */
+    private download(): void {
+        if (this.grid === undefined) return;
+        const csv = this.grid.exportCsv();
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "orders.csv";
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+}

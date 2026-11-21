@@ -1,4 +1,5 @@
-import type { ComponentBase } from "./component-base";
+import { componentInternals } from "./component-internals.js";
+import type { ComponentBase } from "./component-base.js";
 
 /**
  * Blazor's EventCallback: binds a handler to its owning component. The
@@ -8,24 +9,66 @@ import type { ComponentBase } from "./component-base";
 export class EventCallback<TArg = unknown> {
   private constructor(
     private readonly receiver: ComponentBase | null,
-    private readonly delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg> | null,
+    /** The handler; for a `bindWith` callback created on first use. */
+    private delegate: ((arg: TArg) => unknown) | null,
+    /** `bindWith`: the stable function that creates the handler, and its arguments. */
+    private readonly factory: ((...args: never[]) => (arg: TArg) => unknown) | null = null,
+    private readonly args: readonly unknown[] = NO_ARGS,
   ) {}
 
-  /** Creates a callback whose owner re-renders after invocation. Accepts an
-   *  already-bound callback as the delegate too: the compiler wraps every on*-
-   *  named attribute value in `bind` without knowing whether the referenced
-   *  member already holds an EventCallback (e.g. a field like
-   *  `submit = EventCallback.bind(this, …)` referenced by `@onclick`). Without
-   *  the unwrapping below, invokeAsync would call an object like a function. */
+  /**
+   * Compiler ABI (generated code calls it) (render hints, H1 — docs/design-render-hints.md).
+   * A callback whose handler is `factory.apply(receiver, args)`, created on
+   * first use: the compiler hoists an event-handler lambda into a method of
+   * the component (`__tsazor_h0(row) { return (e) => this.select(e, row); }`)
+   * and binds the render-time values it captures as `args`. Two such
+   * callbacks are equal when receiver, factory and every argument are the
+   * same (`Object.is`) — the same behavior — so re-rendering an unchanged
+   * row swaps no handler. Invocation is that of `bind`.
+   */
+  static bindWith<TArg>(
+    receiver: ComponentBase,
+    factory: (...args: never[]) => (arg: TArg) => unknown,
+    args: readonly unknown[],
+  ): EventCallback<TArg> {
+    return new EventCallback<TArg>(receiver, null, factory, args);
+  }
+
+  /** Creates a callback whose owner re-renders after invocation. The delegate
+   *  may return anything — only a returned Promise is awaited — so expression
+   *  lambdas like `@onclick="() => count++"` type-check (C#: an Action accepts
+   *  a statement expression). Accepts an
+   *  already-bound callback as the delegate too: the compiler wraps every
+   *  EventCallback parameter value and event handler in `bind` without knowing
+   *  whether the expression already is an EventCallback (a forwarded
+   *  `OnClick="@OnClick"`, a field `submit = EventCallback.bind(this, …)`
+   *  referenced by `@onclick`) — it passes through unchanged, keeping its own
+   *  receiver (Blazor's `EventCallbackFactory.Create(receiver, callback)`). */
   static bind<TArg>(
     receiver: ComponentBase,
-    delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg>,
-  ): EventCallback<TArg> {
+    delegate: ((arg: TArg) => unknown) | EventCallback<TArg>,
+  ): EventCallback<TArg>;
+  /** A forwarded optional callback that is unset (`onCancel="@onCancel"` without a parent handler) stays
+   *  unset: the child sees no callback, and an element gets no handler (Blazor skips the attribute of an
+   *  EventCallback without a delegate). Blazor's EventCallback is a struct, never null. */
+  static bind<TArg>(
+    receiver: ComponentBase,
+    delegate: ((arg: TArg) => unknown) | EventCallback<TArg> | undefined,
+  ): EventCallback<TArg> | undefined;
+  static bind<TArg>(
+    receiver: ComponentBase,
+    delegate: ((arg: TArg) => unknown) | EventCallback<TArg> | undefined,
+  ): EventCallback<TArg> | undefined {
+    if (delegate === undefined || delegate instanceof EventCallback) return delegate;
     return new EventCallback(receiver, delegate);
   }
 
-  /** Creates a callback without an owning component (no auto re-render). */
-  static unbound<TArg>(delegate: (arg: TArg) => void | Promise<void>): EventCallback<TArg> {
+  /**
+   * Creates a callback without an owning component (no auto re-render). Its delegate runs with no `this`: pass an
+   * arrow function (`EventCallback.unbound(() => this.save())`), not a method (`this.save` loses its object). A
+   * component that handles its own events without a render overrides `handleEventAsync` instead.
+   */
+  static unbound<TArg>(delegate: (arg: TArg) => unknown): EventCallback<TArg> {
     return new EventCallback(null, delegate);
   }
 
@@ -34,28 +77,97 @@ export class EventCallback<TArg = unknown> {
     return new EventCallback<never>(null, null);
   }
 
-  async invokeAsync(arg: TArg): Promise<void> {
-    if (this.delegate === null) return;
-    // Re-wrapped callback: invoke it directly — it binds to its own receiver
-    // and re-renders after running, so forwarding keeps the semantics intact.
-    if (this.delegate instanceof EventCallback) {
-      await this.delegate.invokeAsync(arg);
-      return;
-    }
+  /**
+   * Blazor's `EventCallback<T>.InvokeAsync(T)` — and, for a plain
+   * `EventCallback` (`TArg` = `unknown`), the argument-less
+   * `EventCallback.InvokeAsync()`.
+   */
+  async invokeAsync(...args: unknown extends TArg ? [arg?: TArg] : [arg: TArg]): Promise<void> {
+    const arg = args[0] as TArg;
+    const delegate = this.delegate ?? this.createDelegate();
+    if (delegate === null) return;
     // Call with the receiver as `this` (Blazor's Factory.Bind semantics): the
     // compiler passes method references like `this.incrementCount`, which are
     // not bound — without this, `this.state` inside the handler is undefined.
-    await this.delegate.call(this.receiver, arg);
-    // Blazor semantics: the owning component re-renders after its handler ran.
-    this.receiver?.stateHasChangedInternal();
+    const item = new EventCallbackWorkItem(this.receiver, delegate as (arg: unknown) => unknown);
+    // Blazor: a receiver handles its events (IHandleEvent — ComponentBase's re-renders it); without one the
+    // handler just runs.
+    if (this.receiver === null) await item.invokeAsync(arg);
+    else await componentInternals.handleEvent(this.receiver, item, arg);
   }
 
+  /** Blazor's EventCallback.HasDelegate: false for `EventCallback.empty`, whose invocation does nothing. */
   get hasDelegate(): boolean {
-    return this.delegate !== null;
+    return this.delegate !== null || this.factory !== null;
   }
 
-  /** Identity used by the diff to skip unnecessary listener rebinds. */
+  /**
+   * Blazor's EventCallback.Equals: same receiver and same delegate (a
+   * forwarded EventCallback passes through `bind` as the same instance);
+   * `bindWith` callbacks: same receiver, factory and arguments.
+   * Used by the diff to skip listener rebinds and by parameter change
+   * detection.
+   */
   equals(other: EventCallback<never>): boolean {
-    return this.receiver === other.receiver && this.delegate === other.delegate;
+    if (this.receiver !== other.receiver) return false;
+    if (this.factory === null || other.factory === null) {
+      return this.factory === other.factory && this.delegate === other.delegate;
+    }
+    if (this.factory !== other.factory) return false;
+    const args = this.args;
+    const otherArgs = other.args;
+    if (args.length !== otherArgs.length) return false;
+    for (let i = 0; i < args.length; i++) if (!Object.is(args[i], otherArgs[i])) return false;
+    return true;
   }
+
+  /**
+   * @internal Equality as Blazor's parameter change detection sees it
+   * (`Delegate.Equals`: target and method). A lambda that captures locals is
+   * a new closure object in C# every render — a different target — so a
+   * hoisted callback with arguments always counts as changed there: a child
+   * component re-renders with its parent exactly as in Blazor. The DOM diff
+   * uses `equals` (invisible: the same handler behavior).
+   */
+  equalsAsParameter(other: EventCallback<never>): boolean {
+    if (this.args.length > 0 || other.args.length > 0) return false;
+    return this.equals(other);
+  }
+
+  /** `bindWith`: creates the handler once, with the receiver as `this`. */
+  private createDelegate(): ((arg: TArg) => unknown) | null {
+    if (this.factory === null) return null;
+    this.delegate = (this.factory as (...args: unknown[]) => (arg: TArg) => unknown).apply(this.receiver, this.args as unknown[]);
+    return this.delegate;
+  }
+}
+
+const NO_ARGS: readonly unknown[] = [];
+
+/** The task of a handler that completed synchronously (Blazor's Task.CompletedTask). */
+const COMPLETED: Promise<void> = Promise.resolve();
+
+/**
+ * Blazor's EventCallbackWorkItem: the handler of an event a component handles in `handleEventAsync` (IHandleEvent).
+ * `invokeAsync` runs it, with its receiver as `this`.
+ */
+export class EventCallbackWorkItem {
+  /** Created by EventCallback for each invocation (a test of a `handleEventAsync` creates one too). */
+  constructor(
+    private readonly receiver: unknown,
+    private readonly delegate: (arg: unknown) => unknown,
+  ) {}
+
+  /**
+   * Runs the handler. For a synchronous one the task is `EventCallbackWorkItem.completed`, already settled (Blazor's
+   * Task.CompletedTask) — a handler that throws synchronously throws here, as in Blazor; an async handler's task is
+   * its own.
+   */
+  invokeAsync(arg?: unknown): Promise<void> {
+    const result = this.delegate.call(this.receiver, arg);
+    return result instanceof Promise ? result.then(() => undefined) : COMPLETED;
+  }
+
+  /** The task `invokeAsync` returns for a handler that completed synchronously. */
+  static readonly completed: Promise<void> = COMPLETED;
 }

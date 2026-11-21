@@ -1,0 +1,62 @@
+@* components/sessions/user-sessions-card.tsx's SessionRow: a session — the device icon, browser and OS, IP and when
+   it was last seen, Active or Revoked, and Revoke while it may be revoked. *@
+@import { LogOut, Monitor, Smartphone } from "lucide"
+@import type { UserSessionDto } from "@/api/sessions"
+
+<li class="@cn("grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 py-3", !session.isActive && "opacity-60")">
+    <Icon icon="@deviceIcon" class="h-4 w-4 text-[var(--color-muted-foreground)]" />
+    <div class="min-w-0">
+        <div class="truncate text-sm font-medium">@describeDevice(session)</div>
+        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
+            <span>@(session.ipAddress ?? "unknown ip")</span>
+            <span>· last seen @formatRelative(session.lastActivityAt)</span>
+        </div>
+    </div>
+    @if (session.isActive) {
+        <Badge variant="brand" class="font-mono uppercase tracking-[0.14em]">Active</Badge>
+    } else {
+        <Badge variant="muted" class="font-mono uppercase tracking-[0.14em]">Revoked</Badge>
+    }
+    @if (canRevoke) {
+        <Button variant="outline" size="sm" onClick="@(() => onRevoke?.invokeAsync())" disabled="@busy">
+            <Icon icon="@LogOut" class="mr-1.5 h-3.5 w-3.5" />
+            @(busy ? "Revoking…" : "Revoke")
+        </Button>
+    } else {
+        <span aria-hidden="true"></span>
+    }
+</li>
+
+@code {
+    @Parameter() session!: UserSessionDto;
+    @Parameter() canRevoke: boolean = false;
+    @Parameter() busy: boolean = false;
+    @Parameter() onRevoke?: EventCallback;
+
+    private get deviceIcon() {
+        return (this.session.deviceType ?? "").toLowerCase().includes("mobile") ? Smartphone : Monitor;
+    }
+
+    private describeDevice(s: UserSessionDto): string {
+        const browser = s.browser ?? "Unknown browser";
+        const version = s.browserVersion ? ` ${s.browserVersion}` : "";
+        const os = s.operatingSystem ?? "unknown os";
+        return `${browser}${version} on ${os}`;
+    }
+
+    private formatRelative(value?: string | null): string {
+        if (!value) return "—";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return value;
+        const diff = Date.now() - d.getTime();
+        const sec = Math.round(diff / 1000);
+        if (sec < 60) return `${sec}s ago`;
+        const min = Math.round(sec / 60);
+        if (min < 60) return `${min}m ago`;
+        const hr = Math.round(min / 60);
+        if (hr < 24) return `${hr}h ago`;
+        const day = Math.round(hr / 24);
+        if (day < 14) return `${day}d ago`;
+        return d.toLocaleDateString();
+    }
+}

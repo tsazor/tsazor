@@ -50,3 +50,38 @@
   width: var(--fui-height-l);
   padding: 0;
 }
+/* Icons: the rest icon, or the active one while the link is the current page. */
+.fui-nav__icon {
+  flex: none;
+}
+
+.fui-nav__icon--active,
+.fui-nav__link--active .fui-nav__icon--rest {
+  display: none;
+}
+
+.fui-nav__link--active .fui-nav__icon--active {
+  display: block;
+}
+
+/* The rail: a link with an icon shows only the icon; its label stays for screen readers. */
+.fui-nav--compact .fui-nav__link:has(.fui-nav__icon) .fui-nav__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A section's heading (sections), a quiet caption above its links. */
+.fui-nav__heading {
+  margin: var(--fui-spacing-l) var(--fui-spacing-m) var(--fui-spacing-xs);
+  font-size: var(--fui-font-size-caption);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-3);
+}
+
+.fui-nav--compact .fui-nav__heading {
+  display: none;
+}

@@ -1,0 +1,12 @@
+@* components/list/form-shell.tsx's FormActions: the bottom row of a FormShell over a hairline; `between` splits a
+   destructive action from the primary one. *@
+
+<div class="@cn("flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-5", align === "between" && "justify-between", align === "end" && "justify-end", additionalAttributes?.class as string)">
+    @childContent
+</div>
+
+@code {
+    @Parameter() align: "start" | "between" | "end" = "start";
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

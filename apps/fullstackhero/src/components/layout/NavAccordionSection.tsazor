@@ -1,0 +1,32 @@
+@* components/layout/sidebar.tsx's AccordionSection: a section's header button and its items, opened and closed with
+   the grid-template-rows trick (the items fade in after the row has grown). *@
+@import { ChevronDown } from "lucide"
+@import type { NavSection } from "./nav-items"
+
+<div class="@cn("rounded-lg", "transition-[background-color,border-color,box-shadow,padding] duration-[var(--duration-default)] ease-[var(--ease-out-cubic)]", isOpen ? "border border-[var(--color-border)] bg-[var(--color-muted)] p-1.5" : "border border-transparent p-0")">
+    <button type="button" @onclick="() => onToggle?.invokeAsync()" aria-expanded="@(isOpen ? "true" : "false")" aria-controls="@(`nav-section-${section.id}`)"
+            class="@cn("flex h-9 w-full cursor-pointer items-center gap-3 rounded-md px-3", "text-left text-sm font-medium", "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]", isOpen ? "text-[var(--color-foreground)]" : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]")">
+        <Icon icon="@section.icon" class="h-4 w-4 shrink-0" />
+        <span class="flex-1 truncate">@section.caption</span>
+        <Icon icon="@ChevronDown" class="@cn("h-3.5 w-3.5 shrink-0 transition-transform duration-[var(--duration-default)] ease-[var(--ease-out-cubic)]", isOpen ? "rotate-180 text-[var(--color-foreground)]" : "rotate-0 text-[var(--color-muted-foreground)]")" />
+    </button>
+
+    @* Animated open/close via grid-template-rows trick *@
+    <div id="@(`nav-section-${section.id}`)" class="@cn("grid", "transition-[grid-template-rows,margin-top] duration-[var(--duration-default)] ease-[var(--ease-out-cubic)]", isOpen ? "mt-1 grid-rows-[1fr]" : "mt-0 grid-rows-[0fr]")">
+        <div class="min-h-0 overflow-hidden">
+            <div aria-hidden="@(isOpen ? "false" : "true")" class="@cn("space-y-0.5", "transition-opacity ease-[var(--ease-out-cubic)]", isOpen ? "opacity-100 duration-[var(--duration-default)] delay-[80ms]" : "opacity-0 duration-[var(--duration-fast)]")">
+                @foreach (const item of section.items) {
+                    <NavItemLink @key="item.to" item="@item" collapsed="false" pathname="@pathname" onNavigate="@onNavigate" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    @Parameter() section!: NavSection;
+    @Parameter() isOpen: boolean = false;
+    @Parameter() pathname: string = "/";
+    @Parameter() onToggle?: EventCallback;
+    @Parameter() onNavigate?: EventCallback;
+}

@@ -1,5 +1,10 @@
-<li class="fui-breadcrumb__item">
+@** One entry (li) of a Breadcrumb: a link to href, a button when onClick is set, or, when active,
+    plain text with aria-current="page". Use inside Breadcrumb. *@
+@import { withAttributes } from "./attributes"
+
+<li @attributes="@this.itemAttributes">
     @if (this.active) { <span class="fui-breadcrumb__current" aria-current="page">@childContent</span> }
+    else if (this.onClick !== undefined) { <button type="button" class="fui-breadcrumb__link fui-breadcrumb__button" @onclick="this.click">@childContent</button> }
     else { <a class="fui-breadcrumb__link" href="@href">@childContent</a> }
 </li>
 
@@ -8,5 +13,19 @@
     @Parameter() href: string = "#";
     /** Active item renders plain content without a link. */
     @Parameter() active: boolean = false;
+    /** Makes the item a button that raises this instead of a link: for a trail kept in state, not in the URL
+        (the folders of a file picker). */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The item label (link text, or the plain text of the active item). */
     @Parameter() childContent?: RenderFragment;
+
+    private click(event: MouseEvent): Promise<void> | undefined {
+        return this.onClick?.invokeAsync(event);
+    }
+
+    private get itemAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-breadcrumb__item" }, this.additionalAttributes);
+    }
 }

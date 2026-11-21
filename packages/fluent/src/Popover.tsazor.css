@@ -1,0 +1,62 @@
+/* Popover — Fluent 2 popover surface: a card next to its button. */
+
+.fui-popover-anchor {
+  display: inline-block;
+}
+
+.fui-popover {
+  min-width: 200px;
+  max-width: 320px;
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  z-index: var(--fui-z-dialog);
+  outline: none;
+}
+
+.fui-popover:focus-visible {
+  box-shadow: var(--fui-shadow-16), 0 0 0 2px var(--fui-control-focus-stroke);
+}
+
+.fui-popover__header {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+  padding: var(--fui-spacing-s) var(--fui-spacing-m) 0;
+}
+
+.fui-popover__title {
+  flex: 1;
+  font-weight: var(--fui-font-weight-semibold);
+}
+
+.fui-popover__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  background: transparent;
+  color: var(--fui-foreground-2);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.fui-popover__close:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-popover__close:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+}
+
+.fui-popover__body {
+  padding: var(--fui-spacing-s) var(--fui-spacing-m) var(--fui-spacing-m);
+  color: var(--fui-foreground-2);
+}

@@ -1,0 +1,17 @@
+@* components/ui/input.tsx: the original's field — h-9, hairline border, a brand focus ring. React's controlled
+   `value`/`onChange` is `@bind-Value` (a change per keystroke, as React's onChange); the rest (`type`, `id`,
+   `placeholder`, `autocomplete`, `aria-*`, `class`, …) goes onto the <input>. *@
+@import { withClass } from "@/lib/attributes"
+@import { inputClass } from "./variants"
+
+<input data-slot="input" value="@value" @attributes="@withClass(inputClass, additionalAttributes)" @oninput="this.input" />
+
+@code {
+    @Parameter() value?: string;
+    @Parameter() valueChanged?: EventCallback<string>;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private input(event: Event): Promise<void> | undefined {
+        return this.valueChanged?.invokeAsync((event.target as HTMLInputElement).value);
+    }
+}

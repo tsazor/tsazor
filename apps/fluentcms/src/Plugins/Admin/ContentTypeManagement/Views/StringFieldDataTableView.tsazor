@@ -1,0 +1,6 @@
+@* A text field in the content list, as it is (FluentCMS's StringFieldDataTableView). *@
+@inherits BaseFieldValueView<string | null, StringFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { StringFieldModel } from "../field-models"
+
+@fieldValue.value

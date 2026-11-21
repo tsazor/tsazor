@@ -1,0 +1,96 @@
+@** The app's frame (MudBlazor's MudLayout with MudAppBar, a persistent MudDrawer and MudMainContent; Fluent UI
+    Blazor's FluentLayout): a header bar across the top, a navigation column beside the content, and the content as
+    the page's main landmark. `navOpen` (two-way: @bind-navOpen) shows or hides the column. In a window narrower than
+    960px the column starts closed and, opened, lies over the content: Escape or a click on the content closes it.
+    The window crossing 960px closes the column (narrower) or opens it (wider), as MudBlazor's responsive drawer does. Put a SidebarNav — the nav landmark — into `nav`; without one the layout is the
+    header over the content (a signed-out page). The header is the brand color; its transparent and subtle buttons take
+    its ink. *@
+@import { withAttributes } from "./attributes"
+@import { focusableElements, focusElement } from "@tsazor/ui"
+
+<div @attributes="@this.rootAttributes" @onkeydown="this.keydown">
+    @if (this.header) {
+        <header class="fui-app-layout__header" @ref="headerElement">@this.header</header>
+    }
+    @if (this.nav) {
+        <div class="fui-app-layout__nav" hidden="@(!this.open)" @ref="navElement" @onfocusin="this.navEntered">@this.nav</div>
+    }
+    <main class="fui-app-layout__main" @onclick="this.contentClicked">@this.childContent</main>
+</div>
+
+@code {
+    /** The header bar's content: the app's name, a button that toggles the navigation, menus. */
+    @Parameter() header?: RenderFragment;
+    /** The navigation column's content — a SidebarNav. */
+    @Parameter() nav?: RenderFragment;
+    /** The page. */
+    @Parameter() childContent?: RenderFragment;
+    /** Whether the navigation column shows; with `@bind-navOpen` the parent learns when the layout closes it. */
+    @Parameter() navOpen = true;
+    /** Raised when the layout opens or closes the column itself (the window's width, Escape, a click on the content). */
+    @Parameter() navOpenChanged?: EventCallback<boolean>;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private open = true;
+    /** The CSS breakpoint: below it the column lies over the content. */
+    private static readonly narrowQuery = "(max-width: 959.98px)";
+
+    protected override onParametersSet(): void {
+        this.open = this.navOpen;
+    }
+
+    protected override async onAfterRender(firstRender: boolean): Promise<void> {
+        if (!firstRender) return;
+        // A narrow window starts with the column closed: open, it would cover the page.
+        if (this.nav && this.open && this.narrow()) await this.change(false);
+        // Past the breakpoint the column follows the window: closed when it narrows, open again when it widens.
+        const query = typeof matchMedia === "function" ? matchMedia(AppLayout.narrowQuery) : undefined;
+        query?.addEventListener?.("change", (event: MediaQueryListEvent) => {
+            if (this.nav) void this.change(!event.matches);
+        }, { signal: this.disposeSignal });
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.open ? "fui-app-layout fui-app-layout--nav-open" : "fui-app-layout" }, this.additionalAttributes);
+    }
+
+    /** The column lies over the content (the CSS breakpoint). */
+    private narrow(): boolean {
+        return typeof matchMedia === "function" && matchMedia(AppLayout.narrowQuery).matches;
+    }
+
+    private headerElement?: HTMLElement;
+    private navElement?: HTMLElement;
+    /** Where the focus came from into the column (its toggle, mostly). */
+    private returnFocus?: HTMLElement;
+
+    private navEntered(e: FocusEvent): void {
+        const from = e.relatedTarget;
+        if (from instanceof HTMLElement && !this.navElement?.contains(from)) this.returnFocus = from;
+    }
+
+    /** The column is about to be hidden with the focus in it: back to where it came from, else the header's first control. */
+    private leaveNav(): void {
+        const nav = this.navElement;
+        if (!nav?.contains(nav.ownerDocument.activeElement)) return;
+        if (focusElement(this.returnFocus)) return;
+        focusElement(this.headerElement ? focusableElements(this.headerElement)[0] : undefined);
+    }
+
+    private async keydown(e: KeyboardEvent): Promise<void> {
+        if (e.key === "Escape" && this.open && this.narrow()) await this.change(false);
+    }
+
+    private async contentClicked(): Promise<void> {
+        if (this.open && this.narrow()) await this.change(false);
+    }
+
+    private async change(open: boolean): Promise<void> {
+        if (this.open === open) return;
+        if (!open) this.leaveNav();
+        this.open = open;
+        this.stateHasChanged();
+        await this.navOpenChanged?.invokeAsync(open);
+    }
+}

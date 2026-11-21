@@ -1,0 +1,18 @@
+.receipt {
+    min-width: 20rem;
+    border-collapse: collapse;
+}
+
+td {
+    padding: 0.3rem 0.5rem;
+}
+
+td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.sum td {
+    border-top: 1px solid #cfd4da;
+    font-weight: 600;
+}

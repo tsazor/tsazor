@@ -1,19 +1,31 @@
+@** A status dot (role="status") in a semantic color; with child content it becomes a labelled
+    status chip. Renders nothing while visible is false. *@
+@import type { Intent } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { statusColor } from "./vocabulary"
+
 @if (this.visible) {
-<span class="@this.indicatorClass" role="status">
+<span role="status" @attributes="@this.indicatorAttributes">
     <span class="fui-indicator__dot" aria-hidden="true"></span>
     @if (this.childContent !== undefined) { <span class="fui-indicator__label">@childContent</span> }
 </span>
 }
 
 @code {
-    /** Semantic color: success | danger | warning | info | neutral (default). */
-    @Parameter() color: string = "neutral";
+    /** The status: neutral (default), success, danger, warning or info. */
+    @Parameter() intent: Intent = "neutral";
     /** Renders nothing when false. */
     @Parameter() visible: boolean = true;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Optional label — turns the dot into a status chip. */
     @Parameter() childContent?: RenderFragment;
 
     private get indicatorClass(): string {
-        return `fui-indicator fui-indicator--${this.color}`;
+        return `fui-indicator fui-indicator--${statusColor(this.intent)}`;
+    }
+
+    private get indicatorAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.indicatorClass }, this.additionalAttributes);
     }
 }

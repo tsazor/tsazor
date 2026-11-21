@@ -1,0 +1,16 @@
+@import { Virtualize } from "@tsazor/runtime"
+@import { orders } from "./orders"
+
+<h1>Order history</h1>
+<p>@orders.length orders</p>
+
+<div class="history">
+    <Virtualize Items="@orders" Context="order">
+        <div class="order">
+            <strong>#@order.id</strong> @order.customer: @order.items
+            @if (order.note) {
+                <p class="note">@order.note</p>
+            }
+        </div>
+    </Virtualize>
+</div>

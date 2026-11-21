@@ -1,0 +1,10 @@
+@import type { RenderFragment } from "@tsazor/runtime"
+
+<section class="panel">
+    <header>Untitled</header>
+    <div class="body">@childContent</div>
+</section>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+}

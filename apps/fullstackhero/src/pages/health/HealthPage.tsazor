@@ -1,0 +1,116 @@
+@* pages/health/page.tsx: the API's liveness and readiness probes, polled every 10 seconds — a KPI strip, an error band
+   per failing probe, and a section per probe with its dependency checks. Any signed-in user sees it (the probe
+   endpoints themselves are anonymous). *@
+@page "/health"
+@authorize
+@import { Heart, RefreshCw } from "lucide"
+@import { getLiveness, getReadiness, type HealthEntry, type HealthStatus } from "@/api/health"
+@import { Query } from "@/lib/query"
+@import ProbeSection from "./ProbeSection.tsazor"
+@import StatusGlyph from "./StatusGlyph.tsazor"
+@import { statusToTone } from "./health-status"
+
+<div class="space-y-8">
+    <EntityPageHeader icon="@Heart" tone="success" title="Health">
+        <DescriptionContent>
+            Live process and dependency probes. Auto-refreshes every @(refreshIntervalMs / 1000) seconds.
+            The probe endpoints themselves (<code class="code-chip">/health/live</code> <code class="code-chip">/health/ready</code>) are unauthenticated so they can be
+            scraped by load balancers and uptime monitors.
+        </DescriptionContent>
+        <ChildContent>
+            <Button variant="outline" size="sm" disabled="@isFetching" onClick="@refetchAll" class="flex-1 sm:flex-none">
+                <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", isFetching && "animate-spin")" />
+                Refresh
+            </Button>
+        </ChildContent>
+    </EntityPageHeader>
+
+    <StatStrip cols="4">
+        <Stat label="Liveness" hint="API process responding" tone="@statusToTone(liveStatus)">
+            <ValueContent><StatusGlyph status="@liveStatus" /></ValueContent>
+        </Stat>
+        <Stat label="Readiness" hint="Dependencies reachable" tone="@statusToTone(readyStatus)">
+            <ValueContent><StatusGlyph status="@readyStatus" /></ValueContent>
+        </Stat>
+        <Stat label="Checks healthy" value="@(isLoading ? "—" : checksHealthy.toString())" hint="@(`of ${readyEntries.length || "—"} registered`)"
+              tone="@(checksHealthy > 0 ? "success" : "default")" />
+        <Stat label="Checks failing" value="@(isLoading ? "—" : (checksFailing + checksDegraded).toString())"
+              hint="@(checksDegraded > 0 ? `${checksDegraded} degraded · ${checksFailing} unhealthy` : `${checksFailing} unhealthy`)"
+              tone="@(checksFailing > 0 ? "danger" : checksDegraded > 0 ? "warning" : "default")" />
+    </StatStrip>
+
+    @if (live.result.isError) {
+        <ErrorBand kind="liveness" message="@(live.result.error instanceof Error ? live.result.error.message : "Liveness probe failed.")" />
+    }
+    @if (ready.result.isError) {
+        <ErrorBand kind="readiness" message="@(ready.result.error instanceof Error ? ready.result.error.message : "Readiness probe failed.")" />
+    }
+
+    <ProbeSection title="Liveness" path="/health/live" result="@live.result.data" loading="@live.result.isLoading"
+                  description="Process is up and serving requests. No external dependencies are checked." />
+
+    <ProbeSection title="Readiness" path="/health/ready" result="@ready.result.data" loading="@ready.result.isLoading"
+                  description="All registered dependency checks must report Healthy for the probe to return 200. A 503 here flips the API out of the load-balancer pool." />
+</div>
+
+@code {
+    private readonly refreshIntervalMs = 10_000;
+
+    private readonly live = new Query(() => ({
+        queryKey: ["health", "live"],
+        queryFn: getLiveness,
+        refetchInterval: this.refreshIntervalMs,
+        refetchOnWindowFocus: false,
+        retry: 1,
+    }));
+
+    private readonly ready = new Query(() => ({
+        queryKey: ["health", "ready"],
+        queryFn: getReadiness,
+        refetchInterval: this.refreshIntervalMs,
+        refetchOnWindowFocus: false,
+        retry: 1,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.live);
+        this.observe(this.ready);
+    }
+
+    private get isLoading(): boolean {
+        return this.live.result.isLoading || this.ready.result.isLoading;
+    }
+
+    private get isFetching(): boolean {
+        return this.live.result.isFetching || this.ready.result.isFetching;
+    }
+
+    private get liveStatus(): HealthStatus {
+        return (this.live.result.data?.status as HealthStatus | undefined) ?? "Unknown";
+    }
+
+    private get readyStatus(): HealthStatus {
+        return (this.ready.result.data?.status as HealthStatus | undefined) ?? "Unknown";
+    }
+
+    private get readyEntries(): HealthEntry[] {
+        return this.ready.result.data?.results ?? [];
+    }
+
+    private get checksHealthy(): number {
+        return this.readyEntries.filter((e) => e.status === "Healthy").length;
+    }
+
+    private get checksDegraded(): number {
+        return this.readyEntries.filter((e) => e.status === "Degraded").length;
+    }
+
+    private get checksFailing(): number {
+        return this.readyEntries.filter((e) => e.status !== "Healthy" && e.status !== "Degraded").length;
+    }
+
+    private refetchAll(): void {
+        void this.live.refetch();
+        void this.ready.refetch();
+    }
+}

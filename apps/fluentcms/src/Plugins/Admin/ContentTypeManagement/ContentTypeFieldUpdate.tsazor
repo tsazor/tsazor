@@ -1,0 +1,31 @@
+@* A field's settings (FluentCMS's ContentTypeFieldUpdate): its type's settings form, shown through a DynamicComponent,
+   on a model made once per field (the form edits it). *@
+@inherits BaseContentTypeField
+@import type { ContentTypeField } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { BaseContentTypeField } from "./BaseContentTypeField"
+@import { toFieldModel } from "./field-models"
+@import { SETTINGS_VIEWS } from "./field-types"
+
+@if (this.settingsView !== null) {
+    <DynamicComponent Type="@this.settingsView" Parameters="@this.parameters" />
+}
+
+@code {
+    private settingsView: ComponentType | null = null;
+    private parameters: Record<string, unknown> = {};
+    private shown?: ContentTypeField;
+
+    protected override onParametersSet(): void {
+        if (this.contentTypeField === undefined || this.contentTypeField === this.shown) return;
+        this.shown = this.contentTypeField;
+        const model = toFieldModel(this.contentTypeField);
+        this.settingsView = SETTINGS_VIEWS[model.type];
+        this.parameters = { model, onCancel: this.onComplete, onSubmit: EventCallback.bind(this, this.save) };
+    }
+
+    private async save(field: ContentTypeField): Promise<void> {
+        ensureOk(await this.api.contentTypeSetField(this.contentType!.id, field));
+        await this.onComplete?.invokeAsync();
+    }
+}

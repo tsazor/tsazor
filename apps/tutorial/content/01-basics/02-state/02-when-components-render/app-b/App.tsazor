@@ -1,0 +1,15 @@
+<button @onclick="start" disabled="@running">Start</button>
+<p>@seconds @(seconds === 1 ? "second" : "seconds") elapsed</p>
+
+@code {
+    seconds = 0;
+    running = false;
+
+    start() {
+        this.running = true;
+        setInterval(() => {
+            this.seconds++;
+            this.stateHasChanged();
+        }, 1000);
+    }
+}

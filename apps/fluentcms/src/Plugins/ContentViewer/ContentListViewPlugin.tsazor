@@ -1,0 +1,24 @@
+@* The contents of one type, through the plugin's Scriban template (FluentCMS's ContentListViewPlugin). *@
+@inherits BasePlugin
+@import { ensureOk } from "../../api/api-result"
+@import { renderTemplate } from "../../Shell/scriban"
+@import { templateData } from "./template-data"
+
+@if (this.rendered !== undefined) {
+    <div class="f-content-list">
+        @(new MarkupString(this.rendered))
+    </div>
+}
+
+@code {
+    private rendered?: string;
+
+    protected override async onInitialized(): Promise<void> {
+        const slug = this.plugin.settings?.["ContentTypeSlug"];
+        if (!slug) return;
+        const contents = ensureOk(await this.api.contentGetAll(slug, { siteId: this.viewState.site.id })) ?? [];
+        // Each item is the content's data, with its id as `Id`.
+        const items = contents.map((content) => templateData({ ...content.data, Id: content.id }));
+        this.rendered = renderTemplate(this.plugin.settings?.["Template"] ?? "No Template", { Items: items });
+    }
+}

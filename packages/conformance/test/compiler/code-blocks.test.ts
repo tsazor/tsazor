@@ -1,0 +1,185 @@
+/**
+ * Razor is code-first inside control-block bodies and @{ } blocks: statements
+ * are TypeScript, markup starts at a tag in statement position.
+ * Review §1: C1, C2, C3, C7, C11, C20, deferred-closure capture.
+ */
+import { describe, expect, it } from "vitest";
+import { mount } from "../harness.js";
+
+describe("C1 — statements inside control-block bodies", () => {
+  it("declares a local in an @if body and uses it in markup", async () => {
+    const m = await mount(`
+@if (show) {
+    const label = this.title.toUpperCase();
+    <p>@label</p>
+}
+@code { private show = true; private title = "hi"; }`);
+    expect(m.html()).toBe("<p>HI</p>");
+  });
+
+  it("nests a plain if (no @) inside @foreach", async () => {
+    const m = await mount(`
+@foreach (const n of nums) {
+    if (n > 1) {
+        <b>@n</b>
+    }
+}
+@code { private nums = [1, 2, 3]; }`);
+    expect(m.html()).toBe("<b>2</b><b>3</b>");
+  });
+});
+
+describe("C2 — @{ } blocks", () => {
+  it("shares its locals with the following markup", async () => {
+    const m = await mount(`@{ const greeting = "hi"; }<p>@greeting</p>`);
+    expect(m.html()).toBe("<p>hi</p>");
+  });
+
+  it("contains markup inside statements", async () => {
+    const m = await mount(`
+@{
+    if (this.a) {
+        <p>yes</p>
+    }
+}
+@code { private a = true; }`);
+    expect(m.html()).toBe("<p>yes</p>");
+  });
+});
+
+describe("C3 — markup text inside blocks is not code", () => {
+  it("keeps an apostrophe in element text", async () => {
+    const m = await mount(`
+@if (a) {
+    <p>it's</p>
+}
+@code { private a = true; }`);
+    expect(m.html()).toBe("<p>it's</p>");
+  });
+
+  it("keeps a literal brace in element text", async () => {
+    const m = await mount(`
+@if (a) {
+    <p>50% off {</p>
+}
+@code { private a = true; }`);
+    expect(m.html()).toBe("<p>50% off {</p>");
+  });
+});
+
+describe("C7 — further control keywords", () => {
+  it("@while renders each iteration", async () => {
+    const m = await mount(`
+@{ let i = 0; }
+@while (i < 3) {
+    <i>@i</i>
+    i++;
+}`);
+    expect(m.html()).toBe("<i>0</i><i>1</i><i>2</i>");
+  });
+
+  it("@do … while renders at least once", async () => {
+    const m = await mount(`
+@{ let i = 5; }
+@do {
+    <i>@i</i>
+    i++;
+} while (i < 3);`);
+    expect(m.html()).toBe("<i>5</i>");
+  });
+
+  it("@try / catch renders the catch branch", async () => {
+    const m = await mount(`
+@try {
+    const v = this.risky();
+    <p>@v</p>
+} catch (e) {
+    <p>caught</p>
+}
+@code { private risky(): string { throw new Error("x"); } }`);
+    expect(m.html()).toBe("<p>caught</p>");
+  });
+});
+
+describe("C11 — @switch", () => {
+  it("falls through stacked case labels", async () => {
+    const m = await mount(`
+@switch (k) {
+    case 1:
+    case 2:
+        <p>low</p>
+        break;
+    default:
+        <p>other</p>
+        break;
+}
+@code { private k = 1; }`);
+    expect(m.html()).toBe("<p>low</p>");
+  });
+
+  it("a section without break falls through (TS semantics) with a TZS023 warning", async () => {
+    const m = await mount(`
+@switch (k) {
+    case 1:
+        <p>one</p>
+    case 2:
+        <p>two</p>
+        break;
+    default:
+        <p>other</p>
+}
+@code { private k = 1; }`);
+    expect(m.html()).toBe("<p>one</p><p>two</p>");
+    expect(m.diagnostics.map((d) => [d.code, d.severity, d.pos.line])).toEqual([["TZS023", "warning", 3]]);
+  });
+
+  it("sections share one lexical scope, as in TS", async () => {
+    const m = await mount(`
+@switch (k) {
+    case 1:
+        const label = "shared";
+    case 2:
+        <p>@label</p>
+        break;
+}
+@code { private k = 1; }`);
+    expect(m.html()).toBe("<p>shared</p>");
+  });
+});
+
+describe("C20 — @: line transitions", () => {
+  it("processes @ expressions on a @: line", async () => {
+    const m = await mount(`
+@if (true) {
+    @:Hello @name!
+}
+@code { private name = "Ada"; }`);
+    expect(m.text()).toBe("Hello Ada!");
+  });
+});
+
+describe("loop variables captured by deferred child content", () => {
+  it("each child content sees its own iteration value", async () => {
+    const m = await mount({
+      "Test.tsazor": `
+@for (let i = 0; i < 3; i++) {
+    <Wrap>@i</Wrap>
+}`,
+      "Wrap.tsazor": `<span>@ChildContent</span>\n@code { @Parameter() ChildContent?: RenderFragment; }`,
+    });
+    expect(m.diagnostics).toEqual([]);
+    expect(m.text()).toBe("012");
+  });
+
+  it("var keeps its TS meaning (one shared binding) and warns with TZS022", async () => {
+    const m = await mount({
+      "Test.tsazor": `
+@for (var i = 0; i < 3; i++) {
+    <Wrap>@i</Wrap>
+}`,
+      "Wrap.tsazor": `<span>@ChildContent</span>\n@code { @Parameter() ChildContent?: RenderFragment; }`,
+    });
+    expect(m.diagnostics.map((d) => [d.code, d.severity, d.pos])).toEqual([["TZS022", "warning", { line: 2, column: 6 }]]);
+    expect(m.text()).toBe("333");
+  });
+});

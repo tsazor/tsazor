@@ -1,0 +1,174 @@
+/* @tsazor/charts — SVG charts in the skin's tokens: Fluent's when the Fluent skin is on the page, else Bootstrap's,
+   else plain colors. An app sets --tz-chart-1 … --tz-chart-8 to its own palette. */
+
+:root {
+  --tz-chart-1: var(--fui-brand-background, var(--bs-primary, #0f6cbd));
+  --tz-chart-2: var(--fui-color-green-filled, var(--bs-success, #0e700e));
+  --tz-chart-3: var(--fui-color-amber-filled, var(--bs-warning, #b75c06));
+  --tz-chart-4: var(--fui-color-red-filled, var(--bs-danger, #b10e1c));
+  --tz-chart-5: #8764b8;
+  --tz-chart-6: #038387;
+  --tz-chart-7: #c239b3;
+  --tz-chart-8: #6b7280;
+  --tz-chart-text: var(--fui-foreground-2, var(--bs-secondary-color, #616161));
+  --tz-chart-grid: var(--fui-stroke-2, var(--bs-border-color, #e0e0e0));
+  --tz-chart-axis: var(--fui-stroke-1, var(--bs-border-color, #d1d1d1));
+}
+
+.tz-chart {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--tz-chart-text);
+}
+
+.tz-chart--legend-end {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.tz-chart--legend-end .tz-chart__data {
+  grid-column: 1 / -1;
+}
+
+.tz-chart__svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+}
+
+.tz-chart__tick,
+.tz-chart__title {
+  fill: var(--tz-chart-text);
+  font-size: 12px;
+}
+
+.tz-chart__title {
+  font-weight: 600;
+}
+
+.tz-chart__grid {
+  stroke: var(--tz-chart-grid);
+  stroke-width: 1;
+}
+
+.tz-chart__baseline {
+  stroke: var(--tz-chart-axis);
+  stroke-width: 1;
+}
+
+.tz-chart__series {
+  color: var(--tz-chart-color);
+}
+
+.tz-chart__line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tz-chart__area {
+  fill: currentColor;
+  fill-opacity: 0.18;
+  stroke: none;
+}
+
+.tz-chart__point {
+  fill: var(--fui-background-1, var(--bs-body-bg, #fff));
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.tz-chart__bar {
+  fill: currentColor;
+}
+
+.tz-chart__slice {
+  stroke: var(--fui-background-1, var(--bs-body-bg, #fff));
+  stroke-width: 2;
+}
+
+.tz-chart--dimmed {
+  opacity: 0.35;
+}
+
+.tz-chart__series[role="button"],
+.tz-chart__slice[role="button"] {
+  cursor: pointer;
+}
+
+/* Focus: no box after a click; for the keyboard, the series' box and the slice's outline (a box around an arc would
+   take in its neighbors). */
+.tz-chart__series[role="button"]:focus,
+.tz-chart__slice[role="button"]:focus {
+  outline: none;
+}
+
+.tz-chart__series[role="button"]:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke, var(--bs-focus-ring-color, #0f6cbd));
+  outline-offset: 2px;
+}
+
+.tz-chart__slice[role="button"]:focus-visible {
+  stroke: var(--fui-foreground-1, var(--bs-body-color, #242424));
+  stroke-width: 3;
+}
+
+.tz-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.tz-chart--legend-end .tz-chart__legend {
+  flex-direction: column;
+}
+
+.tz-chart__legend-item,
+.tz-chart__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.tz-chart__swatch {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.tz-chart__table th,
+.tz-chart__table td {
+  padding: 0.125rem 0.75rem;
+  text-align: start;
+}
+
+.tz-sparkline {
+  --tz-chart-color: var(--tz-chart-1);
+  vertical-align: middle;
+  color: var(--tz-chart-color);
+  overflow: visible;
+}
+
+.tz-sparkline__line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tz-sparkline__area {
+  fill: currentColor;
+  fill-opacity: 0.18;
+}
+
+.tz-sparkline__dot {
+  fill: currentColor;
+}

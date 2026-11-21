@@ -1,0 +1,43 @@
+@** A settings pane, copied in (`npx @tsazor/fluent add SettingsPane`) and then the app's: a
+    profile form over the skins' form pieces; the save is yours — `onValidSubmit` is the TODO. *@
+@import { EditContext, DataAnnotationsValidator } from "@tsazor/runtime"
+@import { ProfileSettings } from "./profile-settings"
+
+<Form Model="@profile" OnValidSubmit="@this.onValidSubmit" OnInvalidSubmit="@this.onInvalidSubmit">
+    <DataAnnotationsValidator />
+    <section class="fui-settings">
+        <Typography Variant="h3">Profile</Typography>
+        <FormField Label="Display name" Id="settings-name" For="displayName" Help="The name the team sees.">
+            <TextInput @bind-Value="@profile.displayName" Required="@true" maxlength="40" />
+        </FormField>
+        <FormField Label="E-mail for notifications" Id="settings-email" For="email">
+            <TextInput @bind-Value="@profile.email" Type="email" Placeholder="person@organization.example" />
+        </FormField>
+        <Button Intent="primary" Type="submit" Disabled="@busy">Save</Button>
+        @if (this.saved) {
+            <Typography Variant="caption">Saved to your profile.</Typography>
+        }
+    </section>
+</Form>
+
+@code {
+    private profile = new ProfileSettings();
+    private busy = false;
+    private saved = false;
+
+    /** The valid submit is yours (TODO): persist the profile; the local flag only says it briefly. */
+    private async onValidSubmit(context: EditContext): Promise<void> {
+        void context;
+        this.busy = true;
+        this.stateHasChanged();
+        // TODO: your API — e.g. await updateProfile(this.profile);
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        this.busy = false;
+        this.saved = true;
+        this.stateHasChanged();
+    }
+
+    private onInvalidSubmit(context: EditContext): void {
+        void context;
+    }
+}

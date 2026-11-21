@@ -1,0 +1,56 @@
+@** Renders Bootstrap's `.accordion`: a stack of AccordionItem children, each with a header button
+    that shows or hides its body. It cascades itself to the items; at most one item is open at a
+    time (the first one initially), and opening an item closes the others. *@
+@import type AccordionItem from "./AccordionItem.tsazor"
+@import { uniqueId } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+<div @attributes="@withClass("accordion", additionalAttributes)">@childContent</div>
+
+@code {
+    /** The AccordionItem children. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    readonly isCascadingValueSupplier = true;
+    readonly isFixed = false;
+    readonly cascadeName = "Accordion";
+    get cascadeValue(): unknown {
+        return this;
+    }
+
+    private items: AccordionItem[] = [];
+    private readonly idBase = uniqueId("tz-accordion");
+
+    /** @internal The header button's id of the item at `index` (its panel is labelled by it). */
+    headerId(index: number): string {
+        return `${this.idBase}-header-${index}`;
+    }
+
+    /** @internal The panel's id of the item at `index` (the header controls it). */
+    panelId(index: number): string {
+        return `${this.idBase}-panel-${index}`;
+    }
+
+    get openIndex(): number {
+        return this.openIndexInternal;
+    }
+
+    /** -1 = nothing open. */
+    private openIndexInternal = 0;
+
+    /** @internal Called by AccordionItem during its initialization. */
+    registerItem(item: AccordionItem): void {
+        if (this.items.includes(item)) return;
+        item.setIndex(this.items.length);
+        this.items.push(item);
+        this.stateHasChanged();
+    }
+
+    /** @internal Toggles one item; opening one closes the others. */
+    toggle(index: number): void {
+        if (index < 0 || index >= this.items.length) return;
+        this.openIndexInternal = this.openIndexInternal === index ? -1 : index;
+        this.stateHasChanged();
+    }
+}

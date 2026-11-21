@@ -6,120 +6,219 @@
 // validity are compile-checked without a (structurally ambiguous) lookup over T.
 import { SleipnirCall, ExecutionMode } from "sleipnir-client";
 import type { SleipnirRequest, SleipnirMultiRequest, SleipnirResponse } from "sleipnir-client";
-import type { TickerSnapshot, TickerHistory, PricePoint, TickerFeedStatus } from "./types.js";
+import type { AnalysisJob, AnalysisRequest, AnalysisResult, JobProgress, PricePoint, TickerFeedStatus, TickerHistory, TickerSnapshot } from "./types.js";
 
-export interface TickerSnapshotPaths {
-  "$": TickerSnapshot;
-  "$.symbol": string;
-  "$.lastPrice": number;
-  "$.priceChange": number;
-  "$.priceChangePercent": number;
-  "$.high": number;
-  "$.low": number;
-  "$.volume": number;
-  "$.quoteVolume": number;
-  "$.eventTimeMs": number;
-  "$.serverTimeUtc": string;
-  "$.mode": string;
+export interface AnalysisJobPaths {
+  "$": AnalysisJob;
+  "$.id": number;
+  "$.label": string;
+  "$.points": number;
+  "$.startedUtc": string;
+  "$.state": string;
 }
 
-export interface TickerSnapshotArrayPaths {
-  "$": TickerSnapshot[];
-  "$[0]": TickerSnapshot;
-  "$[0].symbol": string;
-  "$[0].lastPrice": number;
-  "$[0].priceChange": number;
-  "$[0].priceChangePercent": number;
-  "$[0].high": number;
-  "$[0].low": number;
-  "$[0].volume": number;
-  "$[0].quoteVolume": number;
-  "$[0].eventTimeMs": number;
-  "$[0].serverTimeUtc": string;
-  "$[0].mode": string;
-  "$[*].symbol": string[];
-  "$[*].lastPrice": number[];
-  "$[*].priceChange": number[];
-  "$[*].priceChangePercent": number[];
-  "$[*].high": number[];
-  "$[*].low": number[];
-  "$[*].volume": number[];
-  "$[*].quoteVolume": number[];
-  "$[*].eventTimeMs": number[];
-  "$[*].serverTimeUtc": string[];
-  "$[*].mode": string[];
+export interface AnalysisJobArrayPaths {
+  "$": AnalysisJob[];
+  "$[0]": AnalysisJob;
+  "$[0].id": number;
+  "$[0].label": string;
+  "$[0].points": number;
+  "$[0].startedUtc": string;
+  "$[0].state": string;
+  "$[*].id": number[];
+  "$[*].label": string[];
+  "$[*].points": number[];
+  "$[*].startedUtc": string[];
+  "$[*].state": string[];
 }
 
-export interface TickerHistoryPaths {
-  "$": TickerHistory;
-  "$.symbol": string;
-  "$.points": PricePoint[];
-  "$.points[0]": PricePoint;
-  "$.points[*]": PricePoint[];
-  "$.points[0].t": number;
-  "$.points[0].price": number;
-  "$.points[*].t": number[];
-  "$.points[*].price": number[];
+export interface AnalysisRequestPaths {
+  "$": AnalysisRequest;
+  "$.label": string;
+  "$.points": number;
 }
 
-export interface TickerHistoryArrayPaths {
-  "$": TickerHistory[];
-  "$[0]": TickerHistory;
-  "$[0].symbol": string;
-  "$[0].points": PricePoint[];
-  "$[0].points[0]": PricePoint;
-  "$[0].points[*]": PricePoint[];
-  "$[0].points[0].t": number;
-  "$[0].points[0].price": number;
-  "$[0].points[*].t": number[];
-  "$[0].points[*].price": number[];
-  "$[*].symbol": string[];
-  "$[*].points": PricePoint[][];
-  "$[*].points[0]": PricePoint[];
-  "$[*].points[*]": PricePoint[];
-  "$[*].points[0].t": number[];
-  "$[*].points[0].price": number[];
-  "$[*].points[*].t": number[];
-  "$[*].points[*].price": number[];
+export interface AnalysisRequestArrayPaths {
+  "$": AnalysisRequest[];
+  "$[0]": AnalysisRequest;
+  "$[0].label": string;
+  "$[0].points": number;
+  "$[*].label": string[];
+  "$[*].points": number[];
+}
+
+export interface AnalysisResultPaths {
+  "$": AnalysisResult;
+  "$.average": number;
+  "$.changePercent": number;
+  "$.max": number;
+  "$.min": number;
+}
+
+export interface AnalysisResultArrayPaths {
+  "$": AnalysisResult[];
+  "$[0]": AnalysisResult;
+  "$[0].average": number;
+  "$[0].changePercent": number;
+  "$[0].max": number;
+  "$[0].min": number;
+  "$[*].average": number[];
+  "$[*].changePercent": number[];
+  "$[*].max": number[];
+  "$[*].min": number[];
+}
+
+export interface JobProgressPaths {
+  "$": JobProgress;
+  "$.jobId": number;
+  "$.message": string;
+  "$.percent": number;
+  "$.result": AnalysisResult | null;
+  "$.result.average": number;
+  "$.result.changePercent": number;
+  "$.result.max": number;
+  "$.result.min": number;
+  "$.seq": number;
+  "$.state": string;
+}
+
+export interface JobProgressArrayPaths {
+  "$": JobProgress[];
+  "$[0]": JobProgress;
+  "$[0].jobId": number;
+  "$[0].message": string;
+  "$[0].percent": number;
+  "$[0].result": AnalysisResult | null;
+  "$[0].result.average": number;
+  "$[0].result.changePercent": number;
+  "$[0].result.max": number;
+  "$[0].result.min": number;
+  "$[0].seq": number;
+  "$[0].state": string;
+  "$[*].jobId": number[];
+  "$[*].message": string[];
+  "$[*].percent": number[];
+  "$[*].result": AnalysisResult | null[];
+  "$[*].result.average": number[];
+  "$[*].result.changePercent": number[];
+  "$[*].result.max": number[];
+  "$[*].result.min": number[];
+  "$[*].seq": number[];
+  "$[*].state": string[];
 }
 
 export interface PricePointPaths {
   "$": PricePoint;
-  "$.t": number;
   "$.price": number;
+  "$.t": number;
 }
 
 export interface PricePointArrayPaths {
   "$": PricePoint[];
   "$[0]": PricePoint;
-  "$[0].t": number;
   "$[0].price": number;
-  "$[*].t": number[];
+  "$[0].t": number;
   "$[*].price": number[];
+  "$[*].t": number[];
 }
 
 export interface TickerFeedStatusPaths {
   "$": TickerFeedStatus;
-  "$.mode": string;
-  "$.state": string;
   "$.connectedSinceUtc": string | null;
-  "$.reconnects": number;
   "$.detail": string | null;
+  "$.mode": string;
+  "$.reconnects": number;
+  "$.state": string;
 }
 
 export interface TickerFeedStatusArrayPaths {
   "$": TickerFeedStatus[];
   "$[0]": TickerFeedStatus;
-  "$[0].mode": string;
-  "$[0].state": string;
   "$[0].connectedSinceUtc": string | null;
-  "$[0].reconnects": number;
   "$[0].detail": string | null;
-  "$[*].mode": string[];
-  "$[*].state": string[];
+  "$[0].mode": string;
+  "$[0].reconnects": number;
+  "$[0].state": string;
   "$[*].connectedSinceUtc": string | null[];
-  "$[*].reconnects": number[];
   "$[*].detail": string | null[];
+  "$[*].mode": string[];
+  "$[*].reconnects": number[];
+  "$[*].state": string[];
+}
+
+export interface TickerHistoryPaths {
+  "$": TickerHistory;
+  "$.points": PricePoint[];
+  "$.points[0]": PricePoint;
+  "$.points[*]": PricePoint[];
+  "$.points[0].price": number;
+  "$.points[0].t": number;
+  "$.points[*].price": number[];
+  "$.points[*].t": number[];
+  "$.symbol": string;
+}
+
+export interface TickerHistoryArrayPaths {
+  "$": TickerHistory[];
+  "$[0]": TickerHistory;
+  "$[0].points": PricePoint[];
+  "$[0].points[0]": PricePoint;
+  "$[0].points[*]": PricePoint[];
+  "$[0].points[0].price": number;
+  "$[0].points[0].t": number;
+  "$[0].points[*].price": number[];
+  "$[0].points[*].t": number[];
+  "$[0].symbol": string;
+  "$[*].points": PricePoint[][];
+  "$[*].points[0]": PricePoint[];
+  "$[*].points[*]": PricePoint[];
+  "$[*].points[0].price": number[];
+  "$[*].points[0].t": number[];
+  "$[*].points[*].price": number[];
+  "$[*].points[*].t": number[];
+  "$[*].symbol": string[];
+}
+
+export interface TickerSnapshotPaths {
+  "$": TickerSnapshot;
+  "$.eventTimeMs": number;
+  "$.high": number;
+  "$.lastPrice": number;
+  "$.low": number;
+  "$.mode": string;
+  "$.priceChange": number;
+  "$.priceChangePercent": number;
+  "$.quoteVolume": number;
+  "$.serverTimeUtc": string;
+  "$.symbol": string;
+  "$.volume": number;
+}
+
+export interface TickerSnapshotArrayPaths {
+  "$": TickerSnapshot[];
+  "$[0]": TickerSnapshot;
+  "$[0].eventTimeMs": number;
+  "$[0].high": number;
+  "$[0].lastPrice": number;
+  "$[0].low": number;
+  "$[0].mode": string;
+  "$[0].priceChange": number;
+  "$[0].priceChangePercent": number;
+  "$[0].quoteVolume": number;
+  "$[0].serverTimeUtc": string;
+  "$[0].symbol": string;
+  "$[0].volume": number;
+  "$[*].eventTimeMs": number[];
+  "$[*].high": number[];
+  "$[*].lastPrice": number[];
+  "$[*].low": number[];
+  "$[*].mode": string[];
+  "$[*].priceChange": number[];
+  "$[*].priceChangePercent": number[];
+  "$[*].quoteVolume": number[];
+  "$[*].serverTimeUtc": string[];
+  "$[*].symbol": string[];
+  "$[*].volume": number[];
 }
 
 export interface _NumberPaths {

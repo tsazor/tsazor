@@ -17,20 +17,29 @@ import {
   Location,
   CompletionItemKind,
   type MarkupContent,
-} from "vscode-languageserver/node";
+  type CodeAction,
+  type CodeActionParams,
+  CodeActionKind,
+  DidChangeWatchedFilesNotification,
+  FileChangeType,
+} from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { CHECK_CODES } from "@tsazor/compiler";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { analyzeSource, definitionAt, hoverAt, type AnalyzedFile } from "./analysis";
-import { completeAt, type CompletionKind } from "./completions";
-import { TsazorTypeService, type ShadowEntry } from "./ts-service";
+import { analyzeSource, bindableHoverAt, bindableRefactorsAt, definitionAt, directiveAttributeHoverAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
+import { completeAt, type CompletionKind } from "./completions.js";
+import { ProjectRegistry } from "./projects.js";
+import type { ShadowEntry } from "./ts-service.js";
 import {
   tsCompletionDetail,
   tsCompletions,
   tsDefinition,
   tsDiagnostics,
   tsHover,
-} from "./ts-features";
+  tsImportFixes,
+  tsInferTypeFixes,
+} from "./ts-features.js";
 
 /** Pure candidates → LSP items. */
 const COMPLETION_KINDS: Record<CompletionKind, CompletionItemKind> = {
@@ -38,6 +47,7 @@ const COMPLETION_KINDS: Record<CompletionKind, CompletionItemKind> = {
   attribute: CompletionItemKind.Property,
   directive: CompletionItemKind.Keyword,
   member: CompletionItemKind.Value,
+  slot: CompletionItemKind.Interface,
 };
 
 const DIAGNOSTICS_CAP = 200;
@@ -46,22 +56,41 @@ const PUBLISH_DEBOUNCE_MS = 100;
 /**
  * Tsazor language server (stdio).
  *
- * v2: a single per-workspace `ts.LanguageService` over shadow modules powers
- * @code, @{…} and @-expression completions, hover, go-to-definition and
- * (toggleable) semantic diagnostics. Markup contexts keep the v1 heuristics;
- * every query falls back to v1 wherever the shadow layer has nothing to offer.
+ * v2: per-project `ts.LanguageService`s over shadow modules power @code,
+ * @{…} and @-expression completions, hover, go-to-definition and (toggleable)
+ * semantic diagnostics. Markup contexts keep the v1 heuristics; every query
+ * falls back to v1 wherever the shadow layer has nothing to offer.
+ *
+ * 2.5 projektweit: multiple workspace folders, each file routed to the
+ * project of its nearest tsconfig.json (per-app options), tsconfig/
+ * didChangeWatchedFiles handling, dependent documents re-checked when a
+ * dependency changes.
  */
 
 const connection = createConnection(ProposedFeatures.all);
 // v9 API: the document class doubles as the create/update configuration.
 const documents = new TextDocuments(TextDocument);
 
+let registry!: ProjectRegistry;
+let tsDiagnosticsEnabled = true;
+
 connection.onInitialize((params: InitializeParams): InitializeResult => {
-  const root = projectRootOf(params);
-  const typeService = new TsazorTypeService(root);
+  // Multi-root: one registry over every workspace folder; each file routes to
+  // the tsconfig project nearest above it (per-app options).
+  const roots = (params.workspaceFolders ?? []).length > 0
+    ? params.workspaceFolders!.map((folder) => fileURLToPath(folder.uri))
+    : [process.cwd()];
+  registry = new ProjectRegistry(roots);
+  // T4 (2.4): the shadow graph covers every project .tsazor, not only open
+  // documents — types flow across closed files too. Scanned in the
+  // background; the per-document rebuilds keep the open ones fresh.
+  void registry.scanAll().then(
+    (count) => connection.console.log(`tsazor: ${count} project .tsazor shadowed`),
+    (error) => connection.console.error(`tsazor scan failed: ${error instanceof Error ? error.stack : String(error)}`),
+  );
   // tsDiagnostics toggle; initializationOptions.tsDiagnostics: false → off.
   const init = (params.initializationOptions ?? {}) as { tsDiagnostics?: boolean };
-  const tsDiagnosticsEnabled = init.tsDiagnostics !== false;
+  tsDiagnosticsEnabled = init.tsDiagnostics !== false;
 
   const cache = new Map<string, { version: number; analyzed: AnalyzedFile; entry?: ShadowEntry | null }>();
   const pendingPublish = new Map<string, ReturnType<typeof setTimeout>>();
@@ -69,14 +98,14 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   const analyzed = async (document: TextDocument): Promise<AnalyzedFile> => {
     const cached = cache.get(document.uri);
     if (cached && cached.version === document.version) return cached.analyzed;
-    const result = await analyzeSource(uriToPath(document.uri), document.getText(), root);
+    const result = await analyzeSource(uriToPath(document.uri), document.getText(), registry.rootOf(uriToPath(document.uri)));
     cache.set(document.uri, { version: document.version, analyzed: result, entry: cached?.entry });
     return result;
   };
 
   /** The shadow entry for an open document (rebuilds when the version moved). */
   const entryFor = (document: TextDocument): Promise<ShadowEntry | null> =>
-    typeService.ensureTsazor(uriToPath(document.uri), document.getText());
+    registry.ensureTsazor(uriToPath(document.uri), document.getText());
 
   /* Diagnostics publish (compiler + mapped TS, debounced) ----------------- */
 
@@ -96,10 +125,8 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       const items: Diagnostic[] = diagnostics.map(
         (diagnostic): Diagnostic => ({
           severity: diagnostic.severity === "error" ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
-          range: {
-            start: { line: diagnostic.pos.line - 1, character: diagnostic.pos.column },
-            end: { line: diagnostic.pos.line - 1, character: diagnostic.pos.column + 1 },
-          },
+          // The construct the diagnostic covers (header, directive, attribute, expression).
+          range: lspRange(diagnostic),
           code: diagnostic.code,
           source: "tsazor",
           message: diagnostic.message,
@@ -109,16 +136,29 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       if (tsDiagnosticsEnabled) {
         const entry = await entryFor(document);
         if (entry) {
-          for (const diag of tsDiagnostics(typeService, entry)) {
+          for (const diag of tsDiagnostics(registry.projectFor(uriToPath(document.uri)).service, entry)) {
             items.push({
               severity: DiagnosticSeverity.Error,
               range: {
                 start: { line: diag.line, character: diag.character },
-                end: { line: diag.line, character: diag.character + 1 },
+                end: { line: diag.endLine, character: diag.endCharacter },
               },
               code: diag.code,
               source: "tsazor-ts",
               message: diag.message,
+            });
+          }
+          // B46: a text field bound to a number, a Decimal or a date that can be null.
+          for (const warning of registry.projectFor(uriToPath(document.uri)).service.textBindWarnings(entry)) {
+            items.push({
+              severity: DiagnosticSeverity.Warning,
+              range: {
+                start: { line: warning.start.line - 1, character: warning.start.column },
+                end: { line: warning.end.line - 1, character: warning.end.column },
+              },
+              code: CHECK_CODES.textBind,
+              source: "tsazor",
+              message: warning.message,
             });
           }
         }
@@ -130,7 +170,17 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     }
   };
 
-  /* _Imports.tsazor invalidation ------------------------------------------- */
+  /** Re-publishing after a dependency changed: the shadow graph and the
+   *  component metadata of the dependents moved with it. Cached analyses are
+   *  dropped (their diagnostics depend on other files' metadata too). */
+  const republishDependents = (changedPath: string): void => {
+    for (const dependent of registry.dependentsOf(changedPath)) {
+      const document = openDocumentOf(dependent);
+      if (!document) continue;
+      cache.delete(document.uri);
+      publish(document);
+    }
+  };
 
   const invalidateShadows = (changedPath: string): void => {
     // An _Imports.tsazor change can alter the component/using chain of every
@@ -146,13 +196,50 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
 
   documents.onDidOpen((event) => publish(event.document));
   documents.onDidChangeContent((event) => {
+    const filePath = uriToPath(event.document.uri);
+    if (path.basename(filePath) === "_Imports.tsazor") invalidateShadows(filePath);
     publish(event.document);
-    invalidateShadows(uriToPath(event.document.uri));
+    // 2.5: once this document's own shadow is rebuilt, the dependent
+    // documents get re-checked (their TypeScript layer and component
+    // metadata moved with the change).
+    void entryFor(event.document)
+      .then(() => republishDependents(filePath))
+      .catch(() => undefined);
   });
   documents.onDidClose((event) => {
     cache.delete(event.document.uri);
-    typeService.closeTsazor(uriToPath(event.document.uri));
     connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+    // Closed files keep their disk shadow (T4): rebuilt by mtime instead of
+    // dropped, so closed-file types stay in the shadow graph.
+    void registry.ensureTsazor(uriToPath(event.document.uri));
+  });
+
+  // File change notifications: created/changed .tsazor files refresh their
+  // disk shadow and re-check their dependents, deleted ones leave the shadow
+  // graph. A tsconfig change rebuilds the project it owns (its compiler
+  // options and library resolution moved).
+  connection.onDidChangeWatchedFiles((params) => {
+    for (const change of params.changes) {
+      const filePath = uriToPath(change.uri);
+      if (path.basename(filePath) === "tsconfig.json") {
+        registry.projectChanged(filePath);
+        for (const document of documents.all()) {
+          cache.delete(document.uri);
+          publish(document);
+        }
+        continue;
+      }
+      if (!filePath.endsWith(".tsazor")) continue;
+      if (change.type === FileChangeType.Deleted) {
+        registry.closeTsazor(filePath);
+        republishDependents(filePath);
+      } else {
+        void registry
+          .ensureTsazor(filePath)
+          .then(() => republishDependents(filePath))
+          .catch(() => undefined);
+      }
+    }
   });
 
   /* Hover: shadow positions → TS layer, everything else → v1 --------------- */
@@ -161,12 +248,18 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
     const pos = params.position;
+    const current = await analyzed(document);
+    // A @Bindable() member: the desugared pair, above the TS layer's own hover.
+    const bindable = bindableHoverAt(current, pos.line, pos.character);
+    // F2: the name of an `@attach` attribute maps onto generated plumbing — its own text wins.
+    const directive = directiveAttributeHoverAt(current, pos.line, pos.character);
+    if (directive) return { contents: { kind: "markdown", value: directive.markdown } };
     const entry = await entryFor(document);
     if (entry) {
-      const info = tsHover(typeService, entry, pos.line, pos.character);
-      if (info) return { contents: { kind: "markdown", value: info.markdown } };
+      const info = tsHover(registry.projectFor(uriToPath(document.uri)).service, entry, pos.line, pos.character);
+      if (info) return { contents: { kind: "markdown", value: bindable ? `${bindable.markdown}\n\n---\n\n${info.markdown}` : info.markdown } };
     }
-    const current = await analyzed(document);
+    if (bindable) return { contents: { kind: "markdown", value: bindable.markdown } };
     const info = hoverAt(current, pos.line, pos.character);
     if (!info) return null;
     const contents: MarkupContent = { kind: "markdown", value: info.markdown };
@@ -181,7 +274,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     const pos = params.position;
     const entry = await entryFor(document);
     if (entry) {
-      const targets = tsDefinition(typeService, entry, pos.line, pos.character);
+      const targets = tsDefinition(registry.projectFor(uriToPath(document.uri)).service, entry, pos.line, pos.character);
       if (targets && targets.length > 0) {
         return targets.map((target) =>
           Location.create(
@@ -203,12 +296,12 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     })];
   });
 
-  /* Completion: code context → TS layer, markup → v1 ----------------------- */
+  /* Completion: code context → TS layer, markup → v1 (slots → metadata) ----- */
 
   connection.onCompletion(async (params: CompletionParams): Promise<CompletionList> => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return { isIncomplete: false, items: [] };
-    const pos = params.position;
+    const pos: Position = params.position;
     const entry = await entryFor(document);
     const current = await analyzed(document);
 
@@ -217,7 +310,13 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       // `@`-prefix and line-start directive contexts return null → v1. (The
       // gate must not pre-classify on classifyCodeContext — the cursor right
       // behind `@ticker.` sits in a text node there, yet owns TS completions.)
-      const candidates = await tsCompletions(typeService, entry, current, pos.line, pos.character);
+      const candidates = await tsCompletions(
+        registry.projectFor(uriToPath(document.uri)).service,
+        entry,
+        current,
+        pos.line,
+        pos.character,
+      );
       if (candidates !== null) {
         return {
           isIncomplete: false,
@@ -243,7 +342,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
           label: candidate.label,
           kind: COMPLETION_KINDS[candidate.kind],
           detail: candidate.detail,
-          documentation: candidate.doc,
+          documentation: candidate.doc ? { kind: "markdown", value: candidate.doc } : undefined,
         };
         if (candidate.snippet) {
           item.insertText = candidate.snippet;
@@ -265,10 +364,60 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     if (!entry) return item;
     const gen = entry.shadow.map.srcToGen(data.line, data.character);
     if (!gen) return item;
-    const details = tsCompletionDetail(typeService, entry, gen.line, gen.column, item.label);
+    const details = tsCompletionDetail(registry.projectFor(uriToPath(data.uri)).service, entry, gen.line, gen.column, item.label);
     if (details?.detail) item.detail = details.detail;
     if (details?.doc) item.documentation = { kind: "markdown", value: details.doc };
     return item;
+  });
+
+  /* Code actions: the mechanical fixes the compiler attaches (TZS021, TZS022, …) */
+
+  connection.onCodeAction(async (params: CodeActionParams): Promise<CodeAction[]> => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    const current = await analyzed(document);
+    const fixes = quickFixesAt(current, params.range).map((fix): CodeAction => ({
+      title: fix.title,
+      kind: CodeActionKind.QuickFix,
+      isPreferred: true,
+      diagnostics: params.context.diagnostics.filter((d) => d.code === fix.diagnostic.code && d.message === fix.diagnostic.message),
+      edit: { changes: { [document.uri]: fix.edits } },
+    }));
+    // Tsazor extension offers (no diagnostic): the codemod keeps the Blazor form.
+    const refactors = bindableRefactorsAt(current, params.range).map((refactor): CodeAction => ({
+      title: refactor.title,
+      kind: CodeActionKind.RefactorRewrite,
+      edit: { changes: { [document.uri]: refactor.edits } },
+    }));
+    // S4: TypeScript's "Infer parameter types from usage" for implicit-any errors (TS7006 & co.).
+    const entry = await entryFor(document);
+    const inferred = entry
+      ? tsInferTypeFixes(registry.projectFor(uriToPath(document.uri)).service, entry, params.range).map((fix): CodeAction => ({
+          title: fix.title,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: params.context.diagnostics.filter((d) => d.code === fix.code && d.range.start.line === fix.line),
+          edit: { changes: { [document.uri]: fix.edits } },
+        }))
+      : [];
+    // F29: the `@import` a name in `@code` lacks (TS2304), when markup would find it.
+    const imports = entry
+      ? tsImportFixes(registry.projectFor(uriToPath(document.uri)).service, entry, params.range).map((fix): CodeAction => ({
+          title: fix.title,
+          kind: CodeActionKind.QuickFix,
+          isPreferred: true,
+          diagnostics: params.context.diagnostics.filter((d) => d.code === fix.code && d.range.start.line === fix.line),
+          edit: { changes: { [document.uri]: fix.edits } },
+        }))
+      : [];
+    return [...fixes, ...imports, ...inferred, ...refactors];
+  });
+
+  // Watched files need dynamic registration (the LSP static capability is
+  // client-side only). Handlers installed above. (It stood after the return and never ran.)
+  connection.onInitialized(() => {
+    void connection.client.register(DidChangeWatchedFilesNotification.type, {
+      watchers: [{ globPattern: "**/*.tsazor" }, { globPattern: "**/tsconfig.json" }],
+    });
   });
 
   return {
@@ -276,6 +425,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       hoverProvider: true,
       definitionProvider: true,
+      codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix, CodeActionKind.RefactorRewrite] },
       completionProvider: { triggerCharacters: ["<", "@", " ", "."], resolveProvider: true },
     },
   };
@@ -286,14 +436,14 @@ connection.listen();
 
 /* Helpers ------------------------------------------------------------------- */
 
-function projectRootOf(params: InitializeParams): string {
-  const folder = params.workspaceFolders?.[0];
-  if (folder) return fileURLToPath(folder.uri);
-  return process.cwd();
-}
-
 function uriToPath(uri: string): string {
   return fileURLToPath(uri);
+}
+
+/** The open TextDocument behind a real-path dependent, if any. */
+function openDocumentOf(filePath: string): TextDocument | undefined {
+  const target = filePath.replace(/\\/g, "/").toLowerCase();
+  return documents.all().find((document) => uriToPath(document.uri).replace(/\\/g, "/").toLowerCase() === target);
 }
 
 /** Dedupe (source+position+message), sort by position, cap the count. */

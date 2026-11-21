@@ -1,0 +1,56 @@
+@page "/structure"
+
+<h1>Accordion, List, Progress</h1>
+<p class="intro">
+    The structure components both skins share, with the same parameters as
+    <code>@@tsazor/bootstrap</code>: an accordion (one section open at a time), a list of links and
+    buttons, a progress bar, a collapsible region and a radio group.
+</p>
+
+<section class="demo">
+    <h2>Accordion</h2>
+    <Accordion>
+        <AccordionItem Title="Delivery">We bake at 4 and deliver from 6 in the morning.</AccordionItem>
+        <AccordionItem Title="Payment">Invoice, card or cash on delivery.</AccordionItem>
+        <AccordionItem Title="Returns">Tell us the same day; we bake it again.</AccordionItem>
+    </Accordion>
+</section>
+
+<section class="demo">
+    <h2>List</h2>
+    <ListGroup>
+        <ListGroupItem Href="/structure" Active="@true">Today's orders</ListGroupItem>
+        <ListGroupItem OnClick="@(() => this.picked++)">Pick a bakery (@picked)</ListGroupItem>
+        <ListGroupItem Disabled="@true">Archive</ListGroupItem>
+    </ListGroup>
+</section>
+
+<section class="demo">
+    <h2>Progress and Collapse</h2>
+    <Progress Value="@progress" Label="@(`Baked ${progress} %`)" />
+    <div class="demo-row">
+        <Button OnClick="@(() => this.progress = Math.min(100, this.progress + 20))">Bake more</Button>
+        <Button Appearance="subtle" OnClick="@(() => this.detailsOpen = !this.detailsOpen)" aria-expanded="@(detailsOpen ? "true" : "false")">Details</Button>
+    </div>
+    <Collapse IsOpen="@detailsOpen">
+        <p class="details">Sourdough rests 18 hours; rye 12.</p>
+    </Collapse>
+</section>
+
+<section class="demo">
+    <h2>RadioGroup</h2>
+    <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="slice" />
+    <p class="echo">Slicing: @slice</p>
+</section>
+
+@code {
+    private picked = 0;
+    private progress = 40;
+    private detailsOpen = false;
+    private slice = "whole";
+    private readonly slicing = [
+        { value: "whole", label: "Whole" },
+        { value: "sliced", label: "Sliced" },
+        { value: "thin", label: "Thin slices" },
+    ];
+}

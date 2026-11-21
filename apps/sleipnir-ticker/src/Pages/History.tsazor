@@ -2,15 +2,15 @@
 @inject TickerStore Store
 
 <div class="history-page">
-    <h1>Verlauf</h1>
-    <p class="text-muted">@this.Store.points.length erfasste Preis-Punkte (neueste zuerst).</p>
+    <h1>History</h1>
+    <p class="text-muted">@this.Store.points.length recorded price points (newest first).</p>
 
     @if (this.Store.points.length === 0) {
-        <p class="loading">Noch keine Daten…</p>
+        <p class="loading">No data yet…</p>
     } else {
         <table class="history-table">
             <thead>
-                <tr><th>Zeit</th><th>Preis</th></tr>
+                <tr><th>Time</th><th>Price</th></tr>
             </thead>
             <tbody>
                 @for (const point of this.reversed) {
@@ -25,26 +25,22 @@
 </div>
 
 @code {
-    private unsub: () => void = () => {};
     private reversed: PricePoint[] = [];
 
     protected override onInitialized(): void {
-        this.unsub = this.Store.subscribe(() => {
-            this.reversed = [...this.Store.points].reverse().slice(0, 120);
-            this.stateHasChanged();
-        });
+        this.observe(this.Store, () => this.updateRows());
+        this.updateRows();
+    }
+
+    private updateRows(): void {
         this.reversed = [...this.Store.points].reverse().slice(0, 120);
     }
 
-    private cellTime(t: number): string {
-        return new Date(t).toTimeString().slice(0, 8);
+    private cellTime(t: number | undefined): string {
+        return t === undefined ? "—" : new Date(t).toTimeString().slice(0, 8);
     }
 
-    private cellPrice(price: number): string {
-        return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    dispose(): void {
-        this.unsub();
+    private cellPrice(price: number | undefined): string {
+        return price === undefined ? "—" : price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 }

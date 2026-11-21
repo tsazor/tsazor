@@ -1,0 +1,15 @@
+.list {
+    max-width: 24rem;
+    padding: 0;
+    list-style: none;
+    border: 1px solid #e3e6ea;
+    border-radius: 10px;
+}
+
+li {
+    padding: 0.5rem 1rem;
+}
+
+li + li {
+    border-top: 1px solid #e3e6ea;
+}

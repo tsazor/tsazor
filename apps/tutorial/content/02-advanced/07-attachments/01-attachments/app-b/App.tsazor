@@ -1,0 +1,53 @@
+<header>
+    <h1>Docs</h1>
+    @if (!open) {
+        <button class="open" @onclick="show">Search…</button>
+    }
+</header>
+
+@if (open) {
+    <div class="search">
+        <input placeholder="Search the docs" @attach="autofocus" @onfocus="() => focused = true" @onblur="() => focused = false" />
+        <button class="close" @onclick="close" @attach="closeTip">✕</button>
+        <p class="hint">@(focused ? "Type away." : "Click the box first…")</p>
+    </div>
+}
+
+@code {
+    open = false;
+    focused = false;
+    closeTip = this.tooltip("Close the search");
+
+    autofocus = (input: HTMLInputElement) => input.focus();
+
+    tooltip(text: string) {
+        return (element: HTMLElement) => {
+            const tip = document.createElement("div");
+            tip.className = "tooltip";
+            tip.textContent = text;
+            const show = () => {
+                const box = element.getBoundingClientRect();
+                tip.style.left = `${box.left}px`;
+                tip.style.top = `${box.bottom + 6}px`;
+                document.body.append(tip);
+            };
+            const hide = () => tip.remove();
+            element.addEventListener("mouseenter", show);
+            element.addEventListener("mouseleave", hide);
+            return () => {
+                hide();
+                element.removeEventListener("mouseenter", show);
+                element.removeEventListener("mouseleave", hide);
+            };
+        };
+    }
+
+    show() {
+        this.open = true;
+    }
+
+    close() {
+        this.open = false;
+        this.focused = false;
+    }
+}

@@ -1,0 +1,49 @@
+/* Carousel — Bootstrap's carousel, driven by the component: the stop button in a corner over the slides. */
+
+.tz-carousel {
+  touch-action: pan-y;
+}
+
+.tz-carousel__rotation {
+  position: absolute;
+  inset-block-start: 0.5rem;
+  inset-inline-end: 0.5rem;
+  z-index: 3;
+  display: inline-grid;
+  place-items: center;
+  padding: 0.25rem;
+  opacity: 0.85;
+}
+
+.tz-carousel__rotation:hover,
+.tz-carousel__rotation:focus-visible {
+  opacity: 1;
+}
+
+/* The bullets: Bootstrap's indicator look (it styles [data-bs-target], which needs its JavaScript), with a 24 px
+   tall target (WCAG 2.5.8). */
+.tz-carousel .carousel-indicators > button {
+  box-sizing: content-box;
+  flex: 0 1 auto;
+  inline-size: 30px;
+  block-size: 4px;
+  padding: 0;
+  margin-inline: 3px;
+  border: 0;
+  border-block: 10px solid transparent;
+  background-color: var(--bs-carousel-indicator-active-bg, #fff);
+  background-clip: padding-box;
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.6s ease;
+}
+
+.tz-carousel .carousel-indicators > .active {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tz-carousel .carousel-indicators > button {
+    transition: none;
+  }
+}

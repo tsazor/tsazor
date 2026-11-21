@@ -1,0 +1,9 @@
+@inject BakeryClock clock
+<p class="sign">@(isOpen ? "Open" : "Closed")</p>
+
+@code {
+    get isOpen() {
+        const hour = this.clock.now().getHours();
+        return hour >= 7 && hour < 18;
+    }
+}

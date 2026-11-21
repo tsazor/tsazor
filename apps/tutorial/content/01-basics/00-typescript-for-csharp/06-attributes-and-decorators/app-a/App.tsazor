@@ -1,0 +1,17 @@
+@import { Calculator } from "./calculator"
+@import { calls } from "./log"
+
+<p>2 + 3 = @sum, 4 × 5 = @product</p>
+<h2>Call log</h2>
+<ol>
+    @foreach (const call of log) {
+        <li>@call</li>
+    }
+</ol>
+
+@code {
+    calculator = new Calculator();
+    sum = this.calculator.add(2, 3);
+    product = this.calculator.multiply(4, 5);
+    log = [...calls];
+}

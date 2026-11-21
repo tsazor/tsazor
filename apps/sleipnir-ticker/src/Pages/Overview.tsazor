@@ -3,20 +3,20 @@
 
 <div class="ticker-page">
     @if (this.Store.lastError !== null) {
-        <Alert Variant="danger">@this.Store.lastError</Alert>
+        <Alert Intent="danger">@this.Store.lastError</Alert>
     }
 
     <Card>
         <CardBody>
             <p class="ticker-price" role="status">
                 <span class="price">@this.Store.priceText</span>
-                <Badge Variant="@this.Store.changeVariant">@this.Store.changeText</Badge>
+                <Badge Intent="@this.Store.changeVariant">@this.Store.changeText</Badge>
             </p>
             <div class="ticker-stats">
                 <Card>
                     <CardBody>
                         <div class="stat-card">
-                            <span class="stat-label">24h Hoch</span>
+                            <span class="stat-label">24h high</span>
                             <span class="stat-value">@this.Store.highText</span>
                         </div>
                     </CardBody>
@@ -24,7 +24,7 @@
                 <Card>
                     <CardBody>
                         <div class="stat-card">
-                            <span class="stat-label">24h Tief</span>
+                            <span class="stat-label">24h low</span>
                             <span class="stat-value">@this.Store.lowText</span>
                         </div>
                     </CardBody>
@@ -32,7 +32,7 @@
                 <Card>
                     <CardBody>
                         <div class="stat-card">
-                            <span class="stat-label">Volume (Basis)</span>
+                            <span class="stat-label">Volume (base)</span>
                             <span class="stat-value">@this.Store.volumeText</span>
                         </div>
                     </CardBody>
@@ -46,19 +46,19 @@
                     </CardBody>
                 </Card>
             </div>
-            <div class="sync-line">Letzte Aktualisierung: @this.Store.updatedText · @this.Store.statusText</div>
+            <div class="sync-line">Last update: @this.Store.updatedText · @this.Store.statusText</div>
         </CardBody>
     </Card>
 
     <Card>
-        <CardHeader>Verlauf (60 s)</CardHeader>
+        <CardHeader>History (60 s)</CardHeader>
         <CardBody>
             <Sparkline Points="@this.Store.points" />
         </CardBody>
     </Card>
 
     <Card>
-        <CardHeader>Eingehende Ticks</CardHeader>
+        <CardHeader>Incoming ticks</CardHeader>
         <CardBody>
             <EventLog Entries="@this.Store.log" />
         </CardBody>
@@ -66,14 +66,8 @@
 </div>
 
 @code {
-    private unsub: () => void = () => {};
-
     protected override onInitialized(): void {
-        // Page re-renders on every store tick (push, not polling).
-        this.unsub = this.Store.subscribe(() => this.stateHasChanged());
-    }
-
-    dispose(): void {
-        this.unsub();
+        // Page re-renders on every store tick (push, not polling); unsubscribed on dispose.
+        this.observe(this.Store);
     }
 }

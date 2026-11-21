@@ -1,0 +1,142 @@
+@page "/orders"
+@** A CRUD page, copied in (`npx @tsazor/bootstrap add OrdersCrud`) and then the app's: the
+    DataGrid (the filter, the selection, the footer's sum) with a New, an Edit and a Delete, the
+    create/edit in a Dialog's Form, the delete confirmed in a Dialog of its own; the models come
+    from their own modules the copy carries. The orders live in memory here — yours: replace the
+    handlers with your API's round trips. *@
+@import { GridSort, PaginationState } from "@tsazor/ui"
+@import { EditContext, DataAnnotationsValidator } from "@tsazor/runtime"
+@import { OrderRow, OrderForm } from "./order-row"
+
+<div class="tz-crud">
+    <div class="tz-crud-toolbar">
+        <Typography Variant="h2">Orders</Typography>
+        <div class="tz-crud-actions">
+            <Button Intent="primary" OnClick="@this.newOrder">New</Button>
+            <Button Appearance="outline" Disabled="@this.selectedItem === undefined" OnClick="@this.editOrder">Edit</Button>
+            <Button Appearance="outline" Disabled="@this.selectedItem === undefined" OnClick="@this.confirmDelete">Delete</Button>
+        </div>
+    </div>
+    <DataGrid Items="@orders" Pagination="@pagination" SelectionMode="single" @bind-SelectedItems="selection" AriaLabel="Orders" Striped="@true" Hover="@true">
+        <PropertyColumn Property="(order) => order.id" Title="#" Sortable="@true" IsDefaultSortColumn="@true" />
+        <PropertyColumn Property="(order) => order.customer" Sortable="@true" Filterable="@true" />
+        <PropertyColumn Property="(order) => order.total" Title="Total" Align="end" Sortable="@true" Filterable="@true" Aggregate="sum" />
+        <TemplateColumn Title="Paid" Context="order">
+            <Badge Intent="@(order.paid ? "success" : "warning")">@(order.paid ? "paid" : "open")</Badge>
+        </TemplateColumn>
+    </DataGrid>
+    <Paginator State="@pagination" />
+
+    <Dialog IsOpen="@this.dialogOpen" Title="@(this.editing === undefined ? "New order" : "Edit the order")" OnClosed="@this.onDialogClosed">
+        <Form Model="@orderForm" OnValidSubmit="@this.onValidSubmit" OnInvalidSubmit="@this.onInvalidSubmit">
+            <DataAnnotationsValidator />
+            <FormField Label="Customer" Id="crud-customer" For="customer">
+                <TextInput @bind-Value="@orderForm.customer" Required="@true" />
+            </FormField>
+            <FormField Label="Total" Id="crud-total" For="total" Help="In euro, without VAT.">
+                <NumberInput @bind-Value="@orderForm.total" Required="@true" />
+            </FormField>
+            <div class="tz-crud-form-actions">
+                <Button Intent="primary" Type="submit">Save</Button>
+                <Button Appearance="outline" OnClick="@this.closeDialog">Cancel</Button>
+            </div>
+        </Form>
+    </Dialog>
+
+    <Dialog IsOpen="@this.confirmOpen" Title="Delete the order?" OnClosed="@this.onDialogClosed">
+        <p>The order @(this.selectedItem?.id) of @(this.selectedItem?.customer) is gone.</p>
+        <div class="tz-crud-form-actions">
+            <Button Intent="danger" OnClick="@this.reallyDelete">Delete</Button>
+            <Button Appearance="outline" OnClick="@this.closeDialog">Cancel</Button>
+        </div>
+    </Dialog>
+</div>
+
+@code {
+    /** The orders, in memory (yours: the API's page for the data grid's ItemsProvider). */
+    private orders: OrderRow[] = [
+        new OrderRow(1, "Marta", 12.5, true),
+        new OrderRow(2, "Jonas", 30, false),
+        new OrderRow(3, "Lena", 7, true),
+        new OrderRow(4, "Ali", 18, false),
+    ];
+    private readonly pagination = new PaginationState();
+    private selection: OrderRow[] = [];
+
+    /** The single selection (the grid's) — the toolbar's Edit and Delete work on it. */
+    private get selectedItem(): OrderRow | undefined {
+        return this.selection[0];
+    }
+
+    /** The dialogs: the order form's (creating or editing), the delete's confirm. */
+    private dialogOpen = false;
+    private confirmOpen = false;
+    private editing?: OrderRow;
+    private orderForm = new OrderForm();
+
+    private nextId(): number {
+        return this.orders.reduce((highest, order) => Math.max(highest, order.id), 0) + 1;
+    }
+
+    private newOrder(): void {
+        this.orderForm = new OrderForm();
+        this.editing = undefined;
+        this.dialogOpen = true;
+        this.stateHasChanged();
+    }
+
+    private editOrder(): void {
+        const item = this.selectedItem;
+        if (item === undefined) return;
+        this.orderForm = new OrderForm(item.customer, item.total);
+        this.editing = item;
+        this.dialogOpen = true;
+        this.stateHasChanged();
+    }
+
+    private confirmDelete(): void {
+        if (this.selectedItem === undefined) return;
+        this.dialogOpen = false;
+        this.confirmOpen = true;
+        this.stateHasChanged();
+    }
+
+    private reallyDelete(): void {
+        const item = this.selectedItem;
+        if (item === undefined) return;
+        this.orders = this.orders.filter((order) => order !== item);
+        this.selection = [];
+        this.closeDialog();
+        // TODO: your API — e.g. await deleteOrder(item.id);
+    }
+
+    private closeDialog(): void {
+        this.dialogOpen = false;
+        this.confirmOpen = false;
+        this.stateHasChanged();
+    }
+
+    /** The dialogs closed by their own means (Escape, the outside): nothing stays open. */
+    private onDialogClosed(): void {
+        this.dialogOpen = false;
+        this.confirmOpen = false;
+        this.stateHasChanged();
+    }
+
+    /** The dialog's valid submit: into the list (the edit updates its row) and closed. */
+    private async onValidSubmit(context: EditContext): Promise<void> {
+        void context;
+        if (this.editing === undefined) {
+            this.orders = [...this.orders, new OrderRow(this.nextId(), this.orderForm.customer ?? "New", this.orderForm.total ?? 0, false)];
+            // TODO: your API — e.g. await createOrder(this.orderForm);
+        } else {
+            this.orders = this.orders.map((order) => (order === this.editing ? { ...order, customer: this.orderForm.customer ?? order.customer, total: this.orderForm.total ?? order.total } : order));
+            // TODO: your API — e.g. await updateOrder(this.editing.id, this.orderForm);
+        }
+        this.closeDialog();
+    }
+
+    private onInvalidSubmit(context: EditContext): void {
+        void context;
+    }
+}

@@ -1,5 +1,16 @@
-<header class="fui-card-header">@childContent</header>
+@** The header row (header element) of a Card, typically for its title. Use inside Card, before
+    the body. *@
+@import { withAttributes } from "./attributes"
+
+<header @attributes="@this.headerAttributes">@childContent</header>
 
 @code {
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The header content (e.g. a title). */
     @Parameter() childContent?: RenderFragment;
+
+    private get headerAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-card-header" }, this.additionalAttributes);
+    }
 }

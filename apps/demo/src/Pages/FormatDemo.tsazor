@@ -1,0 +1,29 @@
+@page "/format"
+@import { formatValue } from "@tsazor/runtime"
+
+<h1>bind:format</h1>
+
+<p>Number and date binds render through an explicit format and re-parse the change value — invariant culture only (roadmap 3.7).</p>
+
+<div class="card">
+    <div class="field">
+        <label for="format-price">Price (mask 0.00)</label>
+        <input id="format-price" type="number" step="0.01" @bind="price" @bind:format="0.00" />
+        <p class="log">model: @price — grouped N2: @formatValue(price, "N2")</p>
+    </div>
+    <div class="field">
+        <label for="format-ordered">Ordered (yyyy-MM-dd)</label>
+        <input id="format-ordered" type="date" @bind="ordered" @bind:format="yyyy-MM-dd" />
+        <p class="log">model ISO: @ordered.toISOString() — as dd.MM.yyyy: @formatValue(ordered, "dd.MM.yyyy")</p>
+    </div>
+    <p class="log">total N2: @formatValue(sum, "N2")</p>
+</div>
+
+@code {
+    private price = 1234.5;
+    private ordered = new Date(2024, 0, 5);
+
+    private get sum(): number {
+        return this.price * 21;
+    }
+}

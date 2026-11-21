@@ -1,0 +1,172 @@
+/* Chip — Fluent 2's Tag and InteractionTag: a pill with a primary part (label, button or link) and a dismiss button. */
+
+.fui-chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fui-spacing-s);
+}
+
+.fui-chip {
+  --fui-chip-height: 32px;
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--fui-chip-height);
+  border: 1px solid transparent;
+  border-radius: var(--fui-radius-circular);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  line-height: 1;
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.fui-chip--small {
+  --fui-chip-height: 24px;
+  font-size: var(--fui-font-size-caption-lg);
+}
+
+.fui-chip--rounded {
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-chip__primary,
+.fui-chip__dismiss {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+
+.fui-chip__primary {
+  padding: 0 var(--fui-spacing-m);
+}
+
+.fui-chip--small .fui-chip__primary {
+  padding: 0 var(--fui-spacing-s);
+}
+
+.fui-chip__dismiss {
+  justify-content: center;
+  width: var(--fui-chip-height);
+  padding: 0;
+  cursor: pointer;
+}
+
+/* With a close button the label needs less room on its end. */
+.fui-chip:has(.fui-chip__dismiss) .fui-chip__primary {
+  padding-inline-end: var(--fui-spacing-xs);
+}
+
+button.fui-chip__primary,
+a.fui-chip__primary {
+  cursor: pointer;
+}
+
+:is(button.fui-chip__primary, a.fui-chip__primary, .fui-chip__dismiss):hover {
+  background: var(--fui-chip-hover, rgba(0, 0, 0, 0.06));
+}
+
+:is(.fui-chip__primary, .fui-chip__dismiss):focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+  border-radius: inherit;
+}
+
+.fui-chip__icon {
+  flex: none;
+}
+
+.fui-chip__media {
+  display: inline-flex;
+  margin-inline-start: calc(-1 * var(--fui-spacing-s));
+}
+
+.fui-chip__text {
+  white-space: nowrap;
+}
+
+/* Color roles, as Badge has them: fill + on-fill (solid), glass + ink (subtle), ink (outline, transparent). */
+.fui-chip--brand {
+  --fui-chip-fill: var(--fui-brand-background);
+  --fui-chip-on-fill: var(--fui-foreground-on-brand);
+  --fui-chip-glass: var(--fui-color-glass-blue);
+  --fui-chip-ink: var(--fui-color-blue-1);
+}
+
+.fui-chip--neutral {
+  --fui-chip-fill: var(--fui-foreground-2);
+  --fui-chip-on-fill: var(--fui-background-1);
+  --fui-chip-glass: var(--fui-background-3);
+  --fui-chip-ink: var(--fui-foreground-2);
+}
+
+.fui-chip--success {
+  --fui-chip-fill: var(--fui-color-green-filled);
+  --fui-chip-on-fill: #FFFFFF;
+  --fui-chip-glass: var(--fui-color-glass-green);
+  --fui-chip-ink: var(--fui-color-green-1);
+}
+
+.fui-chip--warning {
+  --fui-chip-fill: var(--fui-color-amber-filled);
+  --fui-chip-on-fill: #FFFFFF;
+  --fui-chip-glass: var(--fui-color-glass-amber);
+  --fui-chip-ink: var(--fui-color-amber-1);
+}
+
+.fui-chip--danger {
+  --fui-chip-fill: var(--fui-color-red-filled);
+  --fui-chip-on-fill: #FFFFFF;
+  --fui-chip-glass: var(--fui-color-glass-red);
+  --fui-chip-ink: var(--fui-color-red-1);
+}
+
+.fui-chip--info {
+  --fui-chip-fill: var(--fui-color-blue-1);
+  --fui-chip-on-fill: #FFFFFF;
+  --fui-chip-glass: var(--fui-color-glass-blue);
+  --fui-chip-ink: var(--fui-color-blue-1);
+}
+
+.fui-chip--filled {
+  --fui-chip-hover: rgba(255, 255, 255, 0.16);
+  background: var(--fui-chip-fill);
+  color: var(--fui-chip-on-fill);
+}
+
+.fui-chip--subtle {
+  background: var(--fui-chip-glass);
+  color: var(--fui-chip-ink);
+}
+
+.fui-chip--outline {
+  border-color: var(--fui-stroke-1);
+  background: transparent;
+  color: var(--fui-chip-ink);
+}
+
+.fui-chip--transparent {
+  background: transparent;
+  color: var(--fui-chip-ink);
+}
+
+/* Selected in a set: the brand's fill, whatever the appearance. */
+.fui-chip--selected {
+  --fui-chip-hover: rgba(255, 255, 255, 0.16);
+  border-color: transparent;
+  background: var(--fui-brand-background);
+  color: var(--fui-foreground-on-brand);
+}
+
+.fui-chip--disabled {
+  opacity: 0.55;
+}
+
+.fui-chip--disabled :is(.fui-chip__primary, .fui-chip__dismiss) {
+  cursor: not-allowed;
+}

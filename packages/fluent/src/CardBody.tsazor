@@ -1,0 +1,15 @@
+@** The padded main area of a Card (the same as @tsazor/bootstrap's CardBody). Use inside Card. *@
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.bodyAttributes">@childContent</div>
+
+@code {
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The body content, e.g. a CardTitle and text. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get bodyAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-card__body" }, this.additionalAttributes);
+    }
+}

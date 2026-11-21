@@ -4,10 +4,11 @@
 <div class="layout">
     <nav class="nav">
         <span class="brand">Sleipnir Ticker</span>
-        <NavLink Href="/">Live</NavLink>
-        <NavLink Href="/history">Verlauf</NavLink>
+        <NavLink Href="/" Match="@NavLinkMatch.All">Live</NavLink>
+        <NavLink Href="/history">History</NavLink>
+        <NavLink Href="/jobs">Jobs</NavLink>
         <span class="status-slot">
-            <Badge Variant="@this.Store.statusVariant">@this.Store.statusText</Badge>
+            <Badge Intent="@this.Store.statusVariant">@this.Store.statusText</Badge>
         </span>
     </nav>
     <main class="main page">
@@ -16,15 +17,9 @@
 </div>
 
 @code {
-    private unsub: () => void = () => {};
-
     protected override onInitialized(): void {
-        // The layout always shows the connection state — it subscribes itself.
-        this.unsub = this.Store.subscribe(() => this.stateHasChanged());
-    }
-
-    dispose(): void {
-        this.unsub();
+        // The layout always shows the connection state — it observes the store itself.
+        this.observe(this.Store);
     }
 }
 

@@ -1,0 +1,24 @@
+---
+title: Formatted bindings
+keywords: @bind:format, date input, formatting
+focus: App.tsazor
+---
+
+Show the price with two decimals:
+
+```tsazor
+<input type="number" step="0.01" min="0" @bind="price" @bind:format="F2" />
+```
+
+Type `3.14159` and leave the field: the box shows `3.14`, `price` holds the parsed
+`3.14159`. The date input needs no format — like Blazor, a date input binds through
+`yyyy-MM-dd` by default.
+
+> **Coming from Blazor:** `@bind:format` is a documented subset of .NET formatting, always
+> with the invariant culture — culture-aware number binds exist as a Tsazor extension
+> (`@bind:culture`, together with localization in Part 3). Number formats `F<n>`, `N<n>`
+> and digit masks (`0.00`, `#,##0.0`), and the date tokens `yyyy MM dd HH mm ss` (plus
+> `yy M d H m s`). It applies to `type="number"`, `type="range"` and `type="date"` inputs,
+> and to a text input by the value it is bound to — so the common Blazor idiom works as it
+> does there: a *text* input bound to a `Date` with `@bind:format="dd.MM.yyyy"` shows
+> `02.10.2026` and reads the typed text back as a date.

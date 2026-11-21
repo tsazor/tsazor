@@ -1,0 +1,11 @@
+@* pages/tenants/create.tsx (routes.tsx's `tenants/new`): tenant creation is a dialog on the list page now; this
+   redirect keeps bookmarks and old links working — React Router's `<Navigate to="/tenants" replace />`. *@
+@page "/tenants/new"
+@authorize
+@inject NavigationManager navigation
+
+@code {
+    protected override onInitialized(): void {
+        this.navigation.navigateTo("/tenants", { replaceHistoryEntry: true });
+    }
+}

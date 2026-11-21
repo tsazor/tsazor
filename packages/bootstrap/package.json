@@ -1,0 +1,90 @@
+{
+  "name": "@tsazor/bootstrap",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/bootstrap"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/bootstrap#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Bootstrap 5 components for Tsazor, written in .tsazor.",
+  "keywords": [
+    "tsazor",
+    "tsazor-components",
+    "components",
+    "ui"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tsazor-bootstrap.css": "./dist/tsazor-bootstrap.css",
+    "./tsazor-components.json": "./dist/tsazor-components.json",
+    "./templates": {
+      "types": "./dist/templates/index.d.ts",
+      "default": "./dist/templates/index.js"
+    }
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "tsazor": {
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": [
+        "bootstrap/dist/css/bootstrap.min.css",
+        "@tsazor/bootstrap/tsazor-bootstrap.css"
+      ],
+      "services": "addBootstrap",
+      "layout": [
+        "ToastRegion",
+        "DialogProvider"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin",
+    "templates"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "core-icons": "node scripts/core-icons.mjs"
+  },
+  "dependencies": {
+    "@tsazor/markdown": "workspace:*",
+    "@tsazor/primitives": "workspace:*",
+    "@tsazor/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tsazor/runtime": "workspace:*",
+    "bootstrap": "^5.3.0"
+  },
+  "devDependencies": {
+    "@tsazor/bootstrap-icons": "workspace:*",
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/testing": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^21.0.1",
+    "vitest": "^3.2.7"
+  },
+  "bin": {
+    "tsazor-bootstrap": "./bin/bootstrap.mjs"
+  }
+}

@@ -1,0 +1,69 @@
+/* TreeView — Fluent UI 2 tree: rows with a chevron, the selection in the brand's subtle fill. */
+
+.fui-tree,
+.fui-tree__group {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+}
+
+.fui-tree__node {
+  outline: none;
+  cursor: pointer;
+}
+
+.fui-tree__row {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+  min-height: var(--fui-height-m);
+  padding-inline-end: var(--fui-spacing-m);
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-tree__node:hover > .fui-tree__row {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-tree__node--selected > .fui-tree__row {
+  background: var(--fui-control-fill-selected);
+  font-weight: var(--fui-font-weight-semibold);
+}
+
+.fui-tree__node:focus-visible > .fui-tree__row {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+.fui-tree__node--disabled > .fui-tree__row {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-tree__chevron {
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.fui-tree__chevron-icon {
+  transition: transform var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-tree__node--open > .fui-tree__row > .fui-tree__chevron > .fui-tree__chevron-icon {
+  transform: rotate(90deg);
+}
+
+.fui-tree__chevron-icon:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+.fui-tree__icon {
+  flex: none;
+}

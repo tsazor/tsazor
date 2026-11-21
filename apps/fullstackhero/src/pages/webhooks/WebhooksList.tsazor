@@ -1,0 +1,131 @@
+@* pages/webhooks/list.tsx: the webhook subscriptions, numbered, with their events; a row tests its endpoint, deletes
+   the subscription (after the browser's confirm) or opens its deliveries. React Query's mutations are async handlers:
+   `busyId` is the row whose test or delete is running. "New subscription" opens the create dialog. *@
+@page "/webhooks"
+@authorize({ policy: "Permissions.Webhooks.View" })
+@import { Plus, RefreshCw, Webhook } from "lucide"
+@import { keepPreviousData } from "@tanstack/query-core"
+@import { deleteWebhookSubscription, listWebhookSubscriptions, testWebhookSubscription, type WebhookSubscriptionDto } from "@/api/webhooks"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import CreateWebhookDialog from "@/components/webhooks/CreateWebhookDialog.tsazor"
+@import WebhookRow from "./WebhookRow.tsazor"
+@import { describe } from "./webhook-format"
+@inject NavigationManager navigation
+
+<div class="space-y-8">
+    <EntityPageHeader icon="@Webhook" title="Webhooks" total="@(data?.totalCount ?? null)" unit="subscription"
+                      description="Subscribe HTTP endpoints to domain events. Payloads are signed with HMAC-SHA256 using the secret you provide — verify the X-FSH-Signature header on your side before trusting the body.">
+        <Button variant="outline" size="sm" disabled="@query.result.isFetching" onClick="@(() => query.refetch())" class="flex-1 sm:flex-none">
+            <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", query.result.isFetching && "animate-spin")" />
+            Refresh
+        </Button>
+        <Button onClick="@(() => createOpen = true)" class="flex-1 sm:flex-none">
+            <Icon icon="@Plus" class="mr-1 h-4 w-4" /> New subscription
+        </Button>
+    </EntityPageHeader>
+
+    @if (query.result.isError) {
+        <ErrorBand message="@(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load subscriptions.")" />
+    }
+
+    @if (query.result.isLoading) {
+        <LoadingRow label="Loading subscriptions" />
+    }
+
+    @if (!query.result.isLoading && items.length === 0 && !query.result.isError) {
+        <EmptyState icon="@Webhook" kicker="// no subscriptions" title="No webhook subscriptions yet."
+                    description="Add an endpoint and pick which events should fire. We'll retry failed deliveries automatically.">
+            <Action>
+                <Button onClick="@(() => createOpen = true)">
+                    <Icon icon="@Plus" class="mr-1 h-4 w-4" /> New subscription
+                </Button>
+            </Action>
+        </EmptyState>
+    }
+
+    @if (items.length > 0) {
+        <ol class="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+            @for (let i = 0; i < items.length; i++) {
+                const sub = items[i]!;
+                <WebhookRow @key="sub.id" sub="@sub" index="@(i + 1 + (page - 1) * pageSize)" busy="@(busyId === sub.id)"
+                            onTest="@(() => runTest(sub.id))" onDelete="@(() => confirmDelete(sub))" onOpen="@(() => navigation.navigateTo(`/webhooks/${sub.id}`))" />
+            }
+        </ol>
+    }
+
+    @if (data && data.totalPages > 1) {
+        <Pagination page="@data.pageNumber" totalPages="@data.totalPages" totalCount="@data.totalCount" shown="@items.length"
+                    fetching="@query.result.isFetching" hasPrev="@data.hasPrevious" hasNext="@data.hasNext"
+                    onPrev="@(() => page = Math.max(1, page - 1))" onNext="@(() => page = page + 1)" noun="subscriptions" />
+    }
+
+    <CreateWebhookDialog @bind-open="createOpen" onCreated="@(() => queryClient.invalidateQueries({ queryKey: ["webhooks", "subscriptions"] }))" />
+</div>
+
+@code {
+    private readonly pageSize = 25;
+
+    private page = 1;
+    private createOpen = false;
+    private busyId: string | null = null;
+
+    private readonly query = new Query(() => {
+        const page = this.page;
+        return {
+            queryKey: ["webhooks", "subscriptions", page],
+            queryFn: () => listWebhookSubscriptions(page, this.pageSize),
+            placeholderData: keepPreviousData,
+        };
+    });
+
+    protected override onInitialized(): void {
+        this.observe(this.query);
+    }
+
+    private get data() {
+        return this.query.result.data;
+    }
+
+    private get items(): WebhookSubscriptionDto[] {
+        return this.data?.items ?? [];
+    }
+
+    /** The `test` mutation. */
+    private async runTest(id: string): Promise<void> {
+        this.busyId = id;
+        try {
+            const data = await testWebhookSubscription(id);
+            if (data.success) {
+                toast.success("Test event delivered", {
+                    description: "Your endpoint accepted the payload. Check Deliveries for details.",
+                });
+            } else {
+                toast.warning("Test failed", {
+                    description: "Endpoint rejected the test event. See Deliveries for the response code.",
+                });
+            }
+        } catch (err) {
+            toast.error("Test failed", { description: describe(err) });
+        } finally {
+            this.busyId = null;
+        }
+    }
+
+    /** The `remove` mutation, after the browser's confirm. */
+    private async confirmDelete(sub: WebhookSubscriptionDto): Promise<void> {
+        if (!window.confirm(`Delete subscription to ${sub.url}?`)) return;
+        this.busyId = sub.id;
+        try {
+            await deleteWebhookSubscription(sub.id);
+            toast.success("Subscription deleted");
+            void queryClient.invalidateQueries({ queryKey: ["webhooks", "subscriptions"] });
+        } catch (err) {
+            toast.error("Delete failed", { description: describe(err) });
+        } finally {
+            this.busyId = null;
+        }
+    }
+}

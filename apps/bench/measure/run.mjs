@@ -30,7 +30,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /* ------------------------------------------------------------------ */
 
 const APPS = [
-  { name: "tsazor",  port: 5410, todoRoute: "/todo", rowsRoute: "/rows", kind: "vite",   dir: path.resolve(__dirname, "../tsazor") },
+  { name: "tsazor",  port: 5410, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite",   dir: path.resolve(__dirname, "../tsazor") },
+  // The same app with Tsazor's Router in hash mode (`vite build --mode router`): as a Tsazor app is usually written.
+  { name: "tsazor-router", port: 5415, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../tsazor"), pkg: "tsazor", mode: "router" },
   { name: "react",  port: 5411, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../react") },
   { name: "vue",    port: 5412, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../vue") },
   { name: "svelte", port: 5413, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../svelte") },
@@ -57,7 +59,7 @@ const MIME = {
 // `dotnet publish -o publish` puts the servable site one level down, in
 // publish/wwwroot — vite apps go straight to dist.
 const distDirOf = (app) =>
-  app.kind === "vite" ? path.join(app.dir, "dist") : path.join(app.dir, "publish", "wwwroot");
+  app.kind === "vite" ? path.join(app.dir, app.mode ? `dist-${app.mode}` : "dist") : path.join(app.dir, "publish", "wwwroot");
 
 /* ------------------------------------------------------------------ */
 /* Build                                                               */
@@ -67,7 +69,7 @@ function buildApp(app) {
   const shell = process.platform === "win32";
   if (app.kind === "vite") {
     const pnpm = shell ? "pnpm.cmd" : "pnpm";
-    return guardedRun(pnpm, ["--filter", `bench-${app.name}`, "exec", "vite", "build"], app.dir, shell);
+    return guardedRun(pnpm, ["--filter", `bench-${app.pkg ?? app.name}`, "exec", "vite", "build", ...(app.mode ? ["--mode", app.mode] : [])], app.dir, shell);
   }
   return guardedRun("dotnet", ["publish", "-c", "Release", "-o", "publish"], app.dir, false);
 }
@@ -255,6 +257,27 @@ async function measureForcedHeap(page) {
   }
 }
 
+/**
+ * A fresh browser spends its first seconds before navigations can even start their request
+ * (~0.9 s of `requestStart - fetchStart` per load, measured with a static page) — it hit whichever
+ * app ran first. Navigate until the request starts promptly (or 30 tries), then measure.
+ */
+async function warmUp(browser, url) {
+  for (let i = 0; i < 30; i++) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: "domcontentloaded" }).catch(() => {});
+    const stall = await page
+      .evaluate(() => {
+        const nav = performance.getEntriesByType("navigation")[0];
+        return nav ? nav.requestStart - nav.fetchStart : 0;
+      })
+      .catch(() => 0);
+    await context.close();
+    if (stall < 100) return;
+  }
+}
+
 async function measureLoad(browser, targetUrl, timeoutMs) {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -264,7 +287,8 @@ async function measureLoad(browser, targetUrl, timeoutMs) {
     .catch(() => {});
   const metrics = await page.evaluate(() => {
     const fcpEntry = performance.getEntriesByType("paint").find((p) => p.name === "first-contentful-paint");
-    return { fcp: fcpEntry ? fcpEntry.startTime : null, ready: window.__benchReadyAt ?? null };
+    const nav = performance.getEntriesByType("navigation")[0];
+    return { fcp: fcpEntry ? fcpEntry.startTime : null, ready: window.__benchReadyAt ?? null, stall: nav ? nav.requestStart - nav.fetchStart : 0 };
   });
   await context.close();
   return metrics;
@@ -283,7 +307,12 @@ async function benchmarkApp(browser, app, runs) {
   // -------- load (fresh context per run = cold) --------
   const loads = [];
   for (let i = 0; i < runs; i++) {
-    const metrics = await measureLoad(browser, `${app.url}${app.todoRoute}`, app.kind === "dotnet" ? 60000 : 20000);
+    // A load whose request was held back by the browser (stall, see warmUp) is not the app's: retry it.
+    let metrics = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      metrics = await measureLoad(browser, `${app.url}${app.todoRoute}`, app.kind === "dotnet" ? 60000 : 20000);
+      if (!metrics || metrics.stall < 100) break;
+    }
     if (metrics && metrics.ready !== null) loads.push(metrics);
   }
   if (loads.length > 0) {
@@ -401,7 +430,11 @@ const args = Object.fromEntries(
   process.argv
     .slice(2)
     .filter((a) => a.startsWith("--"))
-    .map((a) => a.replace(/^--/, "").split("=")),
+    .map((a) => {
+      // A bare flag (`--skip-build`) is true.
+      const [key, value = "true"] = a.replace(/^--/, "").split("=");
+      return [key, value];
+    }),
 );
 const only = args.app ? args.app.split(",") : null;
 const runs = Math.max(1, parseInt(args.runs ?? "5", 10));
@@ -445,6 +478,7 @@ for (const app of APPS) {
     browser = await chromium
       .launch({ channel: "msedge", headless: true, args: ["--js-flags=--expose-gc"] })
       .catch(() => chromium.launch({ headless: true, args: ["--js-flags=--expose-gc"] }));
+    await warmUp(browser, app.url);
   }
   const result = await benchmarkApp(browser, app, runs).catch((err) => ({
     name: app.name,

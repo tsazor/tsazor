@@ -1,0 +1,28 @@
+@** Groups related buttons into one control (Bootstrap's `.btn-group`, `role="group"`): put Buttons
+    inside; name the group with `ariaLabel`. `orientation` stacks them vertically, `size` sizes them
+    all. *@
+@import type { Orientation, Size } from "@tsazor/ui"
+@import { sizeSuffix } from "./vocabulary"
+@import { withClass } from "./attributes"
+
+<div role="group" aria-label="@ariaLabel" @attributes="@withClass(groupClass, additionalAttributes)">@childContent</div>
+
+@code {
+    /** Names the group for screen readers ("Text alignment"). */
+    @Parameter() ariaLabel?: string;
+    /** horizontal (default) or vertical. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** The buttons' size: small, medium (default) or large. */
+    @Parameter() size: Size = "medium";
+    /** The buttons. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the group element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get groupClass(): string {
+        const parts = [this.orientation === "vertical" ? "btn-group-vertical" : "btn-group"];
+        const suffix = sizeSuffix(this.size);
+        if (suffix) parts.push(`btn-group-${suffix}`);
+        return parts.join(" ");
+    }
+}

@@ -1,0 +1,134 @@
+@* Client/Pages/Identity/Profile.razor(.cs): the signed-in user's profile, from the token's claims — the picture (or
+   the first letter of the name) to upload or delete, the names and the phone to change. A new or deleted picture
+   reloads the page (NavigateTo forceLoad), so the app bar's user card shows it; changed details sign the user out,
+   since the token still carries the old names. *@
+@import { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "@tsazor/runtime"
+@import { DialogService, Toaster } from "@tsazor/fluent"
+@import { UploadType, type UploadRequest } from "../../Application/Catalog"
+@import { UpdateProfileRequest } from "../../Application/Identity"
+@import { updateProfileRequestValidators } from "../../Application/Validators/Identity"
+@import { getEmail, getFirstName, getLastName, getPhoneNumber, getUserId } from "../../Extensions/ClaimsPrincipalExtensions"
+@import { extensionOf, toBase64 } from "../../Extensions/Files"
+@import { LocalStorage } from "../../Infrastructure/LocalStorage"
+@import DeleteConfirmation from "../../Shared/Dialogs/DeleteConfirmation.tsazor"
+@inject AccountManager accountManager
+@inject AuthenticationManager authenticationManager
+@inject AuthenticationStateProvider stateProvider
+@inject LocalStorage localStorage
+@inject NavigationManager navigation
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<div class="bh-profile">
+    <Card class="bh-profile__card">
+        <div class="bh-profile__picture">
+            @if (imageDataUrl) {
+                <Avatar image="@imageDataUrl" name="@fullName" size="250" />
+            } else {
+                <Avatar initials="@firstLetterOfName" name="@fullName" color="pink" size="250" />
+            }
+        </div>
+        <Typography variant="h5" as="p" class="bh-profile__name">@profileModel.firstName @profileModel.lastName</Typography>
+        <p class="bh-profile__email">@profileModel.email</p>
+        <div class="bh-profile__actions">
+            <InputFile @ref="fileInput" hidden accept="image/*" OnChange="@uploadFiles" />
+            <Button appearance="transparent" size="small" iconStart="@Icons.CloudArrowUp" onClick="@chooseFile">@L("Upload Image")</Button>
+            @if (imageDataUrl) {
+                <Button appearance="transparent" intent="danger" size="small" iconStart="@Icons.Delete" onClick="@deleteAsync">@L("Delete Image")</Button>
+            }
+        </div>
+    </Card>
+    <FluentForm model="@profileModel" validators="@validators" onValidSubmit="@updateProfileAsync" novalidate class="bh-profile__details">
+        <Card>
+            <CardHeader><Typography variant="body" as="h2">@L("Profile Details")</Typography></CardHeader>
+            <div class="bh-form-grid">
+                <TextInput label="@L("First Name")" @bind-Value="profileModel.firstName" />
+                <TextInput label="@L("Last Name")" @bind-Value="profileModel.lastName" />
+                <TextInput label="@L("Phone Number")" @bind-Value="profileModel.phoneNumber" />
+                <TextInput label="@L("Email")" type="email" @bind-Value="profileModel.email" disabled />
+            </div>
+            <CardFooter class="bh-profile__footer">
+                <Button type="submit" intent="primary">@L("Save Changes")</Button>
+            </CardFooter>
+        </Card>
+    </FluentForm>
+</div>
+
+@code {
+    private readonly L = localizerFor("Profile");
+    private readonly validators = updateProfileRequestValidators(localizerFor("UpdateProfileRequestValidator"));
+    private readonly profileModel = new UpdateProfileRequest();
+    private userId = "";
+    private firstLetterOfName = "";
+    private imageDataUrl: string | null = null;
+    private fileInput?: InputFile;
+
+    private get fullName(): string {
+        return `${this.profileModel.firstName} ${this.profileModel.lastName}`;
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.profileModel.email = getEmail(user);
+        this.profileModel.firstName = getFirstName(user);
+        this.profileModel.lastName = getLastName(user);
+        this.profileModel.phoneNumber = getPhoneNumber(user);
+        this.userId = getUserId(user);
+        const data = await this.accountManager.getProfilePictureAsync(this.userId);
+        if (data.succeeded) this.imageDataUrl = data.data;
+        this.firstLetterOfName = this.profileModel.firstName.charAt(0);
+    }
+
+    private async updateProfileAsync(): Promise<void> {
+        const response = await this.accountManager.updateProfileAsync(this.profileModel);
+        if (response.succeeded) {
+            this.authenticationManager.logout();
+            this.toaster.show({ message: this.L("Your Profile has been updated. Please Login to Continue."), intent: "success" });
+            this.navigation.navigateTo("/");
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private chooseFile(): void {
+        (this.fileInput?.element as HTMLInputElement | undefined)?.click();
+    }
+
+    /** UploadFiles: the picture scaled into 400 × 400 as a PNG (RequestImageFileAsync), under a new name. */
+    private async uploadFiles(e: InputFileChangeEventArgs): Promise<void> {
+        if (e.fileCount === 0) return;
+        const extension = extensionOf(e.file.name);
+        const fileName = `${this.userId}-${crypto.randomUUID()}${extension}`;
+        const imageFile = await requestImageFileAsync(e.file, "image/png", 400, 400);
+        const request: UploadRequest = { data: await toBase64(imageFile), fileName, extension, uploadType: UploadType.ProfilePicture };
+        const result = await this.accountManager.updateProfilePictureAsync(request, this.userId);
+        if (result.succeeded) {
+            this.localStorage.setItem(StorageConstants.Local.UserImageURL, result.data);
+            this.toaster.show({ message: this.L("Profile picture added."), intent: "success" });
+            this.navigation.navigateTo("/account", true);
+        } else {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async deleteAsync(): Promise<void> {
+        const dialog = this.dialogs.show(DeleteConfirmation, {
+            // No resource has "Delete": .NET shows the key.
+            title: "Delete",
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { contentText: `${this.L("Do you want to delete the profile picture of {0}", { 0: this.profileModel.email })}?` },
+        });
+        if ((await dialog.result).canceled) return;
+        const request: UploadRequest = { data: null, fileName: "", extension: null, uploadType: UploadType.ProfilePicture };
+        const data = await this.accountManager.updateProfilePictureAsync(request, this.userId);
+        if (data.succeeded) {
+            this.localStorage.removeItem(StorageConstants.Local.UserImageURL);
+            this.imageDataUrl = null;
+            this.toaster.show({ message: this.L("Profile picture deleted."), intent: "success" });
+            this.navigation.navigateTo("/account", true);
+        } else {
+            for (const message of data.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+}

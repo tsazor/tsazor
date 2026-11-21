@@ -1,9 +1,21 @@
-@inherits InputBase
+@** A Fluent UI 2 number field (input type="number", InputBase; bind it with @bind) with an
+    optional label. The value updates on change; an empty field yields "". Inside a FluentForm it
+    shows the field's first validation message (role="alert", aria-describedby) once a
+    submit was attempted; aria-invalid as soon as it shows invalid. *@
+@import { withAttributes } from "./attributes"
+@import { uniqueId } from "@tsazor/ui"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
+
+@inherits InputBase<number>
+
 <div class="@this.wrapperClass">
     @if (this.label) {
-        <label class="fui-input__label" for="@this.labelFor">@this.label</label>
+        <label class="fui-input__label" for="@this.elementId">@this.label</label>
     }
-    <input id="@this.id" type="number" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    <input @ref="element" id="@this.elementId" type="number" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    @if (this.help) {
+        <span class="fui-input__help" id="@this.helpId">@this.help</span>
+    }
     @if (this.message) {
         <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
     }
@@ -12,21 +24,35 @@
 @code {
     /** Optional field label. */
     @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
     /** Placeholder text. */
     @Parameter() placeholder?: string;
+    /** true disables the native input. */
     @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
-    /** Native numeric bounds/step (strings stay forwardable; null skips). */
+    /** Native min attribute (null skips it). */
     @Parameter() min: number | null = null;
+    /** Native max attribute (null skips it). */
     @Parameter() max: number | null = null;
+    /** Native step attribute (null skips it). */
     @Parameter() step: number | null = null;
-    /** Element id; needed for a `<label for>` association. */
+    /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;
     /** Overrides the input's accessible name. */
     @Parameter() ariaLabel?: string;
 
-    private get labelFor(): string | null {
-        return this.id ?? null;
+    private generatedId?: string;
+
+    private get elementId(): string {
+        return this.id ?? (this.generatedId ??= uniqueId("fui-number"));
+    }
+
+    private get labelFor(): string {
+        return this.elementId;
     }
 
     private get displayValue(): string {
@@ -42,36 +68,49 @@
     }
 
     private get inputAttributes(): Record<string, unknown> {
-        const attrs: Record<string, unknown> = { class: this.inputClass };
-        if (this.placeholder) attrs.placeholder = this.placeholder;
-        if (this.disabled) attrs.disabled = true;
-        if (this.required) attrs.required = true;
-        if (this.min !== null) attrs.min = this.min;
-        if (this.max !== null) attrs.max = this.max;
-        if (this.step !== null) attrs.step = this.step;
-        if (this.ariaLabel) attrs["aria-label"] = this.ariaLabel;
-        if (this.message) attrs["aria-describedby"] = this.messageId;
-        for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
-            if (name === "class") continue;
-            attrs[name] = value;
-        }
-        return attrs;
+        return withAttributes({
+            class: this.inputClass,
+            placeholder: this.placeholder,
+            disabled: this.disabled ? true : undefined,
+            readonly: this.readOnly ? true : undefined,
+            required: this.required ? true : undefined,
+            min: this.min ?? undefined,
+            max: this.max ?? undefined,
+            step: this.step ?? undefined,
+            "aria-label": this.ariaLabel,
+            "aria-invalid": this.fieldClass.includes("invalid") ? "true" : undefined,
+            "aria-describedby": this.describedBy,
+        }, this.additionalAttributes);
     }
 
     private get inputClass(): string {
         const base = "fui-input";
         if (this.fieldClass.includes("invalid")) return `${base} fui-input--invalid`;
-        if (this.fieldClass) return `${base} fui-input--valid`;
+        // Blazor's four states: green only for "modified valid" — an untouched
+        // "valid" field stays quiet.
+        if (this.fieldClass.includes("modified")) return `${base} fui-input--valid`;
         return base;
     }
 
-    private get messageId(): string | null {
-        return this.id ? `${this.id}-message` : `fui-number-message`;
+    private get helpId(): string {
+        return `${this.elementId}-help`;
     }
 
+    /** The help text and (once shown) the message describe the field. */
+    private get describedBy(): string | undefined {
+        const ids = [this.help ? this.helpId : null, this.message ? this.messageId : null].filter((id): id is string => id !== null);
+        return ids.length > 0 ? ids.join(" ") : undefined;
+    }
+
+    private get messageId(): string {
+        return `${this.elementId}-message`;
+    }
+
+    /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
     private get message(): string {
-        if (!this.editContext || !this.ValueExpression) return "";
-        const messages = this.editContext.getValidationMessages(this.ValueExpression);
+        if (!hasSubmitAttempt(this.editContext)) return "";
+        if (!this.editContext || !this.valueExpression) return "";
+        const messages = this.editContext.getValidationMessages(this.valueExpression);
         return messages[0] ?? "";
     }
 

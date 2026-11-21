@@ -165,12 +165,19 @@ p {
   overflow-y: auto;
 }
 
+.virtual-grid {
+  height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
 .virtual-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  height: 32px; /* must match Virtualize ItemSize */
+  height: 32px; /* Virtualize's ItemSize is this estimate; it measures the rows */
   padding: 0 1rem;
   border-bottom: 1px solid #eaeef2;
   font-size: 0.95rem;
@@ -224,7 +231,13 @@ p {
 
 /* --- code / misc -------------------------------------------------------- */
 
+/* Links and inline code in colors that keep 4.5:1 on the page backgrounds (WCAG 1.4.3). */
+a {
+  color: var(--accent);
+}
+
 code {
+  color: #a3245f;
   background: #eff1f3;
   border-radius: 4px;
   padding: 0.1rem 0.35rem;
@@ -242,3 +255,11 @@ code.block {
   font-size: 0.85rem;
   line-height: 1.5;
 }
+
+/* Layout (from MainLayout.tsazor: an inline <style> element needs 'unsafe-inline' under a strict CSP) */
+.layout { font-family: system-ui, sans-serif; }
+.nav { display: flex; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid #ddd; align-items: center; }
+.nav a { text-decoration: none; color: #0366d6; }
+.nav a.active { font-weight: 700; text-decoration: underline; }
+.brand { font-weight: 700; margin-right: 1rem; }
+.main { padding: 1rem; }

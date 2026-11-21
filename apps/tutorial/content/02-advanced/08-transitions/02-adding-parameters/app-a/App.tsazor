@@ -1,0 +1,14 @@
+@import { fade } from "@tsazor/runtime/transition"
+
+<label>
+    <input type="checkbox" @bind="visible" />
+    visible
+</label>
+
+@if (visible) {
+    <p @transition="fade">Fades in and out</p>
+}
+
+@code {
+    visible = true;
+}

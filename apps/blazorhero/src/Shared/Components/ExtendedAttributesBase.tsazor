@@ -1,0 +1,285 @@
+@* Client/Shared/Components/ExtendedAttributesBase.razor(.cs): an entity's extended attributes, a tab per group (MudTabs
+   with a badge "active/all" per tab), each a DataGrid of the group's attributes searched and sorted in the browser,
+   with the actions the entity's policies allow. Abstract and generic, as the original: the entity's page gives the
+   id's conversion, the policy names, the manager (the original injects IExtendedAttributeManager<…>, an open
+   generic — B39) and the markup hand-over (Inherited, ExtendedAttributes.ts). The original's TEntity and
+   TExtendedAttribute only constrained the manager's type; here the manager carries the entity, so two remain. *@
+@typeparam TId
+@typeparam TEntityId
+@import { DialogService, GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import { CultureService } from "@tsazor/runtime"
+@import { AddEditExtendedAttributeCommand, EntityExtendedAttributeType, type GetAllExtendedAttributesByEntityIdResponse } from "../../Application/Misc"
+@import { getUserId } from "../../Extensions/ClaimsPrincipalExtensions"
+@import { formatGeneral } from "../../Extensions/Dates"
+@import { downloadBase64, fileStamp } from "../../Extensions/Files"
+@import type { ExtendedAttributeManager } from "../../Infrastructure/Managers/MiscManagers"
+@import AddEditExtendedAttributeModal from "./AddEditExtendedAttributeModal.tsazor"
+@import DeleteConfirmation from "../Dialogs/DeleteConfirmation.tsazor"
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject NavigationManager navigation
+@inject CultureService culture
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<HeroTitle title="@L("Manage {0} Extended Attributes", { 0: entityName })" description="@description" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Manage {0} Extended Attributes", { 0: entityName })" />
+} else {
+    <Tabs ariaLabel="@L("Group")" onSelected="@((index: number) => activeGroupIndex = index)">
+        @foreach (const [group, attributes] of groupedExtendedAttributes) {
+            <Tab title="@group" badge="@(`${attributes.filter((attribute) => attribute.isActive).length}/${attributes.length}`)"
+                 badgeIntent="@groupBadgeIntent(attributes.filter((attribute) => attribute.isActive).length, attributes.length)">
+                <div class="bh-table-toolbar">
+                    <div class="bh-table-toolbar__actions">
+                        @if (canCreateExtendedAttributes) {
+                            <Button intent="primary" onClick="@(() => invokeModal())">@L("Create")</Button>
+                        }
+                        <Button intent="secondary" onClick="@reset">@L("Reload")</Button>
+                        @if (canExportExtendedAttributes) {
+                            <Button iconStart="@Icons.DocumentTable" onClick="@exportToExcel">@L("Export")</Button>
+                        }
+                    </div>
+                    @if (canSearchExtendedAttributes) {
+                        <TextInput class="bh-table-toolbar__search" ariaLabel='@L("Search For {0} Extended Attributes", { 0: entityName })' placeholder='@L("Search For {0} Extended Attributes", { 0: entityName })' @bind-Value="searchString" immediate>
+                            <ContentAfter><Icon value="@Icons.Search" /></ContentAfter>
+                        </TextInput>
+                    }
+                </div>
+                @if (canExportExtendedAttributes) {
+                    <div class="bh-table-footer__switches">
+                        <Switch label="@L("Include Entity fields (Export)")" @bind-Value="includeEntity" />
+                        <Switch label="@L("Only Selected Group (Export)")" @bind-Value="onlyCurrentGroup" />
+                    </div>
+                }
+                <DataGrid items="@filtered(attributes)" pagination="@paginationOf(group)" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@group">
+                    <PropertyColumn property="(attribute) => attribute.id" title="@L("Id")" sortable />
+                    <PropertyColumn property="(attribute) => attribute.entityId" title="@L("Entity Id")" sortable />
+                    <TemplateColumn title="@L("Type")" sortBy="@byType" Context="attribute">@EntityExtendedAttributeType[attribute.type]</TemplateColumn>
+                    <TemplateColumn title="@L("Key")" sortBy="@byKey" Context="attribute">
+                        <Highlighter text="@attribute.key" highlightedText="@searchString" />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Value")" sortBy="@byValue" Context="attribute">
+                        <Highlighter text="@valueText(attribute)" highlightedText="@searchString" />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("External Id")" sortBy="@byExternalId" Context="attribute">
+                        <Highlighter text="@(attribute.externalId ?? "")" highlightedText="@searchString" />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Group")" sortBy="@byGroup" Context="attribute">
+                        <Highlighter text="@(attribute.group ?? "")" highlightedText="@searchString" />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Description")" sortBy="@byDescription" Context="attribute">
+                        <Highlighter text="@(attribute.description ?? "")" highlightedText="@searchString" />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Is Active")" sortBy="@byIsActive" Context="attribute">
+                        <Checkbox Value="@attribute.isActive" readOnly disabled="@(!canEditExtendedAttributes)" ariaLabel='@(`${L("Is Active")}: ${attribute.key}`)' />
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Owner")" Context="attribute">
+                        @if (attribute.createdBy === currentUserId) {
+                            <Button size="small" iconStart="@Icons.Emoji" href="/account">@L("you")</Button>
+                        }
+                    </TemplateColumn>
+                    <TemplateColumn title="@L("Actions")" align="end" Context="attribute">
+                        @if ((canEditExtendedAttributes || canDeleteExtendedAttributes) && currentUserId === attribute.createdBy) {
+                            <Menu label="@L("Actions")" ariaLabel='@(`${L("Actions")}: ${attribute.key}`)' placement="bottom-end">
+                                @if (canEditExtendedAttributes) {
+                                    <MenuItem onSelect="@(() => invokeModal(attribute.id))">@L("Edit")</MenuItem>
+                                }
+                                @if (canDeleteExtendedAttributes) {
+                                    <MenuItem onSelect="@(() => deleteAsync(attribute.id))">@L("Delete")</MenuItem>
+                                }
+                            </Menu>
+                        } else {
+                            <Button size="small" iconStart="@Icons.HandRight" disabled>@L("No Allowed Actions")</Button>
+                        }
+                    </TemplateColumn>
+                </DataGrid>
+                <div class="bh-table-footer">
+                    <div class="bh-table-footer__switches">
+                        <Switch label="@L("Dense")" @bind-Value="dense" />
+                        <Switch label="@L("Striped")" @bind-Value="striped" />
+                        <Switch label="@L("Bordered")" @bind-Value="bordered" />
+                    </div>
+                    <TablePager state="@paginationOf(group)" />
+                </div>
+            </Tab>
+        }
+    </Tabs>
+}
+
+@code {
+    /** The entity's id as the address writes it; the page converts it (FromStringToEntityIdTypeConverter). */
+    @Parameter() entityIdString = "";
+    /** The entity's name, for the texts: "Document". */
+    @Parameter() entityName = "";
+    @Parameter() description = "";
+
+    /** The id from the address in the entity's id type. */
+    protected abstract fromStringToEntityIdTypeConverter(text: string): TEntityId;
+    protected abstract get extendedAttributesViewPolicyName(): string;
+    protected abstract get extendedAttributesEditPolicyName(): string;
+    protected abstract get extendedAttributesCreatePolicyName(): string;
+    protected abstract get extendedAttributesDeletePolicyName(): string;
+    protected abstract get extendedAttributesExportPolicyName(): string;
+    protected abstract get extendedAttributesSearchPolicyName(): string;
+    /** The entity's manager: `[Inject] IExtendedAttributeManager<TId, TEntityId, TEntity, TExtendedAttribute>`. */
+    protected abstract get extendedAttributeManager(): ExtendedAttributeManager<TId, TEntityId>;
+    /** This markup, for a page with markup of its own (ExtendedAttributes.ts). */
+    protected abstract inherited(): RenderFragment;
+
+    private readonly L = localizerFor("ExtendedAttributesLocalization");
+    private model: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>[] = [];
+    /** Group → its attributes; "All Groups" first (a Map keeps the order, as the original's Dictionary). */
+    private groupedExtendedAttributes = new Map<string, GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>[]>();
+    private readonly paginations = new Map<string, PaginationState>();
+    private searchString = "";
+    private includeEntity = false;
+    private onlyCurrentGroup = false;
+    private activeGroupIndex = 0;
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+    private currentUserId = "";
+
+    private canEditExtendedAttributes = false;
+    private canCreateExtendedAttributes = false;
+    private canDeleteExtendedAttributes = false;
+    private canExportExtendedAttributes = false;
+    private canSearchExtendedAttributes = false;
+    private loaded = false;
+
+    private get entityId(): TEntityId {
+        return this.fromStringToEntityIdTypeConverter(this.entityIdString);
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        const can = async (policy: string): Promise<boolean> => this.authorization.isAuthorized(user, { policy });
+        if (!(await can(this.extendedAttributesViewPolicyName))) {
+            this.toaster.show({ message: this.L("Not Allowed."), intent: "danger" });
+            this.navigation.navigateTo("/");
+        }
+        this.canEditExtendedAttributes = await can(this.extendedAttributesEditPolicyName);
+        this.canCreateExtendedAttributes = await can(this.extendedAttributesCreatePolicyName);
+        this.canDeleteExtendedAttributes = await can(this.extendedAttributesDeletePolicyName);
+        this.canExportExtendedAttributes = await can(this.extendedAttributesExportPolicyName);
+        this.canSearchExtendedAttributes = await can(this.extendedAttributesSearchPolicyName);
+        await this.getExtendedAttributesAsync();
+        this.loaded = true;
+        this.currentUserId = getUserId(user);
+    }
+
+    private async getExtendedAttributesAsync(): Promise<void> {
+        const response = await this.extendedAttributeManager.getAllByEntityIdAsync(this.entityId);
+        if (!response.succeeded) {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+            this.navigation.navigateTo("/");
+            return;
+        }
+        this.model = response.data;
+        const grouped = new Map([[this.L("All Groups"), this.model]]);
+        for (const attribute of this.model) {
+            if (!attribute.group?.trim()) continue;
+            const list = grouped.get(attribute.group);
+            if (list === undefined) grouped.set(attribute.group, [attribute]);
+            else list.push(attribute);
+        }
+        this.groupedExtendedAttributes = grouped;
+        this.description = this.L("Manage {0} {1}'s Extended Attributes", { 0: String(this.entityId), 1: this.entityName });
+    }
+
+    private paginationOf(group: string): PaginationState {
+        let pagination = this.paginations.get(group);
+        if (pagination === undefined) this.paginations.set(group, (pagination = new PaginationState()));
+        return pagination;
+    }
+
+    /** The value its type names, as text. */
+    private valueText(attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>): string {
+        switch (attribute.type) {
+            case EntityExtendedAttributeType.Decimal:
+                return attribute.decimal === null ? "" : String(attribute.decimal);
+            case EntityExtendedAttributeType.Text:
+                return attribute.text ?? "";
+            case EntityExtendedAttributeType.DateTime:
+                return attribute.dateTime === null ? "" : formatGeneral(attribute.dateTime, this.culture.current);
+            case EntityExtendedAttributeType.Json:
+                return attribute.json ?? "";
+        }
+    }
+
+    /** Search: the key, any value, the external id, the group or the description contains it, in any case. */
+    private filtered(attributes: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>[]): GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>[] {
+        const search = this.searchString.trim().toLowerCase();
+        if (search === "") return attributes;
+        return attributes.filter((attribute) =>
+            [attribute.key, attribute.text, attribute.decimal === null ? null : String(attribute.decimal), attribute.dateTime === null ? null : formatGeneral(attribute.dateTime, this.culture.current), attribute.json, attribute.externalId, attribute.group, attribute.description]
+                .some((text) => text?.toLowerCase().includes(search)),
+        );
+    }
+
+    private readonly byType = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => attribute.type);
+    private readonly byKey = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => attribute.key);
+    private readonly byValue = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => this.valueText(attribute));
+    private readonly byExternalId = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => attribute.externalId ?? "");
+    private readonly byGroup = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => attribute.group ?? "");
+    private readonly byDescription = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => attribute.description ?? "");
+    private readonly byIsActive = GridSort.byAscending((attribute: GetAllExtendedAttributesByEntityIdResponse<TId, TEntityId>) => (attribute.isActive ? 1 : 0));
+
+    private groupBadgeIntent(selected: number, all: number): Intent {
+        if (selected === 0) return "danger";
+        if (selected === all) return "success";
+        return "info";
+    }
+
+    private async exportToExcel(): Promise<void> {
+        const groups = [...this.groupedExtendedAttributes.keys()];
+        const request = {
+            searchString: this.searchString,
+            entityId: this.entityId,
+            includeEntity: this.includeEntity,
+            onlyCurrentGroup: this.onlyCurrentGroup && this.activeGroupIndex !== 0,
+            currentGroup: groups[this.activeGroupIndex] ?? "",
+        };
+        const response = await this.extendedAttributeManager.exportToExcelAsync(request);
+        if (response.succeeded) {
+            downloadBase64(response.data, `${this.extendedAttributeManager.entityName.toLowerCase()}extendedattribute_${fileStamp()}.xlsx`, ApplicationConstants.MimeTypes.OpenXml);
+            const filtered = request.searchString.trim() !== "" || request.includeEntity || request.onlyCurrentGroup;
+            this.toaster.show({ message: filtered ? this.L("Filtered Extended Attributes exported") : this.L("Extended Attributes exported"), intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async invokeModal(id?: TId): Promise<void> {
+        const existing = id === undefined ? undefined : this.model.find((attribute) => attribute.id === id);
+        const model = existing === undefined ? new AddEditExtendedAttributeCommand<TId | undefined, TEntityId>(undefined, this.entityId) : AddEditExtendedAttributeCommand.of(existing);
+        const dialog = this.dialogs.show(AddEditExtendedAttributeModal, {
+            title: id === undefined ? this.L("Create") : this.L("Edit"),
+            size: "medium",
+            closeOnBackdrop: false,
+            parameters: { addEditExtendedAttributeModel: model, extendedAttributeManager: this.extendedAttributeManager },
+        });
+        if (!(await dialog.result).canceled) await this.reset();
+    }
+
+    private async deleteAsync(id: TId): Promise<void> {
+        const dialog = this.dialogs.show(DeleteConfirmation, {
+            title: this.L("Delete"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { contentText: this.L("Delete Extended Attribute?", { 0: String(id) }) },
+        });
+        if ((await dialog.result).canceled) return;
+        const response = await this.extendedAttributeManager.deleteAsync(id);
+        await this.reset();
+        if (response.succeeded) this.toaster.show({ message: response.messages[0]!, intent: "success" });
+        else for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+    }
+
+    private async reset(): Promise<void> {
+        this.model = [];
+        this.searchString = "";
+        await this.getExtendedAttributesAsync();
+    }
+}

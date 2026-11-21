@@ -1,0 +1,13 @@
+<div class="stepper">
+    <button @onclick="() => change(-1)" aria-label="Less">−</button>
+    <span>@value</span>
+    <button @onclick="() => change(+1)" aria-label="More">+</button>
+</div>
+
+@code {
+    @Bindable() accessor value = 0;
+
+    change(delta: number) {
+        this.value += delta;
+    }
+}

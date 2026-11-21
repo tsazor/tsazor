@@ -1,0 +1,12 @@
+@** Columns the user can move and size, when the grid asks for it (ResizableColumns, ReorderableColumns — off by
+    default): the grip in a header moves the column (drag it, or focus
+    it and press the arrow keys); the handle at the header's end resizes (drag, or arrow keys —
+    Shift makes a 20 px step). The grid renders a col per column and lays the sized table out
+    itself; the widths and the order live in the model across renders and sorting. *@
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" AriaLabel="Orders" ResizableColumns="@true" ReorderableColumns="@true">
+    <PropertyColumn Property="(o) => o.customer" Sortable="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" Sortable="@true" />
+    <PropertyColumn Property="(o) => o.paid" Title="Paid" />
+</DataGrid>

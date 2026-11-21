@@ -1,0 +1,19 @@
+<button @onclick="removeFirst">Remove first thing</button>
+
+@foreach (const thing of things) {
+    <Thing name="@thing.name" />
+}
+
+@code {
+    things = [
+        { id: 1, name: "apple" },
+        { id: 2, name: "banana" },
+        { id: 3, name: "carrot" },
+        { id: 4, name: "doughnut" },
+        { id: 5, name: "egg" },
+    ];
+
+    removeFirst() {
+        this.things = this.things.slice(1);
+    }
+}

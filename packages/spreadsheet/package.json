@@ -1,0 +1,44 @@
+{
+  "name": "@tsazor/spreadsheet",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/spreadsheet"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/spreadsheet#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "A spreadsheet model for Tsazor: cells, ranges, an undo stack and copy/paste — headless, zero dependencies; formulas arrive later (design-extended-library.md §2.6, D-X4).",
+  "keywords": [
+    "tsazor",
+    "spreadsheet",
+    "grid"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

@@ -1,0 +1,51 @@
+@page "/data"
+@import { GridSort, PaginationState } from "@tsazor/bootstrap"
+@import type { SkinOrder } from "./skin-order"
+
+<Typography Variant="h1">Data</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">DataGrid</Typography>
+    <DataGrid Items="@orders" ItemKey="@((o: SkinOrder) => o.id)" Pagination="@pagination" SelectionMode="multiple" @bind-SelectedItems="selected" AriaLabel="Orders" Striped="@true" Hover="@true">
+        <ChildContent>
+            <DetailsColumn RowName="@((o: SkinOrder) => `order ${o.id}`)" />
+            <PropertyColumn Property="(o) => o.id" Title="#" Sortable="@true" />
+            <PropertyColumn Property="(o) => o.customer" Title="Customer" Sortable="@true" IsDefaultSortColumn="@true" />
+            <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Sortable="@true" />
+            <TemplateColumn Title="Status" Context="order" SortBy="@byStatus">
+                <Badge Intent="@(order.paid ? "success" : "warning")">@(order.paid ? "paid" : "open")</Badge>
+            </TemplateColumn>
+        </ChildContent>
+        <DetailContent Context="order">
+            <dl class="order-details">
+                <dt>Items</dt><dd>@(order.id % 4 + 1) boxes of pastries</dd>
+                <dt>Pickup</dt><dd>@(order.paid ? "at the counter" : "after payment")</dd>
+            </dl>
+        </DetailContent>
+    </DataGrid>
+    <Paginator State="@pagination" />
+    <Typography Variant="caption"><span class="grid-selection" role="status">@selected.length selected</span></Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">List and progress</Typography>
+    <ListGroup>
+        <ListGroupItem Href="/data" Active="@true">Today's orders</ListGroupItem>
+        <ListGroupItem OnClick="@(() => this.progress = Math.min(100, this.progress + 20))">Bake a batch</ListGroupItem>
+        <ListGroupItem Disabled="@true">Archive</ListGroupItem>
+    </ListGroup>
+    <Progress Value="@progress" Label="@(`Baked ${progress} %`)" Intent="success" />
+</section>
+
+@code {
+    private readonly orders: SkinOrder[] = Array.from({ length: 23 }, (_, i) => ({
+        id: i + 1,
+        customer: ["Marta", "Jonas", "Lena", "Ali", "Noor", "Pavel"][i % 6]!,
+        total: ((i % 5) + 1) * 3.4,
+        paid: i % 3 !== 0,
+    }));
+    private readonly pagination = new PaginationState();
+    private selected: SkinOrder[] = [];
+    private progress = 40;
+    private readonly byStatus = GridSort.byAscending((o: SkinOrder) => o.paid).thenAscending((o) => o.id);
+}

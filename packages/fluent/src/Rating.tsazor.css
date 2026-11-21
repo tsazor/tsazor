@@ -1,0 +1,120 @@
+/* Rating and RatingDisplay — stars in the text's line; the color decides the full ones (neutral, brand, marigold). */
+
+.fui-rating,
+.fui-rating-display {
+  --fui-rating-size: 20px;
+  --fui-rating-full: var(--fui-foreground-1);
+  --fui-rating-empty: var(--fui-stroke-1);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.fui-rating--brand {
+  --fui-rating-full: var(--fui-brand-background);
+}
+
+/* Fluent's marigold, darkened for 3:1 against the page (WCAG 1.4.11). */
+.fui-rating--marigold {
+  --fui-rating-full: var(--fui-color-amber-1);
+}
+
+.fui-rating--small {
+  --fui-rating-size: 16px;
+}
+
+.fui-rating--large {
+  --fui-rating-size: 28px;
+}
+
+/* Rating: radio buttons under the stars, focus shown on the star. */
+
+.fui-rating__item {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: calc(var(--fui-rating-size) + 4px);
+  block-size: calc(var(--fui-rating-size) + 4px);
+  color: var(--fui-rating-full);
+  cursor: pointer;
+}
+
+.fui-rating__item .fui-icon {
+  inline-size: var(--fui-rating-size);
+  block-size: var(--fui-rating-size);
+}
+
+.fui-rating__item--preview {
+  opacity: 0.8;
+}
+
+.fui-rating__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.fui-rating__input:focus-visible + .fui-icon {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+  border-radius: var(--fui-radius-sm);
+}
+
+.fui-rating--disabled .fui-rating__item {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-rating[aria-readonly="true"] .fui-rating__item {
+  cursor: default;
+}
+
+/* RatingDisplay: a full star clipped to the fill over an empty one. */
+
+.fui-rating-display {
+  gap: 2px;
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+}
+
+.fui-rating-display__item {
+  position: relative;
+  display: inline-grid;
+  inline-size: var(--fui-rating-size);
+  block-size: var(--fui-rating-size);
+}
+
+.fui-rating-display__item > .fui-icon {
+  grid-area: 1 / 1;
+  inline-size: var(--fui-rating-size);
+  block-size: var(--fui-rating-size);
+}
+
+.fui-rating-display__empty {
+  color: var(--fui-rating-empty);
+}
+
+.fui-rating-display__full {
+  color: var(--fui-rating-full);
+  clip-path: inset(0 calc(100% - var(--fui-rating-fill)) 0 0);
+}
+
+.fui-rating-display__full:dir(rtl) {
+  clip-path: inset(0 0 0 calc(100% - var(--fui-rating-fill)));
+}
+
+.fui-rating-display__value {
+  margin-inline-start: var(--fui-spacing-xs);
+  font-weight: 600;
+}
+
+.fui-rating-display__count {
+  margin-inline-start: var(--fui-spacing-xs);
+  color: var(--fui-foreground-2);
+}
+
+.fui-rating-display__count::before {
+  content: "· ";
+}

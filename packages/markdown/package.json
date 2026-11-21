@@ -1,0 +1,71 @@
+{
+  "name": "@tsazor/markdown",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/markdown"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/markdown#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Markdown for Tsazor: a Markdown component on marked, sanitized with DOMPurify, so an app can show an agent's or a user's text without knowing about XSS.",
+  "keywords": [
+    "tsazor",
+    "tsazor-components",
+    "markdown"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./markdown.css": "./dist/markdown.css",
+    "./tsazor-components.json": "./dist/tsazor-components.json"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "tsazor": {
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": [
+        "@tsazor/markdown/markdown.css"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.16",
+    "marked": "^18.0.14"
+  },
+  "peerDependencies": {
+    "@tsazor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/testing": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
+    "esbuild": "^0.28.2",
+    "jsdom": "29.1.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

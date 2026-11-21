@@ -1,0 +1,257 @@
+@* pages/audits/list.tsx: the audit trail — every security action, entity change and exception the auditing pipeline
+   captured, with a KPI strip from the summary endpoint and filters by event type, severity, tenant (cross-tenant
+   operators only), correlation id and a debounced search. The filters live in the URL's query, as React Router's
+   useSearchParams keeps them: each is a @SupplyParameterFromQuery field, and a change navigates to the same page with
+   the new query, replacing the history entry. A row opens the event in a side sheet (AuditDetailSheet). *@
+@page "/audits"
+@authorize({ policy: "Permissions.AuditTrails.View" })
+@import { RefreshCw, ScrollText, X } from "lucide"
+@import { keepPreviousData } from "@tanstack/query-core"
+@import { SupplyParameterFromQuery } from "@tsazor/runtime"
+@import { AUDIT_EVENT_TYPES, AUDIT_SEVERITIES, getAuditSummary, listAudits, type AuditEventType, type AuditSeverity, type AuditSummaryDto } from "@/api/audits"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { AuditingPermissions } from "@/lib/permissions"
+@import { Query } from "@/lib/query"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import AuditRow from "./AuditRow.tsazor"
+@import AuditDetailSheet from "./AuditDetailSheet.tsazor"
+@import { withQuery } from "./query-string"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+<div class="space-y-8">
+    <EntityPageHeader icon="@ScrollText" title="Audit trail" total="@(data?.totalCount ?? null)" unit="event"
+                      description="Every security action, entity change, and exception captured by the auditing pipeline. Filter by event type, severity, or correlation id to follow a request end-to-end.">
+        <Button variant="outline" size="sm" disabled="@query.result.isFetching" onClick="@(() => query.refetch())" class="flex-1 sm:flex-none">
+            <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", query.result.isFetching && "animate-spin")" />
+            Refresh
+        </Button>
+    </EntityPageHeader>
+
+    <StatStrip cols="4">
+        <Stat label="Total events" value="@(summary.result.isLoading ? "—" : summaryStats.total.toLocaleString())" hint="across all event types" />
+        <Stat label="Errors + critical" value="@(summary.result.isLoading ? "—" : summaryStats.errors.toLocaleString())" hint="severity ≥ Error" tone="@(summaryStats.errors > 0 ? "danger" : "default")" />
+        <Stat label="Security events" value="@(summary.result.isLoading ? "—" : summaryStats.security.toLocaleString())" hint="logins, role grants, tokens" tone="@(summaryStats.security > 0 ? "info" : "default")" />
+        <Stat label="Exceptions" value="@(summary.result.isLoading ? "—" : summaryStats.exceptions.toLocaleString())" hint="unhandled / classified" tone="@(summaryStats.exceptions > 0 ? "warning" : "default")" />
+    </StatStrip>
+
+    @* React's `trailing={activeFilters > 0 ? <Button/> : undefined}`: a slot can't be passed conditionally, so the
+       Trailing slot is always set and its content is conditional (FilterBar then renders its empty wrapper). *@
+    <FilterBar>
+        <ChildContent>
+            <div class="min-w-[16rem] flex-1">
+                <Input value="@searchInput" valueChanged="@onSearchInput" placeholder="Search user, source, correlation…" aria-label="Search audit trail" class="h-8" />
+            </div>
+            <FormSelect value="@eventType" valueChanged="@((value: string) => setParam("type", value || null))" options="@eventTypeOptions" emptyLabel="All event types" class="min-w-[10rem]" />
+            <FormSelect value="@severity" valueChanged="@((value: string) => setParam("sev", value || null))" options="@severityOptions" emptyLabel="All severities" class="min-w-[10rem]" />
+            @if (canCrossTenant) {
+                <div class="min-w-[12rem]">
+                    <Input value="@tenantId" valueChanged="@((value: string) => setParam("tenant", value || null))" placeholder="Tenant id (cross-tenant)" aria-label="Filter by tenant id" class="h-8 font-mono text-xs" />
+                </div>
+            }
+            <div class="min-w-[14rem]">
+                <Input value="@correlationId" valueChanged="@((value: string) => setParam("corr", value || null))" placeholder="Correlation id" aria-label="Filter by correlation id" class="h-8 font-mono text-xs" />
+            </div>
+        </ChildContent>
+        <Trailing>
+            @if (activeFilters > 0) {
+                <Button variant="ghost" size="sm" onClick="@clearAll" class="text-xs">
+                    <Icon icon="@X" class="mr-1 h-3.5 w-3.5" /> Clear all (@(activeFilters))
+                </Button>
+            }
+        </Trailing>
+    </FilterBar>
+
+    @if (query.result.isError) {
+        <ErrorBand message="@(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load audit events.")" />
+    }
+
+    @if (query.result.isLoading) {
+        <LoadingRow label="Loading events" />
+    }
+
+    @if (!query.result.isLoading && items.length === 0 && !query.result.isError) {
+        @if (activeFilters > 0) {
+            <EmptyState icon="@ScrollText" kicker="// no events" title="No audit events match your filters."
+                        description="Try clearing or relaxing a filter — the trail is broad by default.">
+                <Action>
+                    <Button variant="outline" onClick="@clearAll">Clear filters</Button>
+                </Action>
+            </EmptyState>
+        } else {
+            <EmptyState icon="@ScrollText" kicker="// no events" title="No audit events match your filters."
+                        description="The audit pipeline hasn't recorded anything for this tenant yet." />
+        }
+    }
+
+    @if (items.length > 0) {
+        <ol class="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+            @foreach (const item of items) {
+                <AuditRow @key="item.id" event="@item" onClick="@(() => selectedId = item.id)" />
+            }
+        </ol>
+    }
+
+    @if (data && data.totalPages > 1) {
+        <Pagination page="@data.pageNumber" totalPages="@data.totalPages" totalCount="@data.totalCount" shown="@items.length"
+                    fetching="@query.result.isFetching" hasPrev="@data.hasPrevious" hasNext="@data.hasNext"
+                    onPrev="@(() => setPage(Math.max(1, pageNumber - 1)))" onNext="@(() => setPage(pageNumber + 1))" noun="events" />
+    }
+
+    @* Audit detail side sheet *@
+    <AuditDetailSheet auditId="@selectedId" onClose="@(() => selectedId = null)" />
+</div>
+
+@code {
+    private readonly pageSize = 25;
+    /** The search box is local state, pushed to the URL ~250ms after the last keystroke (not a query per key). */
+    private readonly searchDebounceMs = 250;
+
+    // useSearchParams: the filters are the URL's query.
+    @SupplyParameterFromQuery({ name: "page" }) pageQuery: string | null = null;
+    @SupplyParameterFromQuery({ name: "type" }) typeQuery: string | null = null;
+    @SupplyParameterFromQuery({ name: "sev" }) sevQuery: string | null = null;
+    @SupplyParameterFromQuery({ name: "tenant" }) tenantQuery: string | null = null;
+    @SupplyParameterFromQuery({ name: "corr" }) corrQuery: string | null = null;
+    @SupplyParameterFromQuery({ name: "q" }) searchQuery: string | null = null;
+
+    private selectedId: string | null = null;
+    private searchInput = "";
+    private syncedSearch: string | undefined;
+    private searchTimer?: ReturnType<typeof setTimeout>;
+
+    private readonly eventTypeOptions: SelectOption[] = AUDIT_EVENT_TYPES.map((type) => ({ value: type, label: type }));
+    private readonly severityOptions: SelectOption[] = AUDIT_SEVERITIES.map((severity) => ({ value: severity, label: severity }));
+
+    private readonly query = new Query(() => {
+        const filters = {
+            pageNumber: this.pageNumber,
+            eventType: this.eventType,
+            severity: this.severity,
+            tenantId: this.tenantId,
+            correlationId: this.correlationId,
+            search: this.search,
+        };
+        return {
+            queryKey: ["audits", filters],
+            queryFn: () =>
+                listAudits({
+                    pageNumber: filters.pageNumber,
+                    pageSize: this.pageSize,
+                    eventType: filters.eventType || undefined,
+                    severity: filters.severity || undefined,
+                    tenantId: filters.tenantId || undefined,
+                    correlationId: filters.correlationId || undefined,
+                    search: filters.search || undefined,
+                    sort: "-OccurredAtUtc",
+                }),
+            placeholderData: keepPreviousData,
+        };
+    });
+
+    private readonly summary = new Query(() => {
+        const tenantId = this.tenantId;
+        return {
+            queryKey: ["audits", "summary", { tenantId }],
+            queryFn: () => getAuditSummary({ tenantId: tenantId || undefined }),
+        };
+    });
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.query);
+        this.observe(this.summary);
+    }
+
+    /** useEffect(() => setSearchInput(search), [search]): the box follows the URL when the URL changes. */
+    protected override onParametersSet(): void {
+        if (this.search !== this.syncedSearch) {
+            this.syncedSearch = this.search;
+            this.searchInput = this.search;
+        }
+    }
+
+    private get canCrossTenant(): boolean {
+        return (this.auth.user?.permissions ?? []).includes(AuditingPermissions.AuditTrails.ViewCrossTenant);
+    }
+
+    private get pageNumber(): number {
+        return Number(this.pageQuery ?? "1") || 1;
+    }
+
+    private get eventType(): AuditEventType | "" {
+        return (this.typeQuery as AuditEventType | null) ?? "";
+    }
+
+    private get severity(): AuditSeverity | "" {
+        return (this.sevQuery as AuditSeverity | null) ?? "";
+    }
+
+    private get tenantId(): string {
+        return this.tenantQuery ?? "";
+    }
+
+    private get correlationId(): string {
+        return this.corrQuery ?? "";
+    }
+
+    private get search(): string {
+        return this.searchQuery ?? "";
+    }
+
+    private get data() {
+        return this.query.result.data;
+    }
+
+    private get items(): AuditSummaryDto[] {
+        return this.data?.items ?? [];
+    }
+
+    private get summaryStats(): { total: number; errors: number; security: number; exceptions: number } {
+        const s = this.summary.result.data;
+        if (!s) return { total: 0, errors: 0, security: 0, exceptions: 0 };
+        const total = Object.values(s.eventsByType).reduce((a, b) => a + (b ?? 0), 0);
+        const errors = (s.eventsBySeverity.Error ?? 0) + (s.eventsBySeverity.Critical ?? 0);
+        const security = s.eventsByType.Security ?? 0;
+        const exceptions = s.eventsByType.Exception ?? 0;
+        return { total, errors, security, exceptions };
+    }
+
+    private get activeFilters(): number {
+        return [this.eventType, this.severity, this.tenantId, this.correlationId, this.search].filter(Boolean).length;
+    }
+
+    /** The search box's debounce (the original's useEffect on searchInput with a setTimeout). */
+    private onSearchInput(value: string): void {
+        this.searchInput = value;
+        clearTimeout(this.searchTimer);
+        this.searchTimer = setTimeout(() => {
+            if (this.searchInput === this.search) return;
+            const trimmed = this.searchInput.trim();
+            this.navigate({ q: trimmed || null, page: "1" });
+        }, this.searchDebounceMs);
+    }
+
+    private setParam(key: string, value: string | null): void {
+        this.navigate({ [key]: value && value.length > 0 ? value : null, page: "1" });
+    }
+
+    private setPage(page: number): void {
+        this.navigate({ page: String(page) });
+    }
+
+    private clearAll(): void {
+        clearTimeout(this.searchTimer);
+        this.navigation.navigateTo(withQuery(this.navigation.uri, null), { replaceHistoryEntry: true });
+        this.searchInput = "";
+    }
+
+    /** setParams(next, { replace: true }): the same page with the changed query, in place of the current entry. */
+    private navigate(changes: Record<string, string | null>): void {
+        this.navigation.navigateTo(withQuery(this.navigation.uri, changes), { replaceHistoryEntry: true });
+    }
+
+    dispose(): void {
+        clearTimeout(this.searchTimer);
+    }
+}

@@ -1,0 +1,108 @@
+@** Renders Bootstrap's `.modal` dialog with a backdrop while `isOpen` is true, with an optional
+    header (title and close button) and footer — the modal dialog pattern: focus moves into the
+    dialog and stays there (Tab wraps), the page behind it doesn't scroll, and focus returns when it
+    closes. It does not close itself: Escape, a backdrop click or the close button raise onClosed,
+    and the parent sets `isOpen` to false. Also available as `Modal`, Bootstrap's name for it. In a component
+    the DialogService shows (MudBlazor's MudDialog), leave isOpen unset: the dialog is open until it closes, takes its
+    title, size and closing rules from `show`, and Escape, the backdrop and Close cancel it. *@
+@import { createLayer, DialogReference, dismissible, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+
+@if (shown) {
+    <div class="modal-backdrop show" @attach="topLayer()"></div>
+    <div role="dialog" id="@id" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass("modal d-block", additionalAttributes)" @attach:top="topLayer()" @attach="trap" @attach:lock="lock">
+        <div class="@dialogClass">
+            <div class="modal-content" @attach="dismiss">
+                @if (shownTitle) {
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="@titleId">@shownTitle</h2>
+                        <button type="button" class="btn-close" aria-label="@t("close")" @onclick="requestClose"></button>
+                    </div>
+                }
+                <div class="modal-body">@childContent</div>
+                @if (footer) {
+                    <div class="modal-footer">@footer</div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** Whether the dialog is visible; the parent flips this in response to onClosed. Unset in a component the DialogService shows. */
+    @Parameter() isOpen?: boolean;
+    /** The DialogService's dialog this one is the frame of (when isOpen is unset). */
+    @CascadingParameter({ type: DialogReference }) hosted?: DialogReference;
+    /** Optional heading; it also names the dialog for screen readers. Omitting it hides the header row. */
+    @Parameter() title?: string;
+    /** The dialog's accessible name when it has no title. */
+    @Parameter() ariaLabel?: string;
+    /** The dialog element's id (Fluent UI Blazor's `Id`), as the Fluent skin's. */
+    @Parameter() id?: string;
+    /** Dialog width: small, medium (default), large, or Bootstrap's extra large. */
+    @Parameter() size: "small" | "medium" | "large" | "xlarge" = "medium";
+    /** Vertically centers the dialog. */
+    @Parameter() centered: boolean = true;
+    /** Closes when the backdrop is clicked. */
+    @Parameter() closeOnBackdrop: boolean = true;
+    /** Closes when the user presses Escape. */
+    @Parameter() closeOnEscape: boolean = true;
+    /** Optional footer content (e.g. action buttons). */
+    @Parameter() footer?: RenderFragment;
+    /** Fired when the user asks to close (Escape, the backdrop or the close button). It carries no event: Escape and the backdrop have none to give. */
+    @Parameter() onClosed?: EventCallback;
+    /** The dialog's body. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the `.modal` element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly titleId = uniqueId("tz-dialog-title");
+    /** The trap and the dismiss handling are one overlay layer. */
+    private readonly layer = createLayer();
+    private readonly trap = focusTrap({ layer: this.layer });
+    private readonly lock = scrollLock();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
+
+    /** The service's dialog, when this is its frame: isOpen unset (a dialog inside one sets it). */
+    private get hostedBy(): DialogReference | undefined {
+        return this.isOpen === undefined ? this.hosted : undefined;
+    }
+
+    private get shown(): boolean {
+        return this.isOpen ?? this.hostedBy !== undefined;
+    }
+
+    private get shownTitle(): string | undefined {
+        return this.title ?? this.hostedBy?.options.title;
+    }
+
+    private get labelledBy(): string | null {
+        return this.shownTitle ? this.titleId : null;
+    }
+
+    private get dialogClass(): string {
+        const parts = ["modal-dialog"];
+        const size = this.hostedBy?.options.size ?? this.size;
+        if (size === "small") parts.push("modal-sm");
+        else if (size === "large") parts.push("modal-lg");
+        else if (size === "xlarge") parts.push("modal-xl");
+        if (this.centered) parts.push("modal-dialog-centered");
+        return parts.join(" ");
+    }
+
+    private dismissed(reason: DismissReason): void {
+        // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
+        const options = this.hostedBy?.options;
+        const closes = reason === "escape" ? (options?.closeOnEscape ?? this.closeOnEscape) : (options?.closeOnBackdrop ?? this.closeOnBackdrop);
+        if (closes) this.requestClose()?.catch((error) => this.dispatchExceptionAsync(error));
+    }
+
+    private requestClose(): Promise<void> | undefined {
+        this.hostedBy?.cancel();
+        return this.onClosed?.invokeAsync();
+    }
+}

@@ -1,0 +1,41 @@
+@** Renders Bootstrap's `.alert` with `role="alert"` for a contextual feedback message, colored by
+    its intent. When dismissible, a close button hides the alert and raises onDismissed. *@
+@import type { Intent } from "@tsazor/ui"
+@import { backgroundColor } from "./vocabulary"
+@import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+@if (visible) {
+    <div role="alert" @attributes="@withClass(alertClass, additionalAttributes)">
+        @childContent
+        @if (dismissible) {
+            <button type="button" class="btn-close" aria-label="@t("close")" @onclick="dismiss"></button>
+        }
+    </div>
+}
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The color role: primary, secondary, success, danger, warning, info (default) or neutral. */
+    @Parameter() intent: Intent = "info";
+    /** Renders the dismiss button; the alert closes itself and fires onDismissed. */
+    @Parameter() dismissible: boolean = false;
+    /** Fired after the close button hides the alert, with the button's click event. */
+    @Parameter() onDismissed?: EventCallback<MouseEvent>;
+    /** The alert's body. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the alert element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private visible = true;
+
+    private get alertClass(): string {
+        const dismiss = this.dismissible ? " alert-dismissible" : "";
+        return `alert alert-${backgroundColor(this.intent)}${dismiss} fade show`;
+    }
+
+    private dismiss(e: MouseEvent): Promise<void> | undefined {
+        this.visible = false;
+        return this.onDismissed?.invokeAsync(e);
+    }
+}

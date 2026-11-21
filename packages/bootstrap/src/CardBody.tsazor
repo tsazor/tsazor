@@ -1,0 +1,10 @@
+@** Renders Bootstrap's `.card-body`, the padded main area of a Card. Place it inside a Card. *@
+@import { withClass } from "./attributes"
+<div @attributes="@withClass("card-body", additionalAttributes)">@childContent</div>
+
+@code {
+    /** The body content, e.g. a CardTitle and text. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

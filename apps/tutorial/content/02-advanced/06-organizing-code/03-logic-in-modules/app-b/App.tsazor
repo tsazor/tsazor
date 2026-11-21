@@ -1,0 +1,12 @@
+@import { formatMoney, totals, type Line } from "./pricing"
+
+<h1>Your basket · @formatMoney(totals(lines).total)</h1>
+<Receipt lines="@lines" />
+
+@code {
+    lines: Line[] = [
+        { name: "Sourdough loaf", price: 6.5, quantity: 2 },
+        { name: "Olive oil", price: 14, quantity: 1 },
+        { name: "Tomatoes (1 kg)", price: 4.2, quantity: 3 },
+    ];
+}

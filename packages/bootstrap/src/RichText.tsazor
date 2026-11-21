@@ -1,0 +1,98 @@
+@** A rich-text editor around an external engine (design-extended-library.md §2.7); bind it with
+    `@bind-Value`. The engine builds itself on the wrapper's area (`create`, RichText2's:
+    `(element) => new RichTextEditorCore(element, { … })`); the value is HTML, the engine's change
+    events feed it; `sanitize` shapes the value on read — none by default, the app opts in (the
+    editor's content is user HTML, the classic XSS vector; RichText2 ships a sanitizer and a
+    `sanitizeHtml` config). In a Form it validates through EditContext like every input.
+    A re-render leaves the engine's DOM untouched; when the component goes away, the engine is
+    destroyed. *@
+@inherits InputBase<string>
+@import { type RichTextEditorContract, type RichTextFactory } from "@tsazor/ui"
+
+<div class="@this.areaClass" role="@this.areaRole" aria-multiline="@(this.areaIsSurface ? "true" : null)" aria-label="@ariaLabel" @ref="element" @attributes="@this.otherAttributes"></div>
+
+@code {
+    /** The engine's factory: makes the editor on an element, with the engine's own config. */
+    @Parameter() create!: RichTextFactory;
+    /** Shapes the engine's HTML on its way into the value (none by default). */
+    @Parameter() sanitize?: (html: string) => string;
+    /**
+     * The editor's accessible name, when it has no visible label: on the engine's editing surface (its contenteditable
+     * or textbox, unless the engine named it), and on the area — a group of the toolbar and the surface, or the
+     * surface itself when the engine edits on the area (a textbox then).
+     */
+    @Parameter() ariaLabel?: string;
+
+    private editor?: RichTextEditorContract;
+    /** The last HTML the engine reported: the outside value that is only the engine's echo writes nothing back. */
+    private lastEmitted: string | undefined;
+    /** The name this wrapper put on the editing surface: a new ariaLabel replaces it, the engine's own stays. */
+    private surfaceName: string | undefined;
+    /** The engine edits on the area itself (made it contenteditable) rather than on an element it built inside. */
+    private areaIsSurface = false;
+
+    private get areaRole(): string | null {
+        return this.areaIsSurface ? "textbox" : this.ariaLabel ? "group" : null;
+    }
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender) {
+            this.createEditor();
+            this.areaIsSurface = this.element?.getAttribute("contenteditable") === "true" || this.element?.getAttribute("contenteditable") === "";
+            if (this.areaIsSurface) this.stateHasChanged();
+        }
+        this.nameSurface();
+    }
+
+    /** A name on the area alone names the group, not the field a screen reader lands in: the surface gets it too. */
+    private nameSurface(): void {
+        const surface = this.element?.querySelector<HTMLElement>("[contenteditable=true], [contenteditable=''], [role=textbox]");
+        if (surface === null || surface === undefined || surface.hasAttribute("aria-labelledby")) return;
+        const own = surface.getAttribute("aria-label");
+        if (own !== null && own !== this.surfaceName) return;
+        if (this.ariaLabel) surface.setAttribute("aria-label", this.ariaLabel);
+        else surface.removeAttribute("aria-label");
+        this.surfaceName = this.ariaLabel || undefined;
+    }
+
+    private createEditor(): void {
+        const initial = this.value;
+        this.editor = this.create(this.element!);
+        this.editor.on("change", (data: { html: string }) => {
+            this.lastEmitted = this.sanitize !== undefined ? this.sanitize(data.html) : data.html;
+            if (this.lastEmitted !== this.value) this.currentValue = this.lastEmitted;
+        });
+        if (initial !== undefined && initial !== null && initial !== "") {
+            this.editor.setHTML(initial);
+            this.lastEmitted = initial;
+        }
+    }
+
+    protected override onParametersSet(): void {
+        // Only an outside change to the value reaches the engine: its echo is already there.
+        const outside = this.value;
+        if (this.editor !== undefined && outside !== undefined && outside !== null && outside !== this.lastEmitted) {
+            this.editor.setHTML(outside);
+            this.lastEmitted = outside;
+        }
+    }
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => {
+            this.editor?.destroy();
+            this.editor = undefined;
+        });
+    }
+
+    private get areaClass(): string | null {
+        const extra = this.additionalAttributes?.["class"];
+        return typeof extra === "string" && extra.length > 0 ? `tz-rich-text ${extra}` : "tz-rich-text";
+    }
+
+    /** The captured attributes without class (that one joins the area's classes). */
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

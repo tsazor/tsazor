@@ -1,0 +1,63 @@
+@* components/layout/sidebar.tsx's SidebarNavBody: the nav — the top singletons (Overview), the section accordions
+   (expanded; a single-select accordion) or a flat icon stack with thin dividers (collapsed), and the bottom
+   singletons (Settings). The desktop sidebar and the mobile drawer share it. *@
+@import { topNavBottom, topNavTop, type NavSection } from "./nav-items"
+
+<nav class="flex-1 space-y-1.5 overflow-y-auto overflow-x-clip px-2.5 py-3.5" aria-label="Primary">
+    @* Top-level singletons: Overview *@
+    <div class="space-y-0.5">
+        @foreach (const item of topNavTop) {
+            <NavItemLink @key="item.to" item="@item" collapsed="@collapsed" pathname="@pathname" onNavigate="@onNavigate" />
+        }
+    </div>
+
+    @* Section accordions (expanded mode) *@
+    @if (!collapsed) {
+        <div class="space-y-1.5 pt-1.5">
+            @foreach (const section of visibleSections) {
+                <NavAccordionSection @key="section.id" section="@section" isOpen="@(openSection === section.id)" pathname="@pathname"
+                                     onToggle="@(() => toggle(section.id))" onNavigate="@onNavigate" />
+            }
+        </div>
+    }
+
+    @* Collapsed mode — flat icon stack with thin dividers between sections. *@
+    @if (collapsed) {
+        <div class="space-y-1 pt-1.5">
+            @for (let index = 0; index < visibleSections.length; index++) {
+                const section = visibleSections[index]!;
+                <div @key="section.id">
+                    @if (index > 0) {
+                        <div aria-hidden="true" class="mx-2 my-2 h-px bg-[var(--color-border)]"></div>
+                    }
+                    <div class="space-y-0.5">
+                        @foreach (const item of section.items) {
+                            <NavItemLink @key="item.to" item="@item" collapsed pathname="@pathname" onNavigate="@onNavigate" />
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @* Bottom singletons: Settings *@
+    <div class="space-y-0.5 pt-1.5">
+        @foreach (const item of topNavBottom) {
+            <NavItemLink @key="item.to" item="@item" collapsed="@collapsed" pathname="@pathname" onNavigate="@onNavigate" />
+        }
+    </div>
+</nav>
+
+@code {
+    @Parameter() collapsed: boolean = false;
+    @Parameter() openSection: string | null = null;
+    @Parameter() openSectionChanged?: EventCallback<string | null>;
+    @Parameter() visibleSections: NavSection[] = [];
+    @Parameter() pathname: string = "/";
+    /** Called after a nav item click — used by the mobile sheet to close itself. */
+    @Parameter() onNavigate?: EventCallback;
+
+    private toggle(id: string): Promise<void> | undefined {
+        return this.openSectionChanged?.invokeAsync(this.openSection === id ? null : id);
+    }
+}

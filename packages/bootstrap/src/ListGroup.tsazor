@@ -1,0 +1,19 @@
+@** Renders Bootstrap's `.list-group` as a `<ul>` for a list of items, optionally flush or
+    horizontal. Fill it with ListGroupItem children. *@
+<ul class="@listClass">@childContent</ul>
+
+@code {
+    /** Removes borders for a flush list inside cards. */
+    @Parameter() flush: boolean = false;
+    /** Horizontal list variant. */
+    @Parameter() horizontal: boolean = false;
+    /** The ListGroupItem children. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get listClass(): string {
+        const parts = ["list-group"];
+        if (this.flush) parts.push("list-group-flush");
+        if (this.horizontal) parts.push("list-group-horizontal");
+        return parts.join(" ");
+    }
+}

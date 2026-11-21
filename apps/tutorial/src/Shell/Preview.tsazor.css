@@ -1,0 +1,156 @@
+.preview {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    min-height: 0;
+    background: #fff;
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+}
+
+.title {
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.page-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 60%;
+    margin: 0 0.75rem;
+    padding: 0.1rem 0.7rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    border-bottom-color: transparent;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bar .status {
+    margin-left: auto;
+}
+
+/* The app's document title, drawn like a browser tab on the bar. */
+.page-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: -0.35rem 0.75rem -0.36rem;
+    padding: 0.3rem 0.8rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: #fff;
+    color: var(--fg);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* The app's URL (routing lessons), drawn like an address field on the bar. */
+.page-url {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: -0.35rem 0.75rem -0.36rem;
+    padding: 0.3rem 0.8rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: #fff;
+    color: var(--fg);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bar .status {
+    margin-left: auto;
+}
+
+.status--running {
+    color: var(--fg-muted);
+}
+
+.status--ready {
+    color: var(--success);
+}
+
+.status--failed {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.frames {
+    position: relative;
+    min-height: 0;
+}
+
+/* The iframes are created by PreviewHost — not this file's markup. */
+.frames ::deep .preview-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+}
+
+.frames ::deep .preview-frame--pending {
+    visibility: hidden;
+}
+
+.console {
+    max-height: 8rem;
+    overflow: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.line pre {
+    margin: 0;
+    padding: 0.3rem 0.9rem;
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+}
+
+.line--error {
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+
+.line--warn {
+    color: var(--warning);
+}
+
+.frames--stale {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+}
+
+.stale-note {
+    margin: 0;
+    padding: 0.4rem 0.9rem;
+    border-top: 1px solid var(--border);
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: 0.82rem;
+}

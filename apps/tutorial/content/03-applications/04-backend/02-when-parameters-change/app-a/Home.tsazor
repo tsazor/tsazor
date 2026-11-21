@@ -1,0 +1,12 @@
+@page "/"
+<h1>The Daily Loaf</h1>
+<p>Sourdough, rye and the occasional experiment. Open from seven.</p>
+<AuthorizeView>
+    <Authorized>
+        <p class="welcome">Welcome back, @context.user.name! Your usual sourdough is waiting.</p>
+    </Authorized>
+    <NotAuthorized>
+        <p>Sign in to see your usual order.</p>
+    </NotAuthorized>
+</AuthorizeView>
+<p class="staff">Staff: <a href="/orders">today's orders</a></p>

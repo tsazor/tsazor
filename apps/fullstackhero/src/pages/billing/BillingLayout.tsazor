@@ -1,0 +1,33 @@
+@* pages/billing/layout.tsx: the /billing layout — the page hero and a horizontal tabbed sub-nav; the child routes
+   (Plans, Invoices, Top-ups) render in its body, nested in AppShell.
+   - Nesting: the layout's own `@layout AppShell` puts it into the shell (Blazor's nested layouts, F10).
+   - Tabs: React Router's NavLink takes a className function of `isActive`; Blazor's NavLink adds an active class and
+     aria-current="page", so the active tab's classes are Tailwind's `aria-[current=page]:` variants — they win over
+     the inactive ones the tab always carries. *@
+@inherits LayoutComponentBase
+@import { CreditCard } from "lucide"
+@layout AppShell
+
+<div class="space-y-6">
+    <EntityPageHeader icon="@CreditCard" tone="saffron" title="Billing"
+                      description="Manage plans, subscriptions, and invoices across every tenant on this instance." />
+
+    <nav class="flex items-center gap-1 border-b border-[var(--color-border)]" aria-label="Billing sections">
+        @foreach (const tab of BillingLayout.tabs) {
+            <NavLink @key="tab.to" href="@tab.to" activeClass=""
+                     class="relative -mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] aria-[current=page]:border-[var(--color-foreground)] aria-[current=page]:text-[var(--color-foreground)]">@tab.label</NavLink>
+        }
+    </nav>
+
+    <div class="pt-1">
+        @Body
+    </div>
+</div>
+
+@code {
+    static readonly tabs: readonly { to: string; label: string }[] = [
+        { to: "/billing/plans", label: "Plans" },
+        { to: "/billing/invoices", label: "Invoices" },
+        { to: "/billing/topups", label: "Top-ups" },
+    ];
+}

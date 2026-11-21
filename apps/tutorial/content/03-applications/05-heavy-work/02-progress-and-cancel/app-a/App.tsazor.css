@@ -1,0 +1,27 @@
+.clock {
+    font-variant-numeric: tabular-nums;
+    color: #57606a;
+}
+
+.import {
+    padding: 0.45rem 1rem;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.cancel {
+    margin-left: 0.5rem;
+    padding: 0.45rem 1rem;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.progress {
+    display: block;
+    width: 20rem;
+    margin-top: 0.75rem;
+}

@@ -1,0 +1,25 @@
+<h1>Shopping list</h1>
+<textarea rows="4" @bind="text"></textarea>
+
+<SectionContent SectionName="actions">
+    <button @onclick="save">Save</button>
+    <button @onclick="discard">Discard</button>
+</SectionContent>
+
+<p class="status">@status</p>
+
+@code {
+    text = "Milk\nBread";
+    saved = "Milk\nBread";
+    status = "";
+
+    save() {
+        this.saved = this.text;
+        this.status = "Saved.";
+    }
+
+    discard() {
+        this.text = this.saved;
+        this.status = "Changes discarded.";
+    }
+}

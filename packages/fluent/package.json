@@ -1,34 +1,88 @@
 {
   "name": "@tsazor/fluent",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/fluent"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/fluent#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Fluent 2 design system for Tsazor — token-driven, accessible components written in .tsazor. Install via npm or copy the sources: the components belong to you.",
+  "keywords": [
+    "tsazor",
+    "tsazor-components",
+    "components",
+    "ui"
+  ],
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
-    "@tsazor/fluent": "./bin/fluent.mjs"
+    "tsazor-fluent": "./bin/fluent.mjs"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./fluent.css": "./dist/fluent.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./fluent.css": "./dist/fluent.css",
+    "./tsazor-components.json": "./dist/tsazor-components.json",
+    "./templates": {
+      "types": "./dist/templates/index.d.ts",
+      "default": "./dist/templates/index.js"
+    }
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "tsazor": {
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": [
+        "@tsazor/fluent/fluent.css"
+      ],
+      "services": "addFluent",
+      "layout": [
+        "ToastRegion",
+        "DialogProvider"
+      ]
+    }
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "bin",
+    "templates"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "core-icons": "node scripts/core-icons.mjs"
+  },
+  "dependencies": {
+    "@tsazor/markdown": "workspace:*",
+    "@tsazor/primitives": "workspace:*",
+    "@tsazor/ui": "workspace:*"
   },
   "peerDependencies": {
     "@tsazor/runtime": "workspace:*"
   },
   "devDependencies": {
+    "@tsazor/cli": "workspace:*",
     "@tsazor/compiler": "workspace:*",
+    "@tsazor/fluent-icons": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/testing": "workspace:*",
     "@tsazor/workspace": "workspace:*",
     "esbuild": "^0.28.2",
-    "happy-dom": "^18.0.1",
+    "happy-dom": "^21.0.1",
     "vitest": "^3.2.7"
   }
 }

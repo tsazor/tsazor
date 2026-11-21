@@ -1,0 +1,19 @@
+@* pages/audits/list.tsx's SeverityDot: the event's severity as a coloured dot (its name in the tooltip). *@
+@import type { AuditSeverity } from "@/api/audits"
+
+<span aria-hidden="true" title="@severity" class="@cn("h-2 w-2 rounded-full", tone)"></span>
+
+@code {
+    @Parameter() severity!: AuditSeverity;
+
+    private get tone(): string {
+        const severity = this.severity;
+        return severity === "Critical" || severity === "Error"
+            ? "bg-[var(--color-destructive)]"
+            : severity === "Warning"
+              ? "bg-[var(--color-warning)]"
+              : severity === "Information"
+                ? "bg-[var(--color-info)]"
+                : "bg-[var(--color-muted-foreground)]/50";
+    }
+}

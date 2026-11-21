@@ -1,0 +1,14 @@
+@using @tsazor/fluent
+@using ./Shell
+@using ./Plugins/Base
+@using ./Components
+@* The standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). Unused imports are dropped by the build. *@
+@import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, MarkupString, inject } from "@tsazor/runtime"
+@import { NavigationManager, Router, RouteView, LayoutView, NavLink, NavLinkMatch, PageTitle, FocusOnNavigate, SupplyParameterFromQuery } from "@tsazor/runtime"
+@import { EditContext, TsazorHttp } from "@tsazor/runtime"
+@import type { RenderFragment, RouteData, ComponentType } from "@tsazor/runtime"
+@* The app's own (Blazor: @using FluentCMS, @using FluentCMS.Web.ApiClients). *@
+@import { ViewState } from "./ViewState"
+@import { FluentCmsClient } from "./api/fluent-cms"
+@* FluentCMS's icons (Blazor: @using FluentCMS.Web.UI.Components, its IconName). *@
+@import { IconName } from "./Components/IconName"

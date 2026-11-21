@@ -1,0 +1,13 @@
+@* routes.tsx's index route of /billing: `<Navigate to="/billing/invoices" replace />`, inside the billing layout and its
+   RouteGuard (Billing.View). *@
+@page "/billing"
+@authorize({ policy: "Permissions.Billing.View" })
+@layout BillingLayout
+@import BillingLayout from "./BillingLayout.tsazor"
+@inject NavigationManager navigation
+
+@code {
+    protected override onInitialized(): void {
+        this.navigation.navigateTo("/billing/invoices", { replaceHistoryEntry: true });
+    }
+}

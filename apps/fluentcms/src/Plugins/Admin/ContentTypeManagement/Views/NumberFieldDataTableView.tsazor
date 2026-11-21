@@ -1,0 +1,6 @@
+@* A number field in the content list, as it is (FluentCMS's NumberFieldDataTableView). *@
+@inherits BaseFieldValueView<number | null, NumberFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { NumberFieldModel } from "../field-models"
+
+@fieldValue.value

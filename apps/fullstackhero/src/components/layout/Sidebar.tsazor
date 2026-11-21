@@ -1,0 +1,72 @@
+@* components/layout/sidebar.tsx: the desktop sidebar — the brand row with the collapse button, the permission-
+   filtered nav (SidebarNavBody: Overview, the section accordions, Settings) and the footer. Collapsed, it is a 52px
+   icon rail. The open section follows the route, as the original's effect on location.pathname. *@
+@import { PanelLeftClose, PanelLeftOpen } from "lucide"
+@import { findSectionForPath } from "./nav-items"
+@import { ShellState } from "./shell-state"
+@import { visibleSections } from "./visible-sections"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+<aside data-collapsed="@(shell.collapsed ? "true" : null)" aria-label="Primary navigation"
+       class="@cn("hidden shrink-0 flex-col border-r border-[var(--color-border)]", "bg-[oklch(from_var(--color-card)_l_c_h_/_0.85)] backdrop-blur-xl backdrop-saturate-150 md:flex", "transition-[width] duration-[var(--duration-default)] ease-[var(--ease-out-cubic)]", shell.collapsed ? "w-[52px]" : "w-[220px]")">
+    @* Brand row *@
+    <div class="@cn("flex h-14 shrink-0 items-center border-b border-[var(--color-border)]", shell.collapsed ? "justify-center px-0" : "justify-between px-4")">
+        <div class="@cn("flex items-center", shell.collapsed ? "" : "gap-2.5")">
+            <span aria-hidden="true" class="brand-mark grid size-8 shrink-0 place-items-center rounded-lg font-display text-[12px] font-bold text-[var(--color-primary-foreground)]">F</span>
+            @if (!shell.collapsed) {
+                <div class="flex flex-col">
+                    <span class="whitespace-nowrap font-display text-[15px] font-bold leading-none tracking-tight text-[var(--color-foreground)]">fullstack<span class="text-[var(--color-primary)]">hero</span></span>
+                    <span class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">Admin</span>
+                </div>
+            }
+        </div>
+
+        @if (!shell.collapsed) {
+            <button type="button" @onclick="() => shell.toggleCollapsed()" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar" class="@toggleClass">
+                <Icon icon="@PanelLeftClose" class="h-4 w-4" />
+            </button>
+        }
+    </div>
+
+    <SidebarNavBody collapsed="@shell.collapsed" openSection="@openSection" openSectionChanged="@((id: string | null) => openSection = id)"
+                    visibleSections="@visibleSections(auth)" pathname="@pathname" />
+
+    @* Footer *@
+    <div class="@cn("border-t border-[var(--color-border)]", shell.collapsed ? "flex justify-center p-2" : "px-5 py-3")">
+        @if (shell.collapsed) {
+            <button type="button" @onclick="() => shell.toggleCollapsed()" aria-label="Expand sidebar" aria-expanded="false" title="Expand sidebar" class="@toggleClass">
+                <Icon icon="@PanelLeftOpen" class="h-4 w-4" />
+            </button>
+        } else {
+            <p class="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">v0.1 · admin</p>
+        }
+    </div>
+</aside>
+
+@code {
+    @CascadingParameter({ type: ShellState }) shell!: ShellState;
+
+    private pathname = "/";
+    private openSection: string | null = null;
+
+    private readonly toggleClass = cn(
+        "grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-md",
+        "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
+        "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
+    );
+
+    protected override onInitialized(): void {
+        this.observe(this.shell);
+        this.observe(this.auth.changes);
+        this.follow();
+        // Re-sync the open section on every route change.
+        this.observe(this.navigation, () => this.follow());
+    }
+
+    private follow(): void {
+        this.pathname = new URL(this.navigation.uri).pathname;
+        this.openSection = findSectionForPath(this.pathname);
+    }
+}

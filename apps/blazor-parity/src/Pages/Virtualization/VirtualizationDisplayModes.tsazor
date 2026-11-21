@@ -1,0 +1,63 @@
+@page "/virtualization/display-modes"
+@import type { HeightItem } from "./models"
+@* Test page for verifying Virtualize behavior with supported CSS display modes *@
+
+<h3>Virtualization with CSS Display Modes</h3>
+
+<p>
+    <strong>Test:</strong> Verify that variable-height virtualization works correctly with supported CSS layout modes.
+</p>
+
+<h4>1. display: block (default)</h4>
+<p>
+    <div id="block-container" style="display: block; background-color: #e8f5e9; height: 200px; overflow-y: auto;">
+        <Virtualize Items="@items" ItemSize="40">
+            <div @key="context.index" id="block-item-@context.index" class="block-item"
+                 style="height: @(context.height)px; background-color: hsl(@(context.hue), 60%, 75%); padding: 8px; box-sizing: border-box;">
+                <span class="item-index">Block Item @context.index (height: @context.height px)</span>
+            </div>
+        </Virtualize>
+    </div>
+</p>
+<p id="block-status">Block items: <span id="block-count">@items.length</span></p>
+
+<h4>2. display: grid; grid-template-columns: 1fr</h4>
+<p>
+    <div id="grid-container" style="display: grid; grid-template-columns: 1fr; background-color: #fff3e0; height: 200px; overflow-y: auto; gap: 4px;">
+        <Virtualize Items="@items" ItemSize="40">
+            <div @key="context.index" id="grid-item-@context.index" class="grid-item"
+                 style="height: @(context.height)px; background-color: hsl(@(context.hue), 60%, 75%); padding: 8px; box-sizing: border-box;">
+                <span class="item-index">Grid Item @context.index (height: @context.height px)</span>
+            </div>
+        </Virtualize>
+    </div>
+</p>
+<p id="grid-status">Grid items: <span id="grid-count">@items.length</span></p>
+
+<h4>3. Subgrid (single-column parent)</h4>
+<p>
+    <div id="subgrid-container" style="display: grid; grid-template-columns: 100px 1fr; background-color: #e0f2f1; height: 200px; overflow-y: auto;">
+        <div style="grid-column: 1 / -1; display: grid; grid-template-columns: subgrid;">
+            <Virtualize Items="@items" ItemSize="40">
+                <div @key="context.index" id="subgrid-item-@context.index" class="subgrid-item"
+                     style="grid-column: 1 / -1; height: @(context.height)px; background-color: hsl(@(context.hue), 60%, 75%); padding: 8px; box-sizing: border-box; display: grid; grid-template-columns: subgrid;">
+                    <span style="grid-column: 1;">@context.index</span>
+                    <span style="grid-column: 2;">Subgrid Item (height: @context.height px)</span>
+                </div>
+            </Virtualize>
+        </div>
+    </div>
+</p>
+<p id="subgrid-status">Subgrid items: <span id="subgrid-count">@items.length</span></p>
+
+@code {
+    items: HeightItem[] = [];
+
+    protected override onInitialized(): void {
+        this.items = range(0, 50).map((i) => ({
+            index: i,
+            height: 30 + (i * 17 % 51), // Heights vary from 30-80px
+            hue: (i * 7) % 360,
+        }));
+    }
+}

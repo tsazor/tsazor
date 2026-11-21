@@ -1,25 +1,30 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { CascadingValueSupplier } from "../renderer/cascading-value";
-import type { ServiceProvider } from "../di/service-collection";
-import { ANONYMOUS, AuthenticationState } from "./authentication-state";
-import { watchAuthenticationState } from "./authentication-state-provider";
+import { componentInternals } from "../components/component-internals.js";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
+import type { ServiceProvider } from "../di/service-collection.js";
+import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
+import { watchAuthenticationState } from "./authentication-state-provider.js";
 
 /**
  * Blazor's CascadingAuthenticationState: cascades the AuthenticationState to
  * the whole subtree and re-renders it on login/logout. The
  * AuthenticationStateProvider is looked up in DI (registerValue); this
- * wrapper also re-renders children that cascade-consume the state.
+ * wrapper also re-renders children that cascade-consume the state. Blazor
+ * cascades a Task; this cascades the state itself, so while a notified
+ * promise is pending the subtree keeps the last state.
  */
 export class CascadingAuthenticationState extends ComponentBase implements CascadingValueSupplier {
   /** Content whose subtree receives the AuthenticationState. */
   @Parameter() childContent?: RenderFragment;
 
+  /** Marks the component as a cascading value supplier for the renderer. */
   readonly isCascadingValueSupplier = true;
   readonly isFixed = false;
-  /** Cascades under this name OR by the AuthenticationState type token. */
-  readonly cascadeName = "AuthenticationState";
+  /** Cascades by type, unnamed (Blazor cascades its Task<AuthenticationState> the same way). */
+  readonly cascadeType = AuthenticationState;
+  /** The cascaded AuthenticationState (anonymous until the provider resolves). */
   get cascadeValue(): unknown {
     return this.authenticationState ?? ANONYMOUS;
   }
@@ -28,13 +33,14 @@ export class CascadingAuthenticationState extends ComponentBase implements Casca
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
-    const services = this.componentServices as ServiceProvider | undefined;
+    const services = componentInternals.services(this) as ServiceProvider | undefined;
     this.unsubscribe = watchAuthenticationState(services, (state) => {
       this.authenticationState = state;
-      this.stateHasChangedInternal();
+      componentInternals.requestRender(this);
     });
   }
 
+  /** Stops listening to authentication state changes. */
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;

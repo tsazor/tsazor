@@ -1,0 +1,163 @@
+@* components/tenants/tenant-branding-card.tsx: the operator-facing theme editor for one tenant — the light and dark
+   palettes and the brand asset URLs, with a live preview. Every API call is scoped to `tenantId` by the `tenant:`
+   header (the theme endpoints are current-tenant scoped server-side; only root operators get past the override).
+   Typography and layout exist on the DTO but are intentionally left out of the v1 editor, as in the original.
+   The draft is the server's theme, replaced on every fresh fetch (another admin's edit, a reset) — React's
+   `useEffect(() => setDraft(data), [data])`: the data's identity (TanStack Query shares unchanged data) tells a
+   fresh fetch. *@
+@import { Loader2, Palette, RotateCcw, Save } from "lucide"
+@import {
+    DEFAULT_DARK_PALETTE,
+    DEFAULT_LIGHT_PALETTE,
+    getTenantTheme,
+    resetTenantTheme,
+    updateTenantTheme,
+    type BrandAssetsDto,
+    type PaletteDto,
+    type TenantThemeDto,
+} from "@/api/tenants"
+@import { queryClient } from "@/lib/query-client"
+@import { Query } from "@/lib/query"
+@import { toast } from "@/lib/toast"
+@import { describe } from "./format"
+@import BrandAssetsEditor from "./BrandAssetsEditor.tsazor"
+@import PaletteEditor from "./PaletteEditor.tsazor"
+@import ThemePreview from "./ThemePreview.tsazor"
+
+@if (themeQuery.result.isLoading) {
+    <SettingsSection title="Branding" icon="@Palette" description="Operator-controlled colors + brand assets that drive this tenant's UI.">
+        <LoadingRow label="Loading branding" />
+    </SettingsSection>
+} else if (themeQuery.result.isError) {
+    <SettingsSection title="Branding" icon="@Palette">
+        <ErrorBand message="@(describe(themeQuery.result.error, "Unknown error"))" />
+    </SettingsSection>
+} else if (draft) {
+    <SettingsSection title="Branding" icon="@Palette" description="Theme tokens consumed by this tenant's apps on sign-in. Live preview reflects the primary action with the chosen palette.">
+        <Footer>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    @if (draft.isDefault && !dirty) {
+                        <Badge variant="outline" class="font-mono uppercase tracking-[0.14em]">default</Badge>
+                    }
+                    @if (dirty) {
+                        <Badge variant="warning" class="font-mono uppercase tracking-[0.14em]">unsaved</Badge>
+                    }
+                </div>
+                <div class="flex items-center gap-2">
+                    <Button type="button" variant="ghost" onClick="@reset" disabled="@(resetting || saving)" aria-label="Reset branding to defaults">
+                        <Icon icon="@RotateCcw" class="mr-1.5 h-3.5 w-3.5" />
+                        @(resetting ? "Resetting…" : "Reset to defaults")
+                    </Button>
+                    <Button type="button" variant="signal" onClick="@save" disabled="@(!dirty || saving)">
+                        @if (saving) {
+                            <Icon icon="@Loader2" class="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        } else {
+                            <Icon icon="@Save" class="mr-1.5 h-3.5 w-3.5" />
+                        }
+                        @(saving ? "Saving…" : "Save branding")
+                    </Button>
+                </div>
+            </div>
+        </Footer>
+        <ChildContent>
+            <div class="space-y-6">
+                <ThemePreview palette="@draft.lightPalette" label="Light preview" />
+
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <PaletteEditor title="Light palette" palette="@draft.lightPalette" onChange="@onLight" defaults="@DEFAULT_LIGHT_PALETTE" />
+                    <PaletteEditor title="Dark palette" palette="@draft.darkPalette" onChange="@onDark" defaults="@DEFAULT_DARK_PALETTE" />
+                </div>
+
+                <BrandAssetsEditor assets="@draft.brandAssets" onChange="@onAssets" />
+            </div>
+        </ChildContent>
+    </SettingsSection>
+}
+
+@code {
+    @Parameter() tenantId: string = "";
+
+    private readonly themeQuery = new Query(() => ({
+        queryKey: this.themeQueryKey,
+        queryFn: () => getTenantTheme(this.tenantId),
+        // Re-fetch when the page regains focus so other admins' edits are
+        // picked up without a manual refresh.
+        refetchOnWindowFocus: true,
+    }));
+
+    /** The editor's state, and the server payload it was seeded from. */
+    private draftState: TenantThemeDto | null = null;
+    private seededFrom?: TenantThemeDto;
+    private saving = false;
+    private resetting = false;
+
+    protected override onInitialized(): void {
+        // The query was built in a field initializer, before `tenantId` was set; Query.subscribe starts it with those
+        // options (a fetch under the key ["tenant", "", "theme"]). Reading `result` applies the current ones first.
+        void this.themeQuery.result;
+        this.observe(this.themeQuery);
+    }
+
+    private get themeQueryKey() {
+        return ["tenant", this.tenantId, "theme"] as const;
+    }
+
+    /** The draft, replaced whenever a fresh server payload arrives. */
+    private get draft(): TenantThemeDto | null {
+        const data = this.themeQuery.result.data;
+        if (data && data !== this.seededFrom) {
+            this.seededFrom = data;
+            this.draftState = data;
+        }
+        return this.draftState;
+    }
+
+    private get dirty(): boolean {
+        const data = this.themeQuery.result.data;
+        return !!data && JSON.stringify(data) !== JSON.stringify(this.draft);
+    }
+
+    private onLight(next: Partial<PaletteDto>): void {
+        const d = this.draft;
+        if (d) this.draftState = { ...d, lightPalette: { ...d.lightPalette, ...next } };
+    }
+
+    private onDark(next: Partial<PaletteDto>): void {
+        const d = this.draft;
+        if (d) this.draftState = { ...d, darkPalette: { ...d.darkPalette, ...next } };
+    }
+
+    private onAssets(next: Partial<BrandAssetsDto>): void {
+        const d = this.draft;
+        if (d) this.draftState = { ...d, brandAssets: { ...d.brandAssets, ...next } };
+    }
+
+    private async save(): Promise<void> {
+        const theme = this.draft;
+        if (!theme) return;
+        this.saving = true;
+        try {
+            await updateTenantTheme(this.tenantId, theme);
+            toast.success("Branding saved");
+            void queryClient.invalidateQueries({ queryKey: this.themeQueryKey });
+        } catch (err) {
+            toast.error("Save failed", { description: describe(err, "Unknown error") });
+        } finally {
+            this.saving = false;
+        }
+    }
+
+    private async reset(): Promise<void> {
+        this.resetting = true;
+        try {
+            await resetTenantTheme(this.tenantId);
+            toast.success("Branding reset to defaults");
+            void queryClient.invalidateQueries({ queryKey: this.themeQueryKey });
+        } catch (err) {
+            toast.error("Reset failed", { description: describe(err, "Unknown error") });
+        } finally {
+            this.resetting = false;
+        }
+    }
+}

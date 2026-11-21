@@ -1,0 +1,13 @@
+{
+  "name": "starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The starter gate: the apps `npm create tsazor` writes — with @tsazor/bootstrap, with @tsazor/fluent and without a library — built from the packed packages and driven in a real browser.",
+  "scripts": {
+    "verify": "node scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}

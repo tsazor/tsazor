@@ -1,0 +1,40 @@
+@** A Fluent UI 2 highlighter (Fluent UI Blazor's FluentHighlighter, MudBlazor's MudHighlighter): `text` with the
+    search terms marked (`<mark>`) — `highlightedText`, split at any of `delimiters` (" ,;"), and the terms of
+    `highlightedTexts`. `caseSensitive`; `untilNextBoundary` runs a match on to the end of its word. The text stays
+    text: markup in it is shown, not rendered. Attributes go on each mark. *@
+@import { highlightFragments, highlightTerms } from "@tsazor/ui/kit"
+@import { withAttributes } from "./attributes"
+
+@foreach (const fragment of this.fragments) {
+    @if (fragment.highlighted) {
+        <mark @attributes="@this.markAttributes">@fragment.text</mark>
+    } else {
+        @fragment.text
+    }
+}
+
+@code {
+    /** The whole text. */
+    @Parameter() text: string = "";
+    /** The search text to mark (`HighlightedText`). */
+    @Parameter() highlightedText: string = "";
+    /** More terms to mark (MudBlazor's `HighlightedTexts`). */
+    @Parameter() highlightedTexts: string[] = [];
+    /** Characters that split `highlightedText` into terms (" ,;"; `Delimiters`). */
+    @Parameter() delimiters: string = "";
+    /** Upper and lower case count. */
+    @Parameter() caseSensitive: boolean = false;
+    /** A match runs on to the end of its word ("blaz" marks all of "Blazor"). */
+    @Parameter() untilNextBoundary: boolean = false;
+    /** `@attributes` on each mark (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get fragments() {
+        const terms = highlightTerms(this.highlightedText, this.delimiters, this.highlightedTexts);
+        return highlightFragments(this.text, terms, { caseSensitive: this.caseSensitive, untilNextBoundary: this.untilNextBoundary });
+    }
+
+    private get markAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-highlighter" }, this.additionalAttributes);
+    }
+}

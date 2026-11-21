@@ -1,0 +1,94 @@
+@page "/virtualization/bimodal"
+@import type { HeightItem } from "./models"
+@* Tests: bimodal height distribution, nested virtualize isolation, large dataset (100K items) *@
+<p>
+    <b>Bimodal Height Distribution</b> (alternating 30px/300px items):<br />
+    <div id="bimodal-container" style="background-color: #eee; height: 300px; overflow-y: auto">
+        <Virtualize Items="@bimodalItems" ItemSize="50">
+            <div @key="context.index" id="bimodal-item-@context.index" class="bimodal-item"
+                 style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 80%); padding: 4px; box-sizing: border-box;">
+                <span class="item-index">@context.index</span> - H:@context.height
+            </div>
+        </Virtualize>
+    </div>
+    <span id="bimodal-count">@bimodalItems.length</span>
+</p>
+
+<p>
+    <b>Nested Virtualize</b> (outer + inner, measurement isolation):<br />
+    <div id="nested-outer-container" style="background-color: #ddd; height: 400px; overflow-y: auto">
+        <Virtualize Items="@nestedOuterItems" ItemSize="120">
+            <div @key="context.index" id="nested-outer-item-@context.index" class="nested-outer-item"
+                 style="height: 120px; background-color: hsl(@(context.index * 30 % 360), 50%, 85%); padding: 4px; box-sizing: border-box;">
+                <span class="outer-index">Outer @context.index</span>
+                @if (context.index === 0)
+                {
+                    <div id="nested-inner-container" style="height: 80px; overflow-y: auto; background-color: #fff;">
+                        <Virtualize Items="@nestedInnerItems" ItemSize="20" Context="innerCtx">
+                            <div @key="innerCtx.index" id="nested-inner-item-@innerCtx.index" class="nested-inner-item"
+                                 style="height: @(innerCtx.height)px; background-color: hsl(@(innerCtx.hue), 70%, 70%); box-sizing: border-box;">
+                                Inner @innerCtx.index
+                            </div>
+                        </Virtualize>
+                    </div>
+                }
+            </div>
+        </Virtualize>
+    </div>
+    <span id="nested-outer-count">@nestedOuterItems.length</span>
+    <span id="nested-inner-count">@nestedInnerItems.length</span>
+</p>
+
+<p>
+    <b>Large Dataset</b> (100K items):<br />
+    <button id="load-large" @onclick="loadLargeDataset">Load 100K items</button>
+    <span id="large-dataset-status">@largeDatasetStatus</span>
+    @if (largeItems !== null)
+    {
+        <div id="large-dataset-container" style="background-color: #eee; height: 300px; overflow-y: auto">
+            <Virtualize Items="@largeItems" ItemSize="40">
+                <div @key="context.index" id="large-item-@context.index" class="large-dataset-item"
+                     style="height: @(context.height)px; background-color: hsl(@(context.hue), 60%, 80%); padding: 2px; box-sizing: border-box;">
+                    <span class="item-index">@context.index</span>
+                </div>
+            </Virtualize>
+        </div>
+    }
+</p>
+
+@code {
+    bimodalItems: HeightItem[] = [];
+    nestedOuterItems: HeightItem[] = [];
+    nestedInnerItems: HeightItem[] = [];
+    largeItems: HeightItem[] | null = null;
+    largeDatasetStatus = "Not loaded";
+
+    protected override onInitialized(): void {
+        this.bimodalItems = range(0, 200).map((i) => ({
+            index: i,
+            height: i % 2 === 0 ? 30 : 300,
+            hue: i * 7 % 360,
+        }));
+
+        this.nestedOuterItems = range(0, 50).map((i) => ({
+            index: i,
+            height: 120,
+            hue: i * 30 % 360,
+        }));
+
+        this.nestedInnerItems = range(0, 100).map((i) => ({
+            index: i,
+            height: 15 + (i * 7 % 21),
+            hue: i * 12 % 360,
+        }));
+    }
+
+    loadLargeDataset(): void {
+        this.largeItems = range(0, 100_000).map((i) => ({
+            index: i,
+            height: 25 + (i * 13 % 41),
+            hue: i * 3 % 360,
+        }));
+        this.largeDatasetStatus = `Loaded ${this.largeItems.length} items`;
+    }
+}

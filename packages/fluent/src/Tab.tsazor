@@ -1,10 +1,23 @@
+@** One tab of a Tabs container: it registers its title with the parent Tabs and renders its
+    content as a tabpanel only while it is the active tab. Use inside Tabs. *@
+@import type { IconValue, Intent } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
 @if (this.active) {
-    <div class="fui-tab-panel" role="tabpanel" id="@this.panelId" aria-labelledby="@this.labelledBy">@childContent</div>
+    <div role="tabpanel" @attributes="@this.panelAttributes">@childContent</div>
 }
 
 @code {
     /** Label shown in the parent Tabs' list. */
     @Parameter() title: string = "";
+    /** An icon before the title in the tab list (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** A badge after the title in the tab list (MudTabPanel's `BadgeData`): a count, "3/5". */
+    @Parameter() badge?: string;
+    /** The badge's color (MudTabPanel's `BadgeColor`). */
+    @Parameter() badgeIntent: Intent = "neutral";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Panel content (rendered only while the tab is active). */
     @Parameter() childContent?: RenderFragment;
 
@@ -21,6 +34,17 @@
         return (this.host as { activeIndex?: number } | undefined)?.activeIndex === this.index;
     }
 
+    private get panelAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: "fui-tab-panel",
+            id: this.panelId,
+            "aria-labelledby": this.labelledBy,
+            // A Tab stop of its own (the APG's tabs pattern; the Bootstrap skin's too): a panel without a focusable
+            // element in it is reached after the tab list all the same.
+            tabindex: 0,
+        }, this.additionalAttributes);
+    }
+
     private get panelId(): string | null {
         const p = this.host as { panelIdFor?: (i: number) => string | null } | undefined;
         return p?.panelIdFor ? p.panelIdFor(this.index) : null;
@@ -32,12 +56,21 @@
     }
 
     protected override onInitialized(): void {
-        const p = this.host as
-            { registerTab?: (tab: { title: string; setIndex(index: number): void }) => void } | undefined;
+        const p = this.host as { registerTab?(tab: { title: string; iconStart?: IconValue; setIndex(index: number): void }): void; unregisterTab?(tab: object): void; tabChanged?(): void } | undefined;
         p?.registerTab?.(this);
+        this.disposeSignal.addEventListener("abort", () => p?.unregisterTab?.(this));
     }
 
-    /** @internal Called by the parent Tabs at registration. */
+    private shown = "";
+
+    /** A changed title, icon or badge shows in the parent's tab list. */
+    protected override onParametersSet(): void {
+        const shown = `${this.title}\u0000${this.badge ?? ""}\u0000${this.badgeIntent}\u0000${this.iconStart === undefined ? "" : "icon"}`;
+        if (this.shown !== "" && shown !== this.shown) (this.host as { registerTab?(tab: { title: string; iconStart?: IconValue; setIndex(index: number): void }): void; unregisterTab?(tab: object): void; tabChanged?(): void } | undefined)?.tabChanged?.();
+        this.shown = shown;
+    }
+
+    /** @internal Called by the parent Tabs at registration, and again when a tab before it goes. */
     setIndex(index: number): void {
         this.index = index;
     }

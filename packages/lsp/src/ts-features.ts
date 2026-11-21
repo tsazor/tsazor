@@ -9,14 +9,17 @@
  * worse, it only covers @code and expressions, which v1 does not.
  */
 import * as ts from "typescript";
-import type { AnalyzedFile } from "./analysis";
-import { nodeAt } from "./analysis";
-import { readFileSync } from "node:fs";
+import { explainExpressionValue, explainTypeScriptError, unresolvedName, type ImportSuggestion, type UninferredTypeArguments } from "@tsazor/compiler";
+import type { AnalyzedFile } from "./analysis.js";
+import { nodeAt } from "./analysis.js";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
+import { findPackageDir } from "@tsazor/workspace";
 import {
   shadowOffsetToPos,
   TsazorTypeService,
   type ShadowEntry,
-} from "./ts-service";
+} from "./ts-service.js";
 
 /* ------------------------------------------------------------------ */
 /* Context routing                                                     */
@@ -32,7 +35,7 @@ export type CodeContext = "code" | "markup";
 export function classifyCodeContext(analyzed: AnalyzedFile, line: number, character: number): CodeContext {
   if (line < 0) return "markup";
   const node = nodeAt(analyzed.document, line, character);
-  if (node?.kind === "codeBlock" || node?.kind === "expression") return "code";
+  if (node?.kind === "codeBlock" || node?.kind === "statement" || node?.kind === "expression") return "code";
   // Member completions fire one past an expression's end (`@ticker.` with the
   // cursor after the dot is end-exclusive in the AST): the boundary belongs to
   // the TS layer when the previous character sits inside an expression.
@@ -380,6 +383,9 @@ export function targetIsShadowTarget(service: TsazorTypeService, fileName: strin
 export interface TsDiagnostic {
   line: number; // 0-based
   character: number;
+  /** Exclusive end of the failing token/expression in .tsazor coordinates. */
+  endLine: number; // 0-based
+  endCharacter: number;
   code: number;
   message: string;
 }
@@ -417,9 +423,24 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 }
 
 /**
+ * "Declared but never used" (`noUnusedLocals`/`noUnusedParameters`): never an error of generated code (the runtime
+ * import names what the body might use), and an _Imports.tsazor imports for the files below, never for itself.
+ */
+const UNUSED_CODES = new Set([6133, 6138, 6192, 6196, 6198, 6205]);
+
+/** The specifier of a generated import line (a `.gen` shadow rewrite stripped), or undefined. */
+function importLineSpecifier(line: string): string | undefined {
+  return /^import\b[^"']*["']([^"']+)["'];?\s*$/.exec(line.trim())?.[1]?.replace(/\.gen$/, "");
+}
+
+/**
  * Type diagnostics of one shadow (syntactic + semantic) mapped back to .tsazor
- * coordinates: diagnostics that do not map (synthetic regions, plumbing) are
- * dropped — that leaves only squiggles anchored on real source. Capped at 200.
+ * coordinates. An error that doesn't map (generated plumbing: the class
+ * declaration, a resolved component's import) is still an error: it is
+ * reported once on the file's first line, quoting the generated line — so a
+ * gap in the shadow or a component's class problem is never lost silently.
+ * Inherited `@import`s are the exception: their errors belong to the
+ * _Imports.tsazor that declares them, whose own shadow reports them. Capped at 200.
  *
  * Syntactic diagnostics catch @code parse errors (e.g. `private pass word = "";`)
  * that otherwise only surface at build time (esbuild), not in the editor.
@@ -434,6 +455,9 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
   const parameterSpans = parameterPropertySpans(entry.shadow.code);
   const results: TsDiagnostic[] = [];
+  const seen = new Set<string>();
+  let unresolvedModule = false;
+  const imports = entry.shadow.className === "_Imports";
   const diagnostics = [
     ...service.syntacticDiagnosticsOnShadow(entry),
     ...service.semanticDiagnosticsOnShadow(entry),
@@ -443,16 +467,331 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
     // Shadow-false positives (see docstring above) — match before mapping.
     if (diag.code === 2307 && isAssetModuleSpecifier(ts.flattenDiagnosticMessageText(diag.messageText, " "))) continue;
     if (diag.code === 2564 && parameterSpans.some((span) => diag.start! >= span.start && diag.start! < span.end)) continue;
+    if (imports && UNUSED_CODES.has(diag.code)) continue;
+    const length = diag.length ?? 1;
     const genPos = shadowOffsetToPos(entry.shadow.code, diag.start);
     const src = entry.shadow.map.genToSrc(genPos.line, genPos.column);
-    if (!src) continue;
+    if (!src) {
+      if (diag.category !== ts.DiagnosticCategory.Error || UNUSED_CODES.has(diag.code)) continue;
+      const genLine = entry.shadow.code.split("\n")[genPos.line]?.trim() ?? "";
+      const specifier = importLineSpecifier(genLine);
+      if (specifier !== undefined && entry.shadow.inheritedSpecifiers?.has(specifier)) continue;
+      const message = ts.flattenDiagnosticMessageText(diag.messageText, " ");
+      // A generated import that doesn't resolve (`@tsazor/runtime` not installed) leaves the class without its base:
+      // what follows in generated code is that one cause again.
+      if (unresolvedModule && diag.code !== 2307) continue;
+      if (diag.code === 2307) unresolvedModule = true;
+      if (seen.has(`${diag.code}:${message}`)) continue;
+      seen.add(`${diag.code}:${message}`);
+      const quoted = genLine.length > 100 ? `${genLine.slice(0, 100)}…` : genLine;
+      const explained = explainTypeScriptError(diag.code, withModuleHint(diag.code, message, entry.shadow.realPath));
+      results.push({ line: 0, character: 0, endLine: 0, endCharacter: 1, code: diag.code, message: `${explained} (In the code generated from this file: \`${quoted}\`.)` });
+      if (results.length >= cap) break;
+      continue;
+    }
+    // The failing token/expression's end maps like the start; when the end
+    // does not map (plumbing after the token) or precedes the start, the
+    // range stays one character wide so the editor still underlines it.
+    const genEnd = shadowOffsetToPos(entry.shadow.code, diag.start + length);
+    const srcEnd = entry.shadow.map.genToSrc(genEnd.line, genEnd.column);
+    const endLine = srcEnd && (srcEnd.line > src.line || srcEnd.character > src.character) ? srcEnd.line : src.line;
+    const endCharacter =
+      srcEnd && (srcEnd.line > src.line || srcEnd.character > src.character) ? srcEnd.character + 1 : src.character + 1;
+    // One source expression can be emitted more than once (a bind's value and its write-back): one error, once.
+    const placed = `${src.line}:${src.character}:${diag.code}:${ts.flattenDiagnosticMessageText(diag.messageText, " ")}`;
+    if (seen.has(placed)) continue;
+    seen.add(placed);
     results.push({
       line: src.line,
       character: src.character,
+      endLine,
+      endCharacter,
       code: diag.code,
-      message: ts.flattenDiagnosticMessageText(diag.messageText, " "),
+      // S4: a plain-language hint for the common errors, unless the value explanation already applies.
+      message: withUninferredHint(
+        diag.code,
+        explainExpressionValue(
+          diag.code,
+          withModuleHint(diag.code, withImportHint(diag.code, ts.flattenDiagnosticMessageText(diag.messageText, " "), entry), entry.shadow.realPath),
+          { line: src.line + 1, column: src.character },
+          entry.shadow.expressionValues,
+        ),
+        { line: src.line + 1, column: src.character },
+        entry,
+      ),
     });
     if (results.length >= cap) break;
   }
   return results;
+}
+/**
+ * Razor's RZ10001 as the hint: an error inside a generic tag whose type arguments stay open (a grid's columns typed
+ * without the row type) names the cause and the fix, instead of S4's general hint. The innermost such tag wins.
+ */
+function withUninferredHint(code: number, message: string, at: { line: number; column: number }, entry: ShadowEntry): string {
+  const before = (a: { line: number; column: number }, b: { line: number; column: number }): boolean =>
+    a.line < b.line || (a.line === b.line && a.column <= b.column);
+  const tag = (entry.shadow.uninferredTypeArguments ?? [])
+    .filter((candidate) => before(candidate.start, at) && before(at, candidate.end))
+    .reduce<UninferredTypeArguments | undefined>((inner, candidate) => (inner === undefined || before(inner.start, candidate.start) ? candidate : inner), undefined);
+  if (tag === undefined) return explainTypeScriptError(code, message);
+  const names = tag.typeParameters.map((name) => `'${name}'`).join(", ");
+  const example = tag.typeParameters.map((name) => `${name}="…"`).join(" ");
+  return `${message} Hint: the type arguments of <${tag.tagName}> (${names}) can't be inferred from the values given (Razor's RZ10001). Set them on the tag: <${tag.tagName} ${example}>.`;
+}
+
+/* ------------------------------------------------------------------ */
+/* F29: the @import a name in @code lacks                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The suggestion for a TS2304 message — or a TS2339 on the component itself (G2: markup read an import left out as a
+ * member, `Shade="Shade.Dark"` ⇒ "Property 'Shade' does not exist on type 'Page'") — when the name has one.
+ */
+function importSuggestionFor(entry: ShadowEntry, message: string, code = 2304): ImportSuggestion | undefined {
+  const name = code === 2339 ? missingMemberOfComponent(message, entry.shadow.className) : unresolvedName(message);
+  return name === undefined ? undefined : entry.shadow.importSuggestions?.find((suggestion) => suggestion.name === name);
+}
+
+/** The property TS2339 reports as missing on the component's own class, if the message is one. */
+function missingMemberOfComponent(message: string, className: string): string | undefined {
+  const match = /^Property '([^']+)' does not exist on type '([^'<]+)/.exec(message);
+  return match !== null && match[2] === className ? match[1] : undefined;
+}
+
+/* ------------------------------------------------------------------ */
+/* TS2307: where a specifier was looked for                            */
+/* ------------------------------------------------------------------ */
+
+const MODULE_EXTENSIONS = [".d.ts", ".ts", ".tsx", ".mts", ".js", ".mjs", ".tsazor", ".json"];
+
+function isModuleAt(base: string): boolean {
+  try {
+    if (statSync(base).isFile()) return true;
+  } catch {
+    // Not a file as written: try the extensions.
+  }
+  // NodeNext's form: `./x.js` names the source `./x.ts`.
+  if (/\.js$/.test(base) && (existsSync(base.replace(/\.js$/, ".ts")) || existsSync(base.replace(/\.js$/, ".tsx")))) return true;
+  return MODULE_EXTENSIONS.some((extension) => existsSync(base + extension) || existsSync(path.join(base, `index${extension}`)));
+}
+
+/** A module file in `dir` whose name is a near miss of `name` (case, a typo): its name, or undefined. */
+function nearModule(dir: string, name: string): string | undefined {
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return undefined;
+  }
+  // `./Paper.js` wants the module `Paper`, whatever its extension (a component's is `.tsazor`).
+  const wanted = name.toLowerCase().replace(/\.(m|c)?js$|\.tsx?$/, "");
+  const limit = Math.max(1, Math.floor(wanted.length / 3));
+  let best: { name: string; distance: number } | undefined;
+  for (const file of names) {
+    const extension = MODULE_EXTENSIONS.find((candidate) => file.endsWith(candidate));
+    if (extension === undefined || file.endsWith(".gen.ts")) continue;
+    const stem = file.slice(0, -extension.length);
+    const distance = editDistance(stem.toLowerCase(), wanted);
+    if (distance <= limit && (best === undefined || distance < best.distance)) best = { name: extension === ".tsazor" ? file : stem, distance };
+  }
+  return best?.name;
+}
+
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) current[j] = Math.min(previous[j]! + 1, current[j - 1]! + 1, previous[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    previous = current;
+  }
+  return previous[b.length]!;
+}
+
+/** An installed package (in a node_modules folder above `fromDir`) whose name is a near miss of `name`, or undefined. */
+function nearPackage(fromDir: string, name: string): string | undefined {
+  const wanted = name.toLowerCase();
+  const limit = Math.max(1, Math.min(2, Math.floor(wanted.length / 4)));
+  let best: { name: string; distance: number } | undefined;
+  for (let dir = path.resolve(fromDir); ; dir = path.dirname(dir)) {
+    const modules = path.join(dir, "node_modules");
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(modules);
+    } catch {
+      // No node_modules here.
+    }
+    for (const entry of entries) {
+      if (entry.startsWith(".")) continue;
+      let names = [entry];
+      if (entry.startsWith("@")) {
+        try {
+          names = readdirSync(path.join(modules, entry)).map((sub) => `${entry}/${sub}`);
+        } catch {
+          names = [];
+        }
+      }
+      for (const candidate of names) {
+        const distance = editDistance(candidate.toLowerCase(), wanted);
+        if (distance > 0 && distance <= limit && (best === undefined || distance < best.distance)) best = { name: candidate, distance };
+      }
+    }
+    if (path.dirname(dir) === dir) break;
+  }
+  return best?.name;
+}
+
+function specifierFrom(fromDir: string, target: string): string {
+  const relative = path.relative(fromDir, target).replace(/\\/g, "/");
+  return relative.startsWith(".") ? relative : `./${relative}`;
+}
+
+/**
+ * TS2307 in a .tsazor or a .ts module: the folder the specifier was resolved from — the file's own, as in any
+ * TypeScript module (an _Imports.tsazor's for its own @imports) — and the specifier that finds the module when one
+ * does: the same name in the file's folder or a folder or two up (a page in Pages/ importing `./Store` meant
+ * `../Store`; `../base/x.js` from src/ meant `./base/x.js`), or a near-miss name where it points (`./X.js` for a
+ * component is `./X.tsazor`). A bare specifier is a package not installed where the file looks for packages.
+ */
+export function withModuleHint(code: number, message: string, file: string): string {
+  if (code !== 2307 || message.includes(" Hint: ")) return message;
+  const specifier = /Cannot find module '([^']+)'/.exec(message)?.[1];
+  if (specifier === undefined) return message;
+  const dir = path.dirname(file);
+  const folder = `${path.basename(path.dirname(dir))}/${path.basename(dir)}/`;
+  if (!specifier.startsWith("./") && !specifier.startsWith("../")) {
+    const name = specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]!;
+    // A near miss of an installed package: agents porting to Tsazor wrote `@tszor/lsp`.
+    const near = nearPackage(dir, name);
+    if (near !== undefined) return `${message} Hint: '${name}' is not installed — '${near}' is: a typo?`;
+    // Package installed but the subpath is not in its exports (pattern subpath without a 'types' condition, etc.).
+    if (specifier !== name && findPackageDir(name, dir) !== undefined) {
+      const subpath = specifier.slice(name.length);
+      return `${message} Hint: '${name}' is installed but the subpath '${subpath}' was not found in its package exports — add an entry with a 'types' condition, e.g. '"${subpath}": { "types": "...", "default": "..." }'.`;
+    }
+    return `${message} Hint: '${name}' is not installed where this file looks for packages (a node_modules folder above ${folder}): add it to the app's dependencies.`;
+  }
+  const target = path.resolve(dir, specifier);
+  let found: string | undefined;
+  const name = specifier.replace(/^(\.\.?\/)+/, "");
+  for (let up = dir, level = 0; found === undefined && level < 4; up = path.dirname(up), level++) {
+    const candidate = path.join(up, name);
+    if (path.resolve(candidate) !== target && isModuleAt(candidate)) found = specifierFrom(dir, candidate);
+  }
+  if (found === undefined) {
+    const near = nearModule(path.dirname(target), path.basename(target));
+    if (near !== undefined) found = specifierFrom(dir, path.join(path.dirname(target), near));
+  }
+  return `${message} Hint: a relative specifier resolves from the folder of the file it is written in (${folder}), as in any TypeScript module${found !== undefined ? ` — '${found}' finds it` : ""}.`;
+}
+
+/**
+ * TS2304 for a name markup would find (a component through `@using` or its folder): the hint names the
+ * exact `@import`. In TypeScript code a type comes from an import; a Blazor `@ref` field meets this.
+ */
+function withImportHint(code: number, message: string, entry: ShadowEntry): string {
+  const suggestion = code === 2304 || code === 2339 ? importSuggestionFor(entry, message, code) : undefined;
+  if (suggestion === undefined) return message;
+  if (code === 2339) return `${message} Hint: \`${suggestion.name}\` is no member of the component — an import is missing, as in any TypeScript: \`${suggestion.directive}\` (quick fix).`;
+  return `${message} Hint: markup finds \`${suggestion.name}\` by name, but in \`@code\` a type comes from an import, as in any TypeScript: \`${suggestion.directive}\` (quick fix).`;
+}
+
+/** F29: "Add `@import …`" for each TS2304 in the range whose name has a suggestion. */
+export function tsImportFixes(
+  service: TsazorTypeService,
+  entry: ShadowEntry,
+  range: { start: { line: number; character: number }; end: { line: number; character: number } },
+): TsQuickFix[] {
+  const fixes: TsQuickFix[] = [];
+  const seen = new Set<string>();
+  for (const diagnostic of service.semanticDiagnosticsOnShadow(entry)) {
+    if ((diagnostic.code !== 2304 && diagnostic.code !== 2339) || diagnostic.start === undefined) continue;
+    const suggestion = importSuggestionFor(entry, ts.flattenDiagnosticMessageText(diagnostic.messageText, " "), diagnostic.code);
+    if (suggestion === undefined) continue;
+    const gen = shadowOffsetToPos(entry.shadow.code, diagnostic.start);
+    const start = entry.shadow.map.genToSrc(gen.line, gen.column);
+    if (!start || start.line < range.start.line || start.line > range.end.line || seen.has(suggestion.name)) continue;
+    seen.add(suggestion.name);
+    const at = { line: suggestion.insertLine, character: 0 };
+    fixes.push({
+      title: `Add ${suggestion.directive}`,
+      code: diagnostic.code,
+      line: start.line,
+      character: start.character,
+      edits: [{ range: { start: at, end: at }, newText: `${suggestion.directive}\n` }],
+    });
+  }
+  return fixes;
+}
+
+/* ------------------------------------------------------------------ */
+/* S4: "infer parameter types from usage"                              */
+/* ------------------------------------------------------------------ */
+
+/** Implicit-any codes TypeScript's "infer from usage" fix handles for parameters and members. */
+const IMPLICIT_ANY_CODES = [7006, 7031, 7019, 7008, 7005, 7034];
+
+/** A TS code fix translated to .tsazor coordinates (0-based). */
+export interface TsQuickFix {
+  title: string;
+  /** The diagnostic it fixes (its code and .tsazor start), to attach the action to. */
+  code: number;
+  line: number;
+  character: number;
+  edits: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; newText: string }>;
+}
+
+/**
+ * S4: for an implicit-any diagnostic (TS7006 & co.) in the given .tsazor
+ * range, TypeScript's "Infer parameter types from usage" fix run on the
+ * shadow — usages in the markup count, since the markup is code there. A
+ * fix is offered only when every edit lands in the .tsazor file itself (a
+ * position that maps back exactly, inside `@code`); fixes that would touch
+ * the generated plumbing or other files are dropped.
+ */
+export function tsInferTypeFixes(
+  service: TsazorTypeService,
+  entry: ShadowEntry,
+  range: { start: { line: number; character: number }; end: { line: number; character: number } },
+): TsQuickFix[] {
+  const map = entry.shadow.map;
+  const code = entry.shadow.code;
+  const toSrc = (offset: number): { line: number; character: number } | null => {
+    const gen = shadowOffsetToPos(code, offset);
+    const src = map.genToSrc(gen.line, gen.column);
+    if (!src) return null;
+    // Exact: the source position maps back to the same generated one (no plumbing in between).
+    const back = map.srcToGen(src.line, src.character);
+    return back && back.line === gen.line && back.column === gen.column ? src : null;
+  };
+  const fixes: TsQuickFix[] = [];
+  for (const diagnostic of service.semanticDiagnosticsOnShadow(entry)) {
+    if (diagnostic.start === undefined || !IMPLICIT_ANY_CODES.includes(diagnostic.code)) continue;
+    const start = toSrc(diagnostic.start);
+    // The fix belongs to the lines the editor asks about.
+    if (!start || start.line < range.start.line || start.line > range.end.line) continue;
+    for (const action of service.codeFixesOnShadow(entry, diagnostic.start, diagnostic.start + (diagnostic.length ?? 0), [diagnostic.code])) {
+      if (action.fixName !== "inferFromUsage") continue;
+      const edits: TsQuickFix["edits"] = [];
+      let mappable = true;
+      for (const change of action.changes) {
+        if (path.resolve(change.fileName).toLowerCase() !== path.resolve(entry.shadow.virtualPath).toLowerCase()) {
+          mappable = false;
+          break;
+        }
+        for (const text of change.textChanges) {
+          const from = toSrc(text.span.start);
+          const to = text.span.length === 0 ? from : toSrc(text.span.start + text.span.length);
+          if (!from || !to || from.line !== to.line) {
+            mappable = false;
+            break;
+          }
+          edits.push({ range: { start: from, end: to }, newText: text.newText });
+        }
+        if (!mappable) break;
+      }
+      if (mappable && edits.length > 0) fixes.push({ title: action.description, code: diagnostic.code, line: start.line, character: start.character, edits });
+    }
+  }
+  return fixes;
 }

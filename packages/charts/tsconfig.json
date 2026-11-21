@@ -1,0 +1,12 @@
+{
+  // The type check of the sources (`tsazor check`, the library build's first step); the build itself is build.mjs.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src"]
+}

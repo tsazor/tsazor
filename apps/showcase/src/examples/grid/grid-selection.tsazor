@@ -1,0 +1,14 @@
+@** A grid with row selection: SelectionMode multiple adds a checkbox column and binds to
+    selectedItems; "single" renders radio buttons for one row. The header's checkbox selects the
+    page. *@
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" SelectionMode="multiple" @bind-SelectedItems="selected" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" />
+</DataGrid>
+<p>@(selected.length >= 1 ? `${selected.length} selected` : "Nothing selected")</p>
+
+@code {
+    private selected: Order[] = [];
+}

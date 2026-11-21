@@ -1,5 +1,35 @@
 // Workspace-level resolution shared by the Vite plugin and the language server
-export { collectImports, candidateDirs, relativeSpecifier, type ImportsChain, type ImportsLayer } from "./imports";
-export { createFileContext, classNameForFile, type FileContext } from "./resolver";
-export { RUNTIME_PACKAGE, RUNTIME_COMPONENTS, RUNTIME_TYPES, RUNTIME_COMPONENT_PARAMS } from "./builtins";
-export { collectCodeImports } from "./code-imports";
+export {
+  collectImports,
+  collectImportsSync,
+  candidateDirs,
+  checkUsing,
+  enclosingDirs,
+  findPackageDir,
+  inheritedAuthorization,
+  inheritedImports,
+  isPathLikeUsing,
+  rebaseSpecifier,
+  relativeSpecifier,
+  usingDirs,
+  type ImportsChain,
+  type ImportsLayer,
+} from "./imports.js";
+export { createFileContext, classNameForFile, resolutionOptions, type FileContext } from "./resolver.js";
+export { exportsOfFile, importKindOf, packageExports } from "./exports.js";
+export { RUNTIME_PACKAGE, RUNTIME_COMPONENTS, RUNTIME_TYPES } from "./builtins.js";
+export {
+  MetadataCache,
+  defaultMetadataCache,
+  componentMetadataForTag,
+  buildPackageManifest,
+  buildRuntimeManifest,
+  componentTypeDeclaration,
+  componentTypeDeclarations,
+  manifestEntriesOfModule,
+  type ManifestEntry,
+  type ManifestProblem,
+  type MetadataCacheOptions,
+} from "./metadata.js";
+export { mapPath } from "./path-mapping.js";
+export { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";

@@ -1,0 +1,238 @@
+@* pages/billing/invoice-detail.tsx: one invoice — the hero (amount, number, status, the dates of its life cycle, the
+   PDF download), its line items with the subtotal, and the side panel with the state machine: Issue (Draft → Issued,
+   with an optional due date), Mark paid (Issued → Paid), Void (Draft or Issued, with an optional reason). The
+   transitions and the download need Billing.Manage on the server, so they show only with it; the notes show to
+   every viewer. *@
+@page "/billing/invoices/{invoiceId}"
+@authorize({ policy: "Permissions.Billing.View" })
+@layout BillingLayout
+@import { ArrowLeft, Ban, CheckCircle2, Download, FileText, Send } from "lucide"
+@import { downloadInvoicePdf, getInvoice, issueInvoice, markInvoicePaid, voidInvoice } from "@/api/billing"
+@import { BillingPermissions } from "@/lib/permissions"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { describe, formatMoney } from "@/components/billing/billing-format"
+@import BillingLayout from "./BillingLayout.tsazor"
+@import InvoiceMeta from "./InvoiceMeta.tsazor"
+@import LineItemRow from "./LineItemRow.tsazor"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+<div class="space-y-6">
+    <div>
+        <Button variant="ghost" size="sm" onClick="@(() => navigation.navigateTo("/billing/invoices"))" class="-ml-2 mb-4">
+            <Icon icon="@ArrowLeft" class="mr-1 h-4 w-4" /> All invoices
+        </Button>
+
+        @if (query.result.isLoading) {
+            <div class="space-y-2">
+                <Skeleton class="h-7 w-72" />
+                <Skeleton class="h-4 w-96" />
+            </div>
+        } else if (query.result.isError) {
+            <div class="text-sm text-[var(--color-destructive)]">
+                @describe(query.result.error, "Failed to load invoice.")
+            </div>
+        } else if (invoice) {
+            @if (canManageBilling) {
+                <EntityPageHeader icon="@FileText" tone="saffron" title="@formatMoney(invoice.subtotalAmount, invoice.currency)">
+                    <DescriptionContent><InvoiceMeta invoice="@invoice" /></DescriptionContent>
+                    <ChildContent>
+                        <Button variant="outline" size="sm" onClick="@download" disabled="@downloading" title="Download this invoice as a PDF">
+                            <Icon icon="@Download" class="mr-1.5 h-3.5 w-3.5" />
+                            @(downloading ? "Preparing…" : "Download PDF")
+                        </Button>
+                    </ChildContent>
+                </EntityPageHeader>
+            } else {
+                <EntityPageHeader icon="@FileText" tone="saffron" title="@formatMoney(invoice.subtotalAmount, invoice.currency)">
+                    <DescriptionContent><InvoiceMeta invoice="@invoice" /></DescriptionContent>
+                </EntityPageHeader>
+            }
+        }
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
+        @* Line items *@
+        <SettingsSection title="Line items"
+                         description="@(invoice ? `${invoice.lineItems.length} line${invoice.lineItems.length === 1 ? "" : "s"}` : query.result.isError ? "Unavailable" : "Loading…")">
+            @if (query.result.isError) {
+                <div class="py-8 text-center text-sm text-[var(--color-destructive)]">
+                    @describe(query.result.error, "Failed to load line items.")
+                </div>
+            } else if (query.result.isLoading) {
+                <ul class="-mx-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+                    @for (let i = 0; i < 2; i++) {
+                        <li class="px-5 py-4">
+                            <Skeleton class="h-4 w-1/2" />
+                            <Skeleton class="mt-2 h-3 w-1/4" />
+                        </li>
+                    }
+                </ul>
+            } else if (invoice && invoice.lineItems.length === 0) {
+                <div class="py-8 text-center text-sm text-[var(--color-muted-foreground)]">
+                    No line items.
+                </div>
+            } else if (invoice) {
+                <ul class="-mx-5 border-t border-[var(--color-border)]">
+                    @foreach (const [i, li] of invoice.lineItems.entries()) {
+                        <LineItemRow @key="li.id" item="@li" currency="@invoice.currency" delayIndex="@i" />
+                    }
+                    <li class="grid grid-cols-[1fr_auto] items-baseline gap-x-6 border-t-2 border-[var(--color-border-strong)] px-5 py-4">
+                        <div class="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                            subtotal
+                        </div>
+                        <div class="text-display text-xl font-semibold tabular-nums">
+                            @formatMoney(invoice.subtotalAmount, invoice.currency)
+                        </div>
+                    </li>
+                </ul>
+            }
+        </SettingsSection>
+
+        @* Actions side panel *@
+        <div class="space-y-4">
+            @if (invoice) {
+                @* Issue / Mark-paid / Void all mutate invoice state — gated behind
+                   Billing.Manage. View-only users still see read-only Notes below. *@
+                @if (canManageBilling) {
+                    @* Issue *@
+                    <SettingsSection icon="@Send" title="Issue" description="Transition from Draft to Issued status.">
+                        <div class="@cn("space-y-3", invoice.status !== "Draft" && "opacity-60")">
+                            <Field id="dueAt" label="Due date" hint="Leave blank for server default (+14 days).">
+                                <Input id="dueAt" type="date" @bind-Value="dueAt" disabled="@(invoice.status !== "Draft" || issuing)" aria-describedby="dueAt-hint" />
+                            </Field>
+                            <Button size="sm" disabled="@(invoice.status !== "Draft" || issuing)" onClick="@issue" class="w-full">
+                                @(issuing ? "Issuing…" : "Issue invoice")
+                            </Button>
+                        </div>
+                    </SettingsSection>
+
+                    @* Mark paid *@
+                    <SettingsSection icon="@CheckCircle2" title="Mark paid" description="Records manual payment receipt. Idempotent.">
+                        <div class="@cn(invoice.status !== "Issued" && "opacity-60")">
+                            <Button size="sm" disabled="@(invoice.status !== "Issued" || paying)" onClick="@pay" class="w-full">
+                                @(paying ? "Saving…" : "Mark as paid")
+                            </Button>
+                        </div>
+                    </SettingsSection>
+
+                    @* Void *@
+                    <SettingsSection icon="@Ban" title="Void" description="Cancel from Draft or Issued. Irreversible.">
+                        <div class="@cn("space-y-3", (invoice.status === "Paid" || invoice.status === "Void") && "opacity-60")">
+                            <Field id="voidReason" label="Reason" hint="Optional — appended to notes.">
+                                <Input id="voidReason" placeholder="duplicate · disputed · …" @bind-Value="voidReason" aria-describedby="voidReason-hint"
+                                       disabled="@(invoice.status === "Paid" || invoice.status === "Void" || voiding)" />
+                            </Field>
+                            <Button variant="destructive" size="sm" disabled="@(invoice.status === "Paid" || invoice.status === "Void" || voiding)" onClick="@voidIt" class="w-full">
+                                @(voiding ? "Voiding…" : "Void invoice")
+                            </Button>
+                        </div>
+                    </SettingsSection>
+                }
+
+                @if (invoice.notes) {
+                    <SettingsSection title="Notes">
+                        <p class="whitespace-pre-line text-xs text-[var(--color-foreground)]">
+                            @invoice.notes
+                        </p>
+                    </SettingsSection>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    @Parameter() invoiceId: string = "";
+
+    private dueAt = "";
+    private voidReason = "";
+    private downloading = false;
+    private issuing = false;
+    private paying = false;
+    private voiding = false;
+
+    private readonly query = new Query(() => ({
+        queryKey: ["billing", "invoice", this.invoiceId],
+        queryFn: () => getInvoice(this.invoiceId),
+        enabled: !!this.invoiceId,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.query);
+    }
+
+    /** Issue / mark-paid / void and PDF download all require Billing.Manage on the server. */
+    private get canManageBilling(): boolean {
+        return (this.auth.user?.permissions ?? []).includes(BillingPermissions.Manage);
+    }
+
+    private get invoice() {
+        return this.query.result.data;
+    }
+
+    private invalidate(): void {
+        void queryClient.invalidateQueries({ queryKey: ["billing", "invoice", this.invoiceId] });
+        void queryClient.invalidateQueries({ queryKey: ["billing", "invoices"] });
+    }
+
+    // ── state-machine mutations ────────────────────────────────────────
+
+    /** The invoice shown at the click: its id and number, never a later state. */
+    private async download(): Promise<void> {
+        const invoice = this.invoice;
+        if (!invoice) return;
+        this.downloading = true;
+        try {
+            await downloadInvoicePdf(invoice.id, invoice.invoiceNumber);
+        } catch (err) {
+            toast.error("Download failed", { description: describe(err, "Could not download the invoice PDF.") });
+        } finally {
+            this.downloading = false;
+        }
+    }
+
+    private async issue(): Promise<void> {
+        this.issuing = true;
+        try {
+            await issueInvoice(this.invoiceId, this.dueAt ? new Date(this.dueAt).toISOString() : null);
+            toast.success("Invoice issued", { description: "Status moved to Issued." });
+            this.dueAt = "";
+            this.invalidate();
+        } catch (err) {
+            toast.error("Issue failed", { description: describe(err, "Could not issue invoice.") });
+        } finally {
+            this.issuing = false;
+        }
+    }
+
+    private async pay(): Promise<void> {
+        this.paying = true;
+        try {
+            await markInvoicePaid(this.invoiceId);
+            toast.success("Marked paid");
+            this.invalidate();
+        } catch (err) {
+            toast.error("Mark-paid failed", { description: describe(err, "Could not mark paid.") });
+        } finally {
+            this.paying = false;
+        }
+    }
+
+    private async voidIt(): Promise<void> {
+        this.voiding = true;
+        try {
+            await voidInvoice(this.invoiceId, this.voidReason.trim() ? this.voidReason.trim() : null);
+            toast.success("Invoice voided");
+            this.voidReason = "";
+            this.invalidate();
+        } catch (err) {
+            toast.error("Void failed", { description: describe(err, "Could not void invoice.") });
+        } finally {
+            this.voiding = false;
+        }
+    }
+}

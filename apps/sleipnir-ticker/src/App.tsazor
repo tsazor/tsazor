@@ -1,17 +1,9 @@
-<Router Found="@found" NotFound="@notFound" />
-
-@code {
-    private found = (routeData: RouteData): RenderFragment => (b: RenderTreeBuilder) => {
-        b.openComponent(0, RouteView);
-        b.addAttribute(1, "RouteData", routeData);
-        b.addAttribute(2, "DefaultLayout", MainLayout);
-        b.closeComponent();
-    };
-
-    private notFound = (b: RenderTreeBuilder) => {
-        b.openElement(0, "p");
-        b.addAttribute(1, "class", "not-found");
-        b.addContent(2, "Page not found.");
-        b.closeElement();
-    };
-}
+@import MainLayout from "./MainLayout.tsazor"
+<Router>
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@MainLayout" />
+    </Found>
+    <NotFound>
+        <p class="not-found">Page not found.</p>
+    </NotFound>
+</Router>

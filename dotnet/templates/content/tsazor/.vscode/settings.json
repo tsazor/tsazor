@@ -1,0 +1,7 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "*.tsazor": "${capture}.tsazor.css, ${capture}.tsazor.ts",
+    "appsettings.json": "appsettings.*.json"
+  }
+}

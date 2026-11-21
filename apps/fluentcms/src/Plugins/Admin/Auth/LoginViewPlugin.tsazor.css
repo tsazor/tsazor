@@ -1,0 +1,10 @@
+.login-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.login-signup {
+    margin: 0;
+}

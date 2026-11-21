@@ -1,0 +1,13 @@
+@* components/list/settings-field.tsx: the label rhythm inside a SettingsSection — an uppercase tracked label above
+   its control (Field when the control needs a hint or an error). *@
+
+<div>
+    <Label for="@id" class="mb-1.5 block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">@label</Label>
+    @childContent
+</div>
+
+@code {
+    @Parameter() id!: string;
+    @Parameter() label!: string;
+    @Parameter() childContent?: RenderFragment;
+}

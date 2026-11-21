@@ -1,0 +1,67 @@
+@** A Bootstrap number field (`input[type=number].form-control`; InputBase<number> — bind it with
+    @bind) with an optional label and help text; validation state and message as with TextInput. An
+    empty field or text that is no number is handed to validation as it is. *@
+@import { FieldState } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+@inherits InputBase<number>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <input @ref="element" id="@field.id(id)" type="number" value="@(currentValue ?? "")" min="@min" max="@max" step="@step" placeholder="@placeholder" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    /** The smallest allowed value (null: none), as the Fluent skin's. */
+    @Parameter() min: number | null = null;
+    /** The largest allowed value (null: none). */
+    @Parameter() max: number | null = null;
+    /** The step of the spinner buttons (null: the browser's). */
+    @Parameter() step: number | null = null;
+    /** Disables the field. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** Marks the field as required. */
+    @Parameter() required: boolean = false;
+    /** The field's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-number");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        const raw = (e.target as HTMLInputElement).value;
+        const parsed = Number(raw);
+        // Empty or not a number: validation sees what was typed.
+        this.currentValue = (raw === "" || Number.isNaN(parsed) ? raw : parsed) as never;
+    }
+}

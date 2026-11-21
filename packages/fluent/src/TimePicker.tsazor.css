@@ -1,0 +1,84 @@
+/* TimePicker — Fluent 2: a text field with a clock button at its end; the list of times opens below it. */
+
+.fui-time-picker__field {
+  position: relative;
+  display: flex;
+}
+
+.fui-time-picker__field > .fui-input {
+  flex: 1;
+  inline-size: 100%;
+  padding-inline-end: calc(var(--fui-spacing-xs) + 28px);
+}
+
+.fui-time-picker__button {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--fui-spacing-xs);
+  margin-block: auto;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  background: none;
+  color: var(--fui-foreground-3);
+  cursor: pointer;
+}
+
+.fui-time-picker__button:hover:not(:disabled) {
+  background: var(--fui-control-fill-hover);
+  color: var(--fui-foreground-1);
+}
+
+.fui-time-picker__button:disabled {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-time-picker__list {
+  min-width: 160px;
+  max-height: 280px;
+  overflow: auto;
+  margin: 0;
+  padding: var(--fui-spacing-xs, 4px);
+  list-style: none;
+  background: var(--fui-background-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  z-index: var(--fui-z-dialog);
+}
+
+.fui-time-picker__option {
+  padding: var(--fui-spacing-xs, 4px) var(--fui-spacing-s);
+  border-radius: var(--fui-radius-sm);
+  color: var(--fui-foreground-1);
+  cursor: pointer;
+}
+
+.fui-time-picker__option:hover,
+.fui-time-picker__option--active {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-time-picker__option--active {
+  box-shadow: inset 0 0 0 2px var(--fui-control-focus-stroke);
+}
+
+.fui-time-picker__option--selected {
+  font-weight: 600;
+}
+
+.fui-time-picker__option--disabled {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-time-picker__option--disabled:hover {
+  background: none;
+}

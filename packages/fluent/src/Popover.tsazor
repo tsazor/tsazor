@@ -1,0 +1,93 @@
+@** A Fluent UI 2 popover: a button that opens a small non-modal dialog next to it (`role="dialog"`,
+    labelled by its title) for details, a short form or help. Focus moves into the popover when it
+    opens; Escape, the close button or a click outside closes it, and Escape returns focus to the
+    button. It is positioned next to the button and flips when there is no room. *@
+@import { anchoredPosition, dismissible, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
+@import { buttonClasses } from "./vocabulary"
+@import { Dismiss20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+
+<span class="fui-popover-anchor">
+    <button class="@toggleClass" type="button" aria-expanded="@expandedText" aria-controls="@panelControls" @ref="toggleButton" @onclick="toggle">@label</button>
+    @if (open) {
+        <div class="fui-popover" role="dialog" id="@panelId" aria-labelledby="@labelledBy" aria-label="@panelLabel" tabindex="-1" @attach:top="topLayer()" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
+            @if (title) {
+                <div class="fui-popover__header">
+                    <span class="fui-popover__title" id="@titleId">@title</span>
+                    <button type="button" class="fui-popover__close" aria-label="@t("close")" @onclick="() => close(true)"><Icon value="@Dismiss20Regular" size="16" /></button>
+                </div>
+            }
+            <div class="fui-popover__body">@childContent</div>
+        </div>
+    }
+</span>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The button's label. */
+    @Parameter() label: string = "";
+    /** The popover's heading; it also names the dialog. */
+    @Parameter() title?: string;
+    /** The dialog's accessible name when it has no title. */
+    @Parameter() ariaLabel?: string;
+    /** The button's color role (secondary: Fluent's neutral button). */
+    @Parameter() intent: Intent = "secondary";
+    /** The button's visual weight. */
+    @Parameter() appearance: Appearance = "outline";
+    /** The button's size. */
+    @Parameter() size: Size = "medium";
+    /** Where the popover opens relative to the button. */
+    @Parameter() placement: "bottom-start" | "bottom-end" | "top-start" | "top-end" = "bottom-start";
+    /** The popover's content. */
+    @Parameter() childContent?: RenderFragment;
+
+    private open = false;
+    private toggleButton?: HTMLButtonElement;
+    private readonly panelId = uniqueId("fui-popover");
+    private readonly titleId = `${this.panelId}-title`;
+
+    private readonly dismiss = dismissible({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
+    private readonly position = anchoredPosition({ anchor: () => this.toggleButton, placement: () => this.placement });
+    private readonly focusPanel = (panel: HTMLElement): void => {
+        panel.focus({ preventScroll: true });
+    };
+
+    private get toggleClass(): string {
+        return buttonClasses(this.intent, this.appearance, this.size);
+    }
+
+    private get expandedText(): string {
+        return this.open ? "true" : "false";
+    }
+
+    private get panelControls(): string | null {
+        return this.open ? this.panelId : null;
+    }
+
+    private get labelledBy(): string | null {
+        return this.title ? this.titleId : null;
+    }
+
+    private get panelLabel(): string | null {
+        return this.title ? null : (this.ariaLabel ?? this.label);
+    }
+
+    private toggle(): void {
+        if (this.open) this.close(true);
+        else this.open = true;
+    }
+
+    private dismissed(reason: DismissReason): void {
+        this.close(reason === "escape");
+    }
+
+    /** Closes the popover; `returnFocus` puts focus back on the button. */
+    close(returnFocus = true): void {
+        if (!this.open) return;
+        this.open = false;
+        if (returnFocus) this.toggleButton?.focus({ preventScroll: true });
+        this.stateHasChanged();
+    }
+}

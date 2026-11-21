@@ -1,0 +1,101 @@
+@** A Bootstrap text field (`.form-control`; InputBase — bind it with @bind) with an optional label
+    and help text. Inside a Form it turns red or green with the field's validation state, and after
+    a submit attempt it shows the first message below (`.invalid-feedback`, role="alert", linked with
+    aria-describedby, aria-invalid). `mask` shapes the text as it is typed (MudBlazor's `Mask`: a PatternMask,
+    "(000) 000-0000"). `contentBefore` and `contentAfter` make it an input group (MudBlazor's adornments). *@
+@import { type PatternMask } from "@tsazor/ui"
+@import { FieldState, ImmediateInput, maskInput, toMask } from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+
+@inherits InputBase<string>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    @if (contentBefore || contentAfter) {
+        @* Bootstrap's input group: the slots' own classes (.input-group-text, .btn) style them. *@
+        <div class="input-group">
+            @contentBefore
+            <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+            @contentAfter
+        </div>
+    } else {
+        <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+    }
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" role="alert" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
+    /** The field's label (clicking it focuses the input). */
+    @Parameter() label?: string;
+    /** A hint below the input, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    /** The native input type, for text. A date or a time is a DateInput, a number a NumberInput (Blazor's InputDate, InputNumber). */
+    @Parameter() type: "text" | "password" | "email" | "search" | "tel" | "url" = "text";
+    /** Disables the input. */
+    @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
+    /** Marks the input as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** The value follows the typing once it pauses for immediateDelay ms (Fluent UI Blazor's `Immediate`); otherwise it updates on change. */
+    @Parameter() immediate: boolean = false;
+    /** The pause in ms before an immediate update (`ImmediateDelay`). */
+    @Parameter() immediateDelay: number = 200;
+    /** Shapes the text as it is typed: a PatternMask, or its pattern as text ("(000) 000-0000"; MudBlazor's `Mask`). */
+    @Parameter() mask?: PatternMask | string;
+    /** Content before the input in a Bootstrap input group — an `.input-group-text` with an icon (MudBlazor's start adornment). */
+    @Parameter() contentBefore?: RenderFragment;
+    /** Content after the input in the group — a `.btn` that shows the password, say (MudBlazor's end adornment). */
+    @Parameter() contentAfter?: RenderFragment;
+
+    private readonly field = new FieldState("tz-input");
+
+    private get displayValue(): string {
+        const value = this.currentValue ?? "";
+        return toMask(this.mask)?.format(value) ?? value;
+    }
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+    }
+
+    private immediateInput?: ImmediateInput;
+
+    private handleInput(e: Event): void {
+        const mask = toMask(this.mask);
+        if (mask !== undefined) maskInput(e.target as HTMLInputElement, mask);
+        if (!this.immediate) return;
+        this.immediateInput ??= new ImmediateInput(this.disposeSignal);
+        this.immediateInput.input(e, this.immediateDelay, (value) => {
+            this.currentValue = mask?.value(value) ?? value;
+        });
+    }
+
+    private handleChange(e: Event): void {
+        this.immediateInput?.cancel();
+        const text = (e.target as HTMLInputElement).value;
+        this.currentValue = toMask(this.mask)?.value(text) ?? text;
+    }
+}

@@ -1,0 +1,22 @@
+@* components/ui/card.tsx: a calm neutral surface — a 1px hairline and a low resting shadow; `interactive` darkens the
+   border and lifts the card a hint on hover. CardHeader, CardTitle, CardDescription, CardContent and CardFooter are
+   its parts, as in the original. *@
+@import { cn } from "@/lib/cn"
+@import { withClass } from "@/lib/attributes"
+
+<div data-slot="card" @attributes="@withClass(cardClass, additionalAttributes)">@childContent</div>
+
+@code {
+    /** When true, the card softens its border + shadow on hover. */
+    @Parameter() interactive: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get cardClass(): string {
+        return cn(
+            "flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-card-foreground)] shadow-sm",
+            this.interactive &&
+                "transition-[border-color,box-shadow,transform] duration-[var(--duration-default)] ease-[var(--ease-out-cubic)] hover:border-[var(--color-border-strong)] hover:shadow-md hover:-translate-y-px",
+        );
+    }
+}

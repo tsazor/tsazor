@@ -1,0 +1,9 @@
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.sample {
+    font-weight: 700;
+    transition: color 0.2s;
+}

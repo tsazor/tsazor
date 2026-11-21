@@ -1,0 +1,137 @@
+@* Client/Pages/Content/Dashboard.razor(.cs): the counts as tiles — MudGrid of MudPaper becomes a grid of Cards — and
+   what was added each month as a bar chart (MudChart becomes @tsazor/charts' Chart). The hub's UpdateDashboard, which
+   the catalog's dialogs send, loads the numbers again. *@
+@page "/dashboard"
+@authorize({ policy: "Permissions.Dashboards.View" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { Chart } from "@tsazor/charts"
+@import { Toaster } from "@tsazor/fluent"
+@import * as Icons48 from "@tsazor/fluent-icons/regular/size48"
+@import type { ChartSeries } from "../../Application/Dashboard"
+@inject DashboardManager dashboardManager
+@inject Toaster toaster
+
+<HeroTitle title="@L("Dashboard")" description="@L("Realtime Updates & Insights with SignalR.")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Dashboard")" />
+} else {
+    <div class="bh-dashboard">
+        <Card class="bh-tile">
+            <Icon value="@Icons48.Box" size="54" class="bh-tile__icon bh-tile__icon--primary" />
+            <div>
+                <p class="bh-tile__label">@L("Products")</p>
+                <p class="bh-tile__value">@productCount</p>
+            </div>
+        </Card>
+        <Card class="bh-tile">
+            <Icon value="@Icons48.Tag" size="54" class="bh-tile__icon bh-tile__icon--secondary" />
+            <div>
+                <p class="bh-tile__label">@L("Brands")</p>
+                <p class="bh-tile__value">@brandCount</p>
+            </div>
+        </Card>
+        <Card class="bh-tile">
+            <Icon value="@Icons48.Attach" size="54" class="bh-tile__icon bh-tile__icon--primary" />
+            <div>
+                <p class="bh-tile__label">@L("Documents")</p>
+                <p class="bh-tile__value">@documentCount</p>
+            </div>
+        </Card>
+        <Card class="bh-tile">
+            <Icon value="@Icons48.DocumentCopy" size="54" class="bh-tile__icon bh-tile__icon--secondary" />
+            <div>
+                <p class="bh-tile__label">@L("Document Types")</p>
+                <p class="bh-tile__value">@documentTypeCount</p>
+            </div>
+        </Card>
+        <Card class="bh-tile">
+            <Icon value="@Icons48.Clipboard" size="54" class="bh-tile__icon bh-tile__icon--error" />
+            <div>
+                <p class="bh-tile__label">@L("Document Extended Attributes")</p>
+                <p class="bh-tile__value">@documentExtendedAttributeCount</p>
+            </div>
+        </Card>
+        <Card class="bh-tile">
+            <Icon value="@Icons48.Emoji" size="54" class="bh-tile__icon bh-tile__icon--success" />
+            <div>
+                <p class="bh-tile__label">@L("Registered Users")</p>
+                <p class="bh-tile__value">@userCount</p>
+            </div>
+        </Card>
+        <Card class="bh-tile">
+            <Icon value="@Icons48.PeopleTeam" size="54" class="bh-tile__icon bh-tile__icon--warning" />
+            <div>
+                <p class="bh-tile__label">@L("Registered Roles")</p>
+                <p class="bh-tile__value">@roleCount</p>
+            </div>
+        </Card>
+        @* MudChart Width="100%" Height="300px": the chart takes its card's width; 760 × 300 is the drawing's shape (B30). *@
+        <Card class="bh-dashboard__chart">
+            <Chart chartType="bar" chartSeries="@dataEnterBarChartSeries" chartLabels="@dataEnterBarChartXAxisLabels.map((month) => L(month))" ariaLabel="@L("Quick Insights.")" width="760" height="300" />
+        </Card>
+        <Card class="bh-dashboard__aside">
+            @L("Charts comming soon ish...")
+        </Card>
+    </div>
+}
+
+@code {
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+
+    private readonly L = localizerFor("Dashboard");
+    private productCount = 0;
+    private brandCount = 0;
+    private documentCount = 0;
+    private documentTypeCount = 0;
+    private documentExtendedAttributeCount = 0;
+    private userCount = 0;
+    private roleCount = 0;
+
+    private readonly dataEnterBarChartXAxisLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+    private dataEnterBarChartSeries: ChartSeries[] = [];
+    private loaded = false;
+
+    private listening?: HubConnection;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.loadDataAsync();
+        this.loaded = true;
+    }
+
+    /** The hub, when it comes (B31): UpdateDashboard loads the numbers again. */
+    protected override onParametersSet(): void {
+        const hub = this.hubConnection;
+        if (hub === undefined || hub === this.listening) return;
+        this.listening = hub;
+        // The original registers its handler on every visit and never removes it (U11): here it goes with the page.
+        const update = async (): Promise<void> => {
+            await this.loadDataAsync();
+            this.stateHasChanged();
+        };
+        hub.on(ApplicationConstants.SignalR.ReceiveUpdateDashboard, update);
+        this.disposeSignal.addEventListener("abort", () => hub.off(ApplicationConstants.SignalR.ReceiveUpdateDashboard, update));
+    }
+
+    private async loadDataAsync(): Promise<void> {
+        const response = await this.dashboardManager.getDataAsync();
+        if (response.succeeded) {
+            const data = response.data;
+            this.productCount = data.productCount;
+            this.brandCount = data.brandCount;
+            this.documentCount = data.documentCount;
+            this.documentTypeCount = data.documentTypeCount;
+            this.documentExtendedAttributeCount = data.documentExtendedAttributeCount;
+            this.userCount = data.userCount;
+            this.roleCount = data.roleCount;
+            // A series per name: a reload replaces the one of the same name (case-insensitively), as RemoveAll did.
+            // The API sends thirteen values for the twelve months, the last always 0 (U13): the chart takes twelve.
+            const names = new Set(data.dataEnterBarChart.map((series) => series.name.toLowerCase()));
+            this.dataEnterBarChartSeries = [
+                ...this.dataEnterBarChartSeries.filter((series) => !names.has(series.name.toLowerCase())),
+                ...data.dataEnterBarChart.map((series) => ({ name: series.name, data: series.data.slice(0, this.dataEnterBarChartXAxisLabels.length) })),
+            ];
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+}

@@ -1,0 +1,113 @@
+/* Carousel — a slide at a time on a surface; the arrows at the sides, the bullets below, the stop button in a corner. */
+
+.fui-carousel {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "previous slides next"
+    ". bullets .";
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  touch-action: pan-y;
+}
+
+.fui-carousel__slides {
+  grid-area: slides;
+  min-inline-size: 0;
+  overflow: hidden;
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-carousel__item:not([hidden]) {
+  animation: fui-carousel-enter var(--fui-duration-gentle) var(--fui-ease-standard);
+}
+
+@keyframes fui-carousel-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+.fui-carousel__arrow,
+.fui-carousel__rotation {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  cursor: pointer;
+}
+
+.fui-carousel__arrow:hover,
+.fui-carousel__rotation:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-carousel__arrow--previous {
+  grid-area: previous;
+}
+
+.fui-carousel__arrow--next {
+  grid-area: next;
+}
+
+/* Previous and next point the page's way. */
+.fui-carousel__arrow:dir(rtl) .fui-icon {
+  transform: scaleX(-1);
+}
+
+.fui-carousel__rotation {
+  position: absolute;
+  inset-block-start: var(--fui-spacing-s);
+  inset-inline-end: calc(32px + 2 * var(--fui-spacing-xs) + var(--fui-spacing-s));
+  z-index: 1;
+}
+
+.fui-carousel__bullets {
+  grid-area: bullets;
+  display: flex;
+  justify-content: center;
+  gap: var(--fui-spacing-xs);
+}
+
+.fui-carousel__bullet {
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.fui-carousel__bullet::before {
+  content: "";
+  display: block;
+  inline-size: 10px;
+  block-size: 10px;
+  margin: auto;
+  border: 1px solid var(--fui-foreground-2);
+  border-radius: var(--fui-radius-circular);
+}
+
+.fui-carousel__bullet--current::before {
+  background: var(--fui-brand-background);
+  border-color: var(--fui-brand-background);
+}
+
+.fui-carousel__arrow:focus-visible,
+.fui-carousel__rotation:focus-visible,
+.fui-carousel__bullet:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-carousel__item:not([hidden]) {
+    animation: none;
+  }
+}

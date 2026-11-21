@@ -1,0 +1,51 @@
+{
+  "name": "@tsazor/cli",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "The Tsazor command line: tsazor check (type-checks every .tsazor component), tsazor codemod (.razor to .tsazor) and tsazor build-lib (a component library's build).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "tsazor": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/lsp": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0"
+  }
+}

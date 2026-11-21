@@ -1,0 +1,159 @@
+@* components/users/create-user-dialog.tsx: register a user in the current tenant (emailed a confirmation link), then
+   open their detail page. react-hook-form + zodResolver become EditForm + StandardSchemaValidator over the original's
+   zod schema (unchanged — the password confirmation is a refinement that speaks on its own field); `register("x")` is
+   an `immediate` InputText bound to the model (per keystroke, a message goes as soon as the value is fixed),
+   `errors.x?.message` Field's `for="x"`, and an invalid submit focuses the first invalid field
+   (FocusOnInvalidSubmit, react-hook-form's shouldFocusError). The submit sends the schema's parsed (trimmed) values, as handleSubmit does. The form
+   validates natively too, as the original's (no noValidate): a malformed email is the browser's to report first. *@
+@import { KeyRound, User as UserIcon, Users } from "lucide"
+@import { z } from "zod"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { registerUser } from "@/api/users"
+@import { describeError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { inputClass } from "@/components/ui/variants"
+@import SectionLabel from "./SectionLabel.tsazor"
+@inject NavigationManager navigation
+
+<Dialog open="@open" openChanged="@this.requestOpen">
+    <DialogContent size="lg">
+        @* ── Header ── *@
+        <DialogHeader>
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)] text-[var(--color-primary)] ring-1 ring-inset ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]">
+                    <Icon icon="@Users" class="h-[18px] w-[18px]" />
+                </span>
+                <div class="min-w-0">
+                    <DialogTitle class="text-[16px]">New account</DialogTitle>
+                </div>
+            </div>
+            <DialogDescription class="mt-1">
+                The new user is created in the current tenant and emailed a confirmation link. Roles can be assigned from the detail page after creation.
+            </DialogDescription>
+        </DialogHeader>
+
+        @* ── Form ── *@
+        <EditForm Model="@model" OnValidSubmit="@submit">
+            <StandardSchemaValidator Schema="@schema" />
+            <FocusOnInvalidSubmit />
+            <DialogBody class="space-y-6">
+                @* ── Identity section ── *@
+                <div class="space-y-3">
+                    <SectionLabel icon="@UserIcon" title="Identity" description="Personal details and the username they'll use to sign in." />
+                    <div class="h-px bg-[var(--color-border)] opacity-60"></div>
+                    <div class="space-y-4">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <Field id="cu-firstName" label="First name" required for="firstName">
+                                <InputText immediate id="cu-firstName" autocomplete="given-name" class="@inputClass" @bind-Value="model.firstName" />
+                            </Field>
+                            <Field id="cu-lastName" label="Last name" required for="lastName">
+                                <InputText immediate id="cu-lastName" autocomplete="family-name" class="@inputClass" @bind-Value="model.lastName" />
+                            </Field>
+                        </div>
+
+                        <Field id="cu-userName" label="Username" required hint="Letters, digits, dot, dash or underscore. 3–32 characters." for="userName">
+                            <InputText immediate id="cu-userName" placeholder="m.chen" autocomplete="off" class="@monoInputClass" @bind-Value="model.userName" />
+                        </Field>
+
+                        <Field id="cu-email" label="Email" required for="email">
+                            <InputText immediate id="cu-email" type="email" placeholder="user@example.com" autocomplete="email" class="@monoInputClass" @bind-Value="model.email" />
+                        </Field>
+
+                        <Field id="cu-phoneNumber" label="Phone (optional)" for="phoneNumber">
+                            <InputText immediate id="cu-phoneNumber" type="tel" placeholder="+1 555 0100" autocomplete="tel" class="@monoInputClass" @bind-Value="model.phoneNumber" />
+                        </Field>
+                    </div>
+                </div>
+
+                @* ── Credentials section ── *@
+                <div class="space-y-3">
+                    <SectionLabel icon="@KeyRound" title="Credentials" description="Initial password. The user is encouraged to change it on first sign-in." />
+                    <div class="h-px bg-[var(--color-border)] opacity-60"></div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <Field id="cu-password" label="Password" required for="password">
+                            <InputText immediate id="cu-password" type="password" autocomplete="new-password" class="@monoInputClass" @bind-Value="model.password" />
+                        </Field>
+                        <Field id="cu-confirmPassword" label="Confirm password" required for="confirmPassword">
+                            <InputText immediate id="cu-confirmPassword" type="password" autocomplete="new-password" class="@monoInputClass" @bind-Value="model.confirmPassword" />
+                        </Field>
+                    </div>
+                </div>
+            </DialogBody>
+
+            @* ── Footer ── *@
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick="@close" disabled="@submitting">Cancel</Button>
+                <Button type="submit" disabled="@submitting">@(submitting ? "Creating…" : "Create account")</Button>
+            </DialogFooter>
+        </EditForm>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+
+    // ─── Schema (identical to the old create page) ───
+    private static readonly usernamePattern = /^[a-zA-Z][a-zA-Z0-9._-]{2,31}$/;
+
+    private readonly schema = z
+        .object({
+            firstName: z.string().trim().min(1, "Required.").max(64),
+            lastName: z.string().trim().min(1, "Required.").max(64),
+            userName: z.string().trim().regex(CreateUserDialog.usernamePattern, "3–32 chars. Letters, digits, dot, dash, underscore. Start with a letter."),
+            email: z.string().trim().email("Enter a valid email."),
+            phoneNumber: z.string().trim().max(32).optional(),
+            password: z.string().min(8, "At least 8 characters."),
+            confirmPassword: z.string().min(8),
+        })
+        .refine((d) => d.password === d.confirmPassword, {
+            path: ["confirmPassword"],
+            message: "Passwords don't match.",
+        });
+
+    /** Input's classes with the original's `className="font-mono"`, merged as its cn() does. */
+    private readonly monoInputClass = cn(inputClass, "font-mono");
+
+    private model = CreateUserDialog.defaults();
+    private submitting = false;
+
+    private static defaults() {
+        return { firstName: "", lastName: "", userName: "", email: "", phoneNumber: "", password: "", confirmPassword: "" };
+    }
+
+    private requestOpen(open: boolean): Promise<void> | undefined {
+        if (!open) return this.close();
+        return this.openChanged?.invokeAsync(true);
+    }
+
+    /** handleClose: react-hook-form's reset(), then close. */
+    private close(): Promise<void> | undefined {
+        this.model = CreateUserDialog.defaults();
+        return this.openChanged?.invokeAsync(false);
+    }
+
+    private async submit(): Promise<void> {
+        const values = this.schema.parse(this.model);
+        this.submitting = true;
+        try {
+            const result = await registerUser({
+                firstName: values.firstName,
+                lastName: values.lastName,
+                userName: values.userName,
+                email: values.email,
+                password: values.password,
+                confirmPassword: values.confirmPassword,
+                phoneNumber: values.phoneNumber?.trim() || undefined,
+            });
+            toast.success("User created", { description: result.message ?? "Confirmation email queued." });
+            void queryClient.invalidateQueries({ queryKey: ["users"] });
+            await this.close();
+            this.navigation.navigateTo(result.userId ? `/users/${result.userId}` : "/users");
+        } catch (err) {
+            toast.error("Create failed", { description: describeError(err) });
+        } finally {
+            this.submitting = false;
+        }
+    }
+}

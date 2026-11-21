@@ -1,0 +1,106 @@
+@page "/index"
+@inject TutorialState State
+@import { buildIndex, isCodeLike, searchReference, type IndexGroup } from "../keyword-index"
+@import reference from "virtual:tutorial-reference"
+@import type { ReferenceLink } from "../reference-types"
+
+<PageTitle>Index · Tsazor tutorial</PageTitle>
+<div class="index-page">
+    <SiteBar Current="index" />
+
+    <main class="index-main">
+        <h1>Index</h1>
+        <p class="intro">Every lesson by keyword: directives, components, APIs and concepts. Each entry links to the lessons that teach it, and to the <a href="reference">reference</a> where it has an entry.</p>
+
+        <div class="controls">
+            <label class="search">
+                <span class="search-label">Search keywords and the reference</span>
+                <input type="search" @bind="query" @bind:event="oninput" placeholder="e.g. @@bind, NavLink, validation" />
+            </label>
+            <div class="track-switch" role="group" aria-label="Track">
+                @foreach (const option of tracks) {
+                    <button type="button" class="track @(option === track ? "track--active" : null)"
+                            aria-pressed="@(option === track ? "true" : "false")"
+                            @onclick="@(() => choose(option))">@TRACK_LABELS[option]</button>
+                }
+            </div>
+        </div>
+
+        <p class="status" role="status">@statusText</p>
+
+        @if (referenceHits.length > 0) {
+            <section class="reference-hits" aria-labelledby="reference-hits-title">
+                <h2 id="reference-hits-title">In the reference</h2>
+                <ul>
+                    @foreach (const hit of referenceHits) {
+                        <li @key="hit.href">
+                            <a href="@hit.href">
+                                @if (hit.kind === "language") {
+                                    @hit.name
+                                } else {
+                                    <code>@hit.name</code>
+                                }
+                            </a>
+                            <span class="chapter">@hit.detail</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @foreach (const group of groups) {
+            <section class="group" @key="group.id" aria-labelledby="@("group-" + group.id)">
+                <h2 id="@("group-" + group.id)">@group.heading</h2>
+                <dl class="entries">
+                    @foreach (const entry of group.entries) {
+                        <div class="entry" @key="entry.keyword">
+                            @if (isCodeLike(entry.keyword)) {
+                                <dt><code>@entry.keyword</code></dt>
+                            } else {
+                                <dt>@entry.keyword</dt>
+                            }
+                            <dd>
+                                <ul class="refs">
+                                    @foreach (const ref of entry.refs) {
+                                        <li><a href="@(track + "/" + ref.lesson.slug)">@ref.lesson.text[track]!.title</a> <span class="chapter">@ref.chapter.title</span></li>
+                                    }
+                                    @if (reference.keywordLinks[entry.keyword]) {
+                                        <li class="ref-entry"><a href="@reference.keywordLinks[entry.keyword]!.href">Reference</a> <span class="chapter">@reference.keywordLinks[entry.keyword]!.detail</span></li>
+                                    }
+                                </ul>
+                            </dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private readonly tracks: Track[] = ["blazor", "ts"];
+    private track: Track = "ts";
+    private query = "";
+
+    protected override onInitialized(): void {
+        this.track = this.State.preferredTrack;
+    }
+
+    private choose(track: Track): void {
+        this.track = track;
+    }
+
+    private get groups(): IndexGroup[] {
+        return buildIndex(this.State.lessons(this.track), this.track, this.query);
+    }
+
+    private get referenceHits(): ReferenceLink[] {
+        return searchReference(reference.search, this.query);
+    }
+
+    private get statusText(): string {
+        const count = this.groups.reduce((sum, group) => sum + group.entries.length, 0);
+        if (count === 0) return `No keyword matches “${this.query.trim()}”.`;
+        return `${count} ${count === 1 ? "keyword" : "keywords"} · ${TRACK_LABELS[this.track]} track`;
+    }
+}

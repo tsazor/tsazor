@@ -1,0 +1,28 @@
+@** Renders Bootstrap's `.navbar` with an optional brand text and a `.navbar-nav` area for the
+    navigation links. It does not collapse into a toggler on small screens. *@
+@import { withClass } from "./attributes"
+<nav data-bs-theme="@theme" aria-label="@ariaLabel" @attributes="@withClass(navbarClass, additionalAttributes)">
+    <div class="container-fluid">
+        @if (brand) {
+            <span class="navbar-brand">@brand</span>
+        }
+        <div class="navbar-nav">@childContent</div>
+    </div>
+</nav>
+
+@code {
+    /** Brand text at the left edge; omit to hide. */
+    @Parameter() brand?: string;
+    /** Light (default) or dark navbar (Bootstrap 5.3 color modes). */
+    @Parameter() theme: "light" | "dark" = "light";
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** The navigation links, placed inside `.navbar-nav`. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get navbarClass(): string {
+        return `navbar navbar-expand-lg ${this.theme === "dark" ? "bg-dark" : "bg-body-tertiary"}`;
+    }
+}

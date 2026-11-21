@@ -1,11 +1,12 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { CascadingValueSupplier } from "../renderer/cascading-value";
-import type { ServiceProvider } from "../di/service-collection";
-import { ANONYMOUS, AuthenticationState } from "./authentication-state";
-import { watchAuthenticationState } from "./authentication-state-provider";
-import { AuthorizationService, defaultAuthorizationService, type AuthorizationRequirements } from "./authorization";
+import { componentInternals } from "../components/component-internals.js";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
+import type { ServiceProvider } from "../di/service-collection.js";
+import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
+import { watchAuthenticationState } from "./authentication-state-provider.js";
+import { AuthorizationDecision, AuthorizationService, defaultAuthorizationService, type AuthorizationRequirements } from "./authorization.js";
 
 /**
  * Blazor's AuthorizeView: renders authorized/not-authorized content based on
@@ -19,37 +20,51 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   /** Roles that grant access (string array or comma-separated string). */
   @Parameter() roles?: readonly string[] | string;
 
-  /** Authorized content without the state context (Razor's default ChildContent). */
-  @Parameter() childContent?: RenderFragment;
+  /** Authorized content without sections (Razor's ChildContent — like Blazor's
+   *  RenderFragment<AuthenticationState>, it receives the state as `context`). */
+  @Parameter() childContent?: (state: AuthenticationState) => RenderFragment;
   /** Authorized content receiving the AuthenticationState (Razor's <Authorized>). */
   @Parameter() authorized?: (state: AuthenticationState) => RenderFragment;
-  /** Rendered when access is denied (Razor's <NotAuthorized>). */
-  @Parameter() notAuthorized?: RenderFragment;
+  /** Rendered when access is denied; receives the AuthenticationState
+   *  (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>). */
+  @Parameter() notAuthorized?: (state: AuthenticationState) => RenderFragment;
   /** Rendered while the state is still resolving (Razor's <Authorizing>). */
   @Parameter() authorizing?: RenderFragment;
 
+  /** Marks the component as a cascading value supplier for the renderer. */
   readonly isCascadingValueSupplier = true;
   /** The state changes over time (login/logout) — never fixed. */
   readonly isFixed = false;
-  /** Cascades under this name OR by the AuthenticationState type token. */
-  readonly cascadeName = "AuthenticationState";
+  /** Cascades by type, unnamed (Blazor cascades its Task<AuthenticationState> the same way). */
+  readonly cascadeType = AuthenticationState;
+  /** The cascaded AuthenticationState (anonymous until the provider resolves). */
   get cascadeValue(): unknown {
     return this.authenticationState ?? ANONYMOUS;
   }
 
   private authenticationState?: AuthenticationState;
   private resolved = false;
+  readonly #decision = new AuthorizationDecision();
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
-    const services = this.componentServices as ServiceProvider | undefined;
-    this.unsubscribe = watchAuthenticationState(services, (state) => {
-      this.authenticationState = state;
-      this.resolved = true;
-      this.stateHasChangedInternal();
-    });
+    const services = componentInternals.services(this) as ServiceProvider | undefined;
+    this.unsubscribe = watchAuthenticationState(
+      services,
+      (state) => {
+        this.authenticationState = state;
+        this.resolved = true;
+        componentInternals.requestRender(this);
+      },
+      () => {
+        // A promise was notified: Authorizing until it resolves, as Blazor awaits the Task.
+        this.resolved = false;
+        componentInternals.requestRender(this);
+      },
+    );
   }
 
+  /** Stops listening to authentication state changes. */
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
@@ -62,19 +77,27 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
       return;
     }
     const state = this.authenticationState ?? ANONYMOUS;
-    if (this.isAuthorized(state)) {
+    const authorized = this.#decision.decide(
+      this.authorizationService(),
+      state.user,
+      this.requirements(),
+      () => componentInternals.requestRender(this),
+      (error) => componentInternals.reportError(this, error, "lifecycle"),
+    );
+    if (authorized === undefined) {
+      // An async policy is deciding: Authorizing, as Blazor awaits AuthorizeAsync.
+      this.authorizing?.(b);
+      return;
+    }
+    if (authorized) {
       if (this.authorized) {
         b.addContent(0, this.authorized(state));
       } else if (this.childContent) {
-        b.addContent(1, this.childContent);
+        b.addContent(1, this.childContent(state));
       }
     } else if (this.notAuthorized) {
-      b.addContent(2, this.notAuthorized);
+      b.addContent(2, this.notAuthorized(state));
     }
-  }
-
-  private isAuthorized(state: AuthenticationState): boolean {
-    return this.authorizationService().isAuthorized(state.user, this.requirements());
   }
 
   private requirements(): AuthorizationRequirements {
@@ -89,7 +112,7 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   }
 
   private authorizationService(): AuthorizationService {
-    const services = this.componentServices as ServiceProvider | undefined;
+    const services = componentInternals.services(this) as ServiceProvider | undefined;
     return services?.tryGet(AuthorizationService) ?? defaultAuthorizationService;
   }
 }

@@ -1,0 +1,4 @@
+.token {
+    font-family: var(--fui-font-family-mono);
+    word-break: break-all;
+}

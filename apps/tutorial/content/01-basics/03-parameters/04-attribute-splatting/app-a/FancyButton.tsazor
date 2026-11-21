@@ -1,0 +1,5 @@
+<button class="fancy">@label</button>
+
+@code {
+    @Parameter() label = "";
+}

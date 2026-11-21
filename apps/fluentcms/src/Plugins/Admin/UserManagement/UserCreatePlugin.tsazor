@@ -1,0 +1,25 @@
+@inherits BasePlugin
+@import { UserCreateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Create New User" onSubmit="@this.submit">
+    <Grid columns="2" gap="m">
+        <TextInput @bind-Value="this.model.username" label="Username" placeholder="Enter Username" required />
+        <TextInput @bind-Value="this.model.password" label="Password" placeholder="Enter Password" required type="password" />
+        <TextInput @bind-Value="this.model.email" label="Email" placeholder="Enter Email" required type="email" />
+        <TextInput @bind-Value="this.model.phoneNumber" label="Phone Number" placeholder="Enter Phone Number" type="tel" />
+        <TextInput @bind-Value="this.model.firstName" label="First Name" placeholder="Enter First Name" />
+        <TextInput @bind-Value="this.model.lastName" label="Last Name" placeholder="Enter Last Name" />
+    </Grid>
+    <Checkbox @bind-Value="this.model.enabled" label="Enabled" help="Enable/disable user account" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = new UserCreateRequest();
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.userCreate(this.model));
+        this.navigateBack();
+    }
+}

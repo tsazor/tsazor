@@ -9,6 +9,7 @@ import { compile } from "../src/compile";
 import path from "node:path";
 
 const RUNTIME = path.resolve(__dirname, "../../runtime/src/index.ts");
+const RUNTIME_INTERNAL = path.resolve(__dirname, "../../runtime/src/internal.ts");
 
 async function instantiate(tsCode: string, stubs?: { name: string; contents: string }[]): Promise<Record<string, unknown>> {
   const stubPlugin = {
@@ -30,7 +31,7 @@ async function instantiate(tsCode: string, stubs?: { name: string; contents: str
   // The wrapper imports the compiled component and re-exports the runtime,
   // so the test and the component share ONE runtime module instance — a
   // second copy would break `instanceof EventCallback` checks in the renderer.
-  const wrapper = `import Comp from "tsazor:component";\nexport default Comp;\nexport * from "@tsazor/runtime";\n`;
+  const wrapper = `import Comp from "tsazor:component";\nexport default Comp;\nexport * from "@tsazor/runtime";\nexport { Renderer } from ${JSON.stringify(RUNTIME_INTERNAL)};\n`;
   const result = await esbuild.build({
     stdin: { contents: wrapper, resolveDir: process.cwd(), loader: "ts", sourcefile: "wrapper.ts" },
     bundle: true,
@@ -41,8 +42,10 @@ async function instantiate(tsCode: string, stubs?: { name: string; contents: str
     sourcemap: false,
     plugins: [stubPlugin],
     // stdin input does not trigger esbuild's tsconfig discovery — pass the
-    // repo-wide settings explicitly so experimental decorators are transpiled.
-    tsconfigRaw: JSON.stringify({ compilerOptions: { experimentalDecorators: true } }),
+    // repo-wide settings explicitly; standard decorators are lowered (Node
+    // does not run them natively).
+    supported: { decorators: false },
+    tsconfigRaw: JSON.stringify({ compilerOptions: { target: "es2022" } }),
   });
   const js = result.outputFiles[0]!.text;
   const url = `data:text/javascript;base64,${Buffer.from(js, "utf8").toString("base64")}`;
@@ -67,7 +70,7 @@ describe("compiler end-to-end (markup → generated module → runtime DOM)", ()
 
     const mod = await instantiate(code);
     const Counter = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Counter as never, container);
@@ -103,7 +106,7 @@ export default class Greeter extends ComponentBase {
     <span>hidden</span>
   }
   <ul>
-    @foreach (var item in items) {
+    @foreach (const item of items) {
       <li @key="item">@item</li>
     }
   </ul>
@@ -123,7 +126,7 @@ export default class Greeter extends ComponentBase {
 
     const mod = await instantiate(code, [{ name: "./Greeter.tsazor", contents: stubGreeter }]);
     const Parent = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Parent as never, container);
@@ -148,7 +151,7 @@ export default class Greeter extends ComponentBase {
       resolveType: (name) => (name === "ClockService" ? { specifier: "./clock" } : null),
     });
     expect(diagnostics.hasErrors).toBe(false);
-    expect(code).toContain("private readonly Clock = inject(ClockService);");
+    expect(code).toContain("private readonly Clock = __tsazor_inject(ClockService);");
     expect(code).toContain('import ClockService from "./clock";');
   });
 
@@ -171,7 +174,7 @@ export default class Greeter extends ComponentBase {
 
     const mod = await instantiate(code);
     const BindDemo = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(BindDemo as never, container);
@@ -225,7 +228,7 @@ export default class Stepper extends ComponentBase {
 
     const mod = await instantiate(code, [{ name: "./Stepper.tsazor", contents: stubStepper }]);
     const Demo = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Demo as never, container);
@@ -244,7 +247,7 @@ export default class Stepper extends ComponentBase {
     const parsed = JSON.parse(map!);
     expect(parsed.version).toBe(3);
     expect(parsed.sources).toContain("Smap.tsazor");
-    expect(code).toContain('b.addContent(1, this.Title);');
+    expect(code).toContain('__builder.addContent(1, this.Title);');
   });
 
   it("sourcemap decodes 1-based via trace-mapping on both sides (convention pin)", async () => {
@@ -253,7 +256,7 @@ export default class Stepper extends ComponentBase {
     // of the chain don't silently break the DevTools debugging story.
     const source = "<p>@Title</p>\n";
     const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tsazor" });
-    const genLine0 = code.split("\n").findIndex((l) => l.includes("b.addContent(1, this.Title);"));
+    const genLine0 = code.split("\n").findIndex((l) => l.includes("__builder.addContent(1, this.Title);"));
     const { TraceMap, originalPositionFor, generatedPositionFor } = await import("@jridgewell/trace-mapping");
     const trace = new TraceMap(JSON.parse(map!));
     const orig = originalPositionFor(trace, { line: genLine0 + 1, column: 4 });
@@ -288,7 +291,7 @@ export default class Stepper extends ComponentBase {
 
     const mod = await instantiate(code);
     const Scoped = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Scoped as never, container);
@@ -326,7 +329,7 @@ export default class BeCode extends ComponentBase {
 
     const mod = await instantiate(code, [{ name: "./Counter.tsazor.ts", contents: sidecar }]);
     const Counter = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Counter as never, container);
@@ -341,5 +344,61 @@ export default class BeCode extends ComponentBase {
     expect(container.querySelector('[data-testid="count"]')?.textContent).toBe("Count: 1");
     // Bare markup identifiers (baked to this.*) resolve to code-behind members.
     expect(container.querySelector('[data-testid="double"]')?.textContent).toBe("2");
+  });
+
+  it("reads a private member in markup: @this.#name (the scan stopped at `.#` and rendered the rest as text)", async () => {
+    // A Radzen port's F340: `style="@this.#contentStyle"` rendered `[object Object].#contentStyle`.
+    const source = '<div id="box" style="@this.#contentStyle">@this.#label</div>\n\n@code {\n  #contentStyle = "color: red";\n  #label = "private";\n}\n';
+    const { code, diagnostics } = compile(source, { className: "Private", fileName: "Private.tsazor", generateSourceMap: false });
+    expect(diagnostics.all).toEqual([]);
+    const mod = await instantiate(code);
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(mod.default as never, container);
+    await renderer.waitUntilIdle();
+    const box = container.querySelector("#box") as HTMLElement;
+    expect([box.getAttribute("style"), box.textContent]).toEqual(["color: red", "private"]);
+  });
+
+  it("keeps the value of a multi-line template literal: re-indented code leaves the string's lines as written", async () => {
+    const source = [
+      '<pre id="field">@text</pre>',
+      '<pre id="method">@joined()</pre>',
+      "@{",
+      "    const block = `x",
+      "  y`;",
+      "}",
+      '<pre id="block">@block</pre>',
+      '<pre id="expression">@(`p',
+      "    q`)</pre>",
+      "",
+      "@code {",
+      "  text = `line1",
+      "line2",
+      "    line3`;",
+      "  joined(): string {",
+      '    const name = "n";',
+      "    return `head ${name}",
+      "  middle ${`inner",
+      " nested`}",
+      "tail`;",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+    const { code, diagnostics } = compile(source, { className: "Literals", fileName: "Literals.tsazor", generateSourceMap: false });
+    expect(diagnostics.hasErrors).toBe(false);
+    const mod = await instantiate(code);
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(mod.default as never, container);
+    await renderer.waitUntilIdle();
+    const text = (id: string) => container.querySelector(`#${id}`)?.textContent;
+    expect(text("field")).toBe("line1\nline2\n    line3");
+    expect(text("method")).toBe("head n\n  middle inner\n nested\ntail");
+    expect(text("block")).toBe("x\n  y");
+    expect(text("expression")).toBe("p\n    q");
   });
 });

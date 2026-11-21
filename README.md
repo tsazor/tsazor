@@ -1,12 +1,15 @@
 # Tsazor — TypeScript Razor
 
-Tsazor ist ein SPA-Framework, das sich 1:1 an Blazors Architektur orientiert — RenderTree,
-Renderer, Lifecycle, Parameter-System, Routing, Forms — aber ohne WASM und C#: TypeScript
-ist die primäre Sprache, alles läuft rein im Browser.
+Tsazor is a component framework for TypeScript SPAs: a mature component model — render tree
+with diffing, lifecycle, parameters, cascading values, dependency injection, routing with layouts,
+forms with validation — strict typing with a stability promise, and everything runs purely in the
+browser.
 
-`.tsazor`-Dateien verwenden Razor als Markup-Syntax. Der Code in `@code`-Blöcken ist
-TypeScript; abgesehen davon sind die Markups weitgehend austauschbar mit Blazors
-`.razor`-Dateien.
+`.tsazor` files use Razor as their markup syntax; the code in `@code` blocks is clean TypeScript.
+
+**Coming from Blazor?** The component model is Blazor's, and the markup is largely
+interchangeable with `.razor` files, so an app migrates route by route — see
+[Migrating from Blazor](docs/migration.md).
 
 ```razor
 @page "/counter"
@@ -26,56 +29,72 @@ TypeScript; abgesehen davon sind die Markups weitgehend austauschbar mit Blazors
 }
 ```
 
-## Feature-Überblick
+**Guiding principle:** markup is Razor (1:1 Blazor), code is clean TypeScript — see
+[docs/design-principles.md](docs/design-principles.md).
 
-- **Blazor-Architektur 1:1:** RenderTree, Renderer/Diff, Komponenten-Lifecycle, Parameter
-  (`@Parameter()`), Cascading, DI, Routing mit Layouts, EditForm/`@bind`-Validierung,
-  Virtualize.
-- **Scoped CSS:** `X.tsazor.css` als Sidecar-Stylesheet, Selector-Rewriting per postcss,
-  `::deep` wie in Blazor ([docs/scoped-css.md](docs/scoped-css.md)).
-- **Code-behind:** `X.tsazor.ts` als Sidecar-Klasse (per Vererbung statt partial classes,
+## Feature overview
+
+- **Component model:** RenderTree, renderer/diff, component lifecycle, parameters
+  (`@Parameter()`), cascading values, DI, routing with layouts, EditForm/`@bind` validation,
+  Virtualize — Blazor's architecture, 1:1.
+- **Tsazor extensions (superset, desugar to the Blazor form):** `@Bindable() accessor value`
+  (a two-way parameter in one line) and `this.observe(source)` / `this.disposeSignal` (external
+  sources bound to the component lifetime) — see the
+  [language reference](docs/language-reference.md#two-way-parameters-bindable-tsazor-extension).
+- **Scoped CSS:** `X.tsazor.css` as a sidecar stylesheet, selector rewriting via postcss,
+  `::deep` as in Blazor ([docs/scoped-css.md](docs/scoped-css.md)).
+- **Code-behind:** `X.tsazor.ts` as a sidecar class (via inheritance instead of partial classes,
   [docs/code-behind.md](docs/code-behind.md)).
-- **Language Server:** Diagnostics, Hover, Go-to-Definition und Auto-Complete für `.tsazor`
+- **Language server:** diagnostics, hover, go-to-definition and auto-complete for `.tsazor`
   ([docs/language-server.md](docs/language-server.md)).
-- **Debugging in DevTools:** Inline-Sourcemaps binden `.tsazor` an die echte Quelle —
-  Breakpoints in `@code` und Variablen-Inspektion funktionieren im Browser
+- **Debugging in DevTools:** inline source maps map `.tsazor` back to the real source —
+  breakpoints in `@code` and variable inspection work in the browser
   ([docs/debugging.md](docs/debugging.md)).
 
 ## Quickstart
 
 ```bash
 pnpm install
-pnpm demo:dev        # Demo-App (Vite Dev-Server mit HMR)
-pnpm -r build        # alle Pakete bauen
-pnpm -r test         # alle Tests (Vitest + happy-dom)
+pnpm demo:dev        # demo app (Vite dev server with HMR)
+pnpm -r build        # build all packages
+pnpm -r test         # run all tests (Vitest + happy-dom)
+pnpm gates           # every browser gate in Edge, Firefox and WebKit (Windows, as CI's browser jobs)
+pnpm ci:local        # CI's check job on a fresh clone of HEAD in Linux (in WSL on Windows)
 ```
 
-Realer Härtetest 1: **[Blazing Pizza](apps/blazing-pizza)** (Port der Blazor-Workshop-App,
-Details in [docs/port-findings.md](docs/port-findings.md)):
+Real-world stress test 1: **[Blazing Pizza](apps/blazing-pizza)** (a port of the Blazor workshop
+app, details in [docs/port-findings.md](docs/port-findings.md)):
 
 ```bash
-pnpm --filter blazing-pizza server   # API auf :5300
-pnpm --filter blazing-pizza dev      # App auf :5301
-node apps/blazing-pizza/scripts/verify-pizza.mjs   # E2E (startet/kills Server selbst)
+pnpm --filter blazing-pizza api      # the backend on :5300
+pnpm --filter blazing-pizza dev      # the app on :5301
+pnpm --filter blazing-pizza verify   # E2E (starts and stops the servers itself)
 ```
 
-Seed-Login: `test@example.com` / `test1234`.
+Seed login: `test@example.com` / `test1234`. More (the build, the generated API client) in the
+[app's README](apps/blazing-pizza/README.md).
 
-Realer Härtetest 2: **[Sleipnir Ticker](apps/sleipnir-ticker)** — Live-Daten statt Forms:
-eine ASP.NET-Core-API relaisiert Binance-WebSocket-Ticker-Daten als Sleipnir
-Command-API, das Tsazor-Frontend rendert sie per SSE-Push live:
+Real-world stress test 2: **[Sleipnir Ticker](apps/sleipnir-ticker)** — live data instead of
+forms: an ASP.NET Core API relays Binance WebSocket ticker data as a Sleipnir command API, and the
+Tsazor frontend renders it live via SSE push:
 
 ```bash
-pnpm --filter sleipnir-ticker api    # API auf :5310
-pnpm --filter sleipnir-ticker codegen   # generierten TS-Client in src/api/ regenerieren
-node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic-Feed, self-starting)
+pnpm --filter sleipnir-ticker api    # API on :5310
+pnpm --filter sleipnir-ticker codegen   # regenerate the generated TS client in src/api/
+node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic feed, self-starting)
 ```
 
-Eine eigene App:
+Your own app, in the shape of `dotnet new blazorwasm` (layout, nav menu, Home, Counter, Weather, a test):
 
 ```bash
-npm create vite@latest my-app -- --template vanilla-ts
-cd my-app && npm install @tsazor/runtime @tsazor/vite-plugin
+npm create tsazor@latest my-app                            # optional: -- --ui <any component library>
+cd my-app && npm run dev
+```
+
+By hand, in an existing Vite project:
+
+```bash
+npm install @tsazor/runtime @tsazor/vite-plugin
 ```
 
 ```ts
@@ -96,62 +115,81 @@ export default defineConfig({ plugins: [tsazor()] });
 // src/Program.ts
 import { createTsazorApp } from "@tsazor/runtime";
 import App from "./App.tsazor";
-import routes from "virtual:tsazor-routes"; // generiert aus allen @page-Dateien
+import routes from "virtual:tsazor-routes"; // generated from all @page files
 
 createTsazorApp({ root: App, routes });
 ```
 
-## Pakete
+## Packages
 
-| Paket | Inhalt |
+| Package | Contents |
 | --- | --- |
-| `@tsazor/runtime` | RenderTree (flaches Frame-Array wie Blazor), Renderer/DomRenderer, Diff, ComponentBase-Lifecycle, Parameter + Cascading, DI, Navigation/Router, Forms/@bind (EditForm, Input*-Familie, Validierung), Data (Virtualize, TsazorHttp) |
-| `@tsazor/compiler` | `.tsazor` → TS-Modul: Lexer/Parser/Codegen mit Sourcemaps, Diagnostics (`TZS001…`), Scoped-CSS-Scope-Hash, Code-behind-Erkennung, `@authorize` |
-| `@tsazor/vite-plugin` | Vite-Plugin: Transform + Route-Manifest (`virtual:tsazor-routes`) + HMR mit State-Retention + Compiler-Fehler im Dev-Overlay + Scoped-CSS-Rewriter (postcss) |
-| `@tsazor/components` | Bootstrap-5-UI-Bibliothek, selbst in `.tsazor` geschrieben (Dogfooding) |
-| `@tsazor/lsp` | Language Server: Diagnostics, Hover, Go-to-Definition, Auto-Complete |
-| `@tsazor/testing` | `render()`-Testhelper über happy-dom |
-| `packages/vscode` | VS Code Extension: TextMate-Grammar + LSP-Client |
-| `@tsazor/workspace` | Workspace-Infrastruktur (Package-Build-Chain, Test-Gates) |
+| `@tsazor/runtime` | RenderTree (flat frame array as in Blazor), Renderer/DomRenderer, diff, ComponentBase lifecycle, parameters + cascading values, DI, navigation/router, forms/@bind (EditForm, Input* family, validation), data (Virtualize, TsazorHttp) |
+| `@tsazor/compiler` | `.tsazor` → TS module: lexer/parser/codegen with source maps, diagnostics (`TZS001…`), scoped CSS scope hash, code-behind detection, `@authorize` |
+| `@tsazor/vite-plugin` | Vite plugin: transform + route manifest (`virtual:tsazor-routes`) + HMR with state retention + compiler errors in the dev overlay + scoped CSS rewriter (postcss) |
+| `@tsazor/bootstrap` | Bootstrap 5 UI library, itself written in `.tsazor` (dogfooding) |
+| `@tsazor/fluent` | Fluent 2 design system: token-driven, accessible components written in `.tsazor` ([docs/fluent.md](docs/fluent.md)) |
+| `@tsazor/ui` | The skins' behavior core: focus trap, dismiss, roving focus, positioning, the DataGrid and tree models, `icon()` |
+| `@tsazor/fluent-icons`, `@tsazor/bootstrap-icons` | The full icon sets as typed, tree-shaken values: `Icons.Regular.Size20.Save`, `Icons.Save` ([docs/design-icons.md](docs/design-icons.md)) |
+| `@tsazor/markdown` | A `Markdown` component on marked, always sanitized with DOMPurify ([README](packages/markdown/README.md)) |
+| `@tsazor/charts` | Line, area, bar, donut and pie charts and sparklines as SVG in the skin's colors ([README](packages/charts/README.md)) |
+| `@tsazor/dotnet` | .NET backend bridge: OpenAPI ⇒ typed TS client (`tsazor-dotnet generate`), `HttpResult`/ProblemDetails, DataAnnotations decorators, cookie/JWT auth ([README](packages/dotnet/README.md)) |
+| `@tsazor/primitives` | .NET's value types in TypeScript: `Decimal` (with `@bind` and validation), `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid` — `@tsazor/dotnet` maps to them |
+| `@tsazor/worker` | Heavy work off the main thread: typed calls into Web Workers with cancellation, transfer and pools — Tsazor's `Task.Run` |
+| `@tsazor/spreadsheet` | A headless spreadsheet model: cells, ranges, undo, copy and paste (the extended library, see [after 1.0](docs/after-1.0.md#the-extended-library)) |
+| `create-tsazor` | `npm create tsazor@latest my-app`: an app in the shape of `dotnet new blazorwasm`, with any component library |
+| `@tsazor/cli` | `tsazor check` (typed component-usage gate) and `tsazor codemod` (`.razor` → `.tsazor`) |
+| `@tsazor/lsp` | Language server: diagnostics, hover, go-to-definition, auto-complete |
+| `@tsazor/testing` | `render()` test helper on top of happy-dom |
+| `@tsazor/conformance` | Blazor conformance suites for the compiler (render-based golden tests) and the runtime (lifecycle/diff semantics) |
+| `packages/vscode` | VS Code extension: TextMate grammar + LSP client |
+| `@tsazor/workspace` | Workspace infrastructure (package build chain, test gates) |
 
-## Dokumentation
+## Documentation
 
 - [Getting Started](docs/getting-started.md)
-- [Sprach-Referenz (.tsazor)](docs/language-reference.md)
-- [Architektur & HMR](docs/architecture.md)
+- [Notes for coding agents](packages/create-tsazor/template/AGENTS.md) — every new app carries them as `AGENTS.md`;
+  the docs site has an `llms.txt`
+- [Migration guide: Blazor → Tsazor at a glance (C# keywords, Razor, Blazor APIs)](docs/migration-guide.md)
+- [Migrating from Blazor (side by side, the codemod, the API boundary)](docs/migration.md)
+- [C# to TypeScript (cheat sheet)](docs/csharp-to-typescript.md)
+- [Design principles](docs/design-principles.md)
+- [Language reference (.tsazor)](docs/language-reference.md)
+- [Authentication (BFF with an HttpOnly cookie)](docs/auth.md)
+- [Content Security Policy](docs/csp.md)
+- [Architecture & HMR](docs/architecture.md)
 - [Scoped CSS (`X.tsazor.css`)](docs/scoped-css.md)
 - [Code-behind (`X.tsazor.ts`)](docs/code-behind.md)
+- [Fluent components (`@tsazor/fluent`)](docs/fluent.md)
+- [Charts and visualizations (a chart library through `@attach`, an SVG of your own)](docs/guide-charts.md)
+- [Live data (server events through `observe`, with reconnects)](docs/guide-live-data.md)
 - [Language Server](docs/language-server.md)
 - [Debugging in DevTools](docs/debugging.md)
-- [Port-Findings (Blazing Pizza)](docs/port-findings.md)
+- [Bundle size (where the bytes go, against React)](docs/bundle-size.md)
+- [Compared to React and Vue (what the numbers contain, how they differ)](docs/compared-to-react-and-vue.md)
+- [Supported browsers](docs/browser-support.md) and [the stability promise](docs/support-policy.md)
+- The ports: [Blazing Pizza](docs/port-findings.md), [FluentCMS](docs/port-fluentcms.md),
+  [BlazorHero](docs/port-blazorhero.md), [fullstackhero's React admin](docs/port-fullstackhero.md)
+- [After 1.0](docs/after-1.0.md)
 
 ## Status
 
-Alle Meilensteine M1–M8 und der Phase-2-Baustein sind umgesetzt:
+Version 1.0 is Blazor parity, measured against .NET 11. What checks it:
 
-- **Runtime-Kern bis Data** (M1–M6): RenderTree, Diff, Lifecycle, Parameter/Cascading,
-  Routing/Layout, Forms/@bind, Virtualize + TsazorHttp — jeweils mit Akzeptanztests.
-- **Tooling** (M7/M8): Vite-Plugin mit HMR und State-Retention, Route-Manifest,
-  Diagnostics-Katalog mit Fehler-Overlay im Dev-Server, Demo-App (`apps/demo`).
-- **Components-POC** (`@tsazor/components`): Bootstrap 5 in `.tsazor` — Dogfooding des
-  Frameworks mit dem Framework.
-- **Blazing-Pizza-Port**: reale Workshop-App (Konfigurator, Checkout, Orders) läuft 1:1,
-  19/19 E2E-Tests; Gaps und Learnings in [docs/port-findings.md](docs/port-findings.md).
-- **Sleipnir-Ticker**: zweite, anders geartete App (Live-Daten statt Forms) — ASP.NET-Core-API
-  (NuGet `Sleipnir.Server`) mit `[SleipnirEvent]`-Push, Tsazor-Frontend über den
-  **generierten TS-Client** (`sleipnir-codegen`, Typesicherheit aus dem Contract); bindet Tsazor
-  ↔ Sleipnir, 15/15 E2E-Checks inkl. Subscription-Survival über Navigation.
-- **Scoped CSS & Code-behind**: Blazor-Parität (`b-<hash>`-Isolation, `::deep`;
-  `X.tsazor.ts` via Vererbung statt partial classes).
-- **Language Server**: Diagnostics, Hover, Go-to-Definition, Auto-Complete (Tag-, Attribut-,
-  Direktiven- und Expression-Kontext); VS-Code-Extension v0.2.0.
-- **Debugging**: DevTools-Sourcemap-Story am echten Browser (CDP) verifiziert —
-  Breakpoints in `@code`, State-Inspektion, Steps auf `.tsazor`-Zeilen.
+- **Blazor's own tests.** `apps/blazor-parity` runs Blazor's E2E tests with their test pages, ported: forms,
+  Virtualize, QuickGrid and InputFile. The conformance suites pin the compiler's and the runtime's semantics against
+  Blazor's (rendering, lifecycle, diff).
+- **Four ported apps**, each against its unchanged backend: Blazing Pizza (the Blazor workshop), FluentCMS (Blazor
+  Server: its admin and its public site, on `@tsazor/fluent`), BlazorHero (Blazor WebAssembly on MudBlazor: every
+  page, eleven languages, right to left, a SignalR chat) and fullstackhero's React admin (Tailwind and shadcn). Every
+  gap a port found became a fix with a test; the port reports list them.
+- **The gates:** every package's tests; the browser gates in Edge, Firefox and WebKit — the tutorial, the demo under
+  a strict CSP, the gallery, both skins, axe in light and dark, the ports; a smoke test of the packed tarballs and a
+  release rehearsal through a registry (`pnpm gates`, `pnpm ci:local`).
 
-**Gates:** Package-Tests 180 ✓ · Pizza-E2E 19/19 ✓ · Demo-Regression 31/31 ✓ ·
-Scoped-Demo 10/10 ✓ · Code-behind-Demo 5/5 ✓ · Debugging-Verifikation 14/14 ✓ ·
-Ticker-E2E 15/15 ✓ (inkl. Live-Updates ohne Polling, Scoped-CSS, Subscription-Survival).
+What comes next: [after 1.0](docs/after-1.0.md).
 
-Damit bewusst vertagt (nicht ohne Rücksprache starten): Web Components
-(`defineCustomElement`), named child slots, `@bind:format`, typecheck-CLI,
-LSP-Rename, published npm layout.
+## License
+
+MIT, see [LICENSE](LICENSE). Code and assets that come from other projects, and their licenses, are listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

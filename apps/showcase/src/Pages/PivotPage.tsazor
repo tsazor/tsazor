@@ -1,0 +1,15 @@
+@page "/pivot"
+@** The PivotDataGrid's example (design-extended-library.md §2.5, cluster 6). *@
+@import { Typography } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import PivotSalesExample from "../examples/pivot/pivot-sales.tsazor"
+
+<Typography Variant="h1">Pivot</Typography>
+<Typography>
+    The pivot over the grid's machinery: the rows by a field's values, the columns by another's,
+    the measure's aggregate per cell (sum, avg, count, min, max, your own), and the totals —
+    the rows' as a column, the columns' as the footer, the grand total on the totals' column.
+</Typography>
+
+<Example Title="Sales by region and quarter" Description="Sort a cell column by its header; the totals stand in the footer."
+    Id="pivot/pivot-sales"><PivotSalesExample /></Example>

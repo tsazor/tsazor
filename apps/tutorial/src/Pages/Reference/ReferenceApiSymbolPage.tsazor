@@ -1,0 +1,71 @@
+@page "/reference/api/{packageSlug}/{name}"
+@import reference from "virtual:tutorial-reference"
+@import type { ApiMember, ApiPackage, ApiSymbol } from "../../reference-types"
+
+<PageTitle>@(symbol?.name ?? "Not found") · Tsazor reference</PageTitle>
+<ReferenceShell Section="api" PackageSlug="@packageSlug" SymbolName="@name">
+    @if (pkg && symbol) {
+        <p class="crumbs"><a href="reference">Reference</a> / <a href="@("reference/api/" + pkg.slug)">@pkg.name</a></p>
+        <h1>
+            <code>@symbol.name</code>
+            <span class="tag">@symbol.kind</span>
+            @if (symbol.deprecated) {
+                <span class="tag tag--deprecated">deprecated</span>
+            }
+        </h1>
+        <pre class="signature"><code>@(new MarkupString(symbol.signature))</code></pre>
+        @if (symbol.deprecated) {
+            <div class="deprecated"><strong>Deprecated.</strong> @(new MarkupString(symbol.deprecated))</div>
+        }
+        @if (symbol.component) {
+            <p class="component-note">A component: its parameters are on the <a href="@symbol.component">component page</a>.</p>
+        }
+        <Prose Html="@symbol.doc" />
+        <LearnIn Lessons="@(symbol.learnIn ?? [])" />
+
+        @foreach (const group of groups) {
+            <h2 @key="group.heading">@group.heading</h2>
+            @foreach (const member of group.members) {
+                <section class="member" @key="member.kind + member.name" aria-label="@member.name">
+                    <pre class="signature signature--member"><code>@(new MarkupString(member.signature))</code></pre>
+                    @if (member.deprecated) {
+                        <div class="deprecated"><strong>Deprecated.</strong> @(new MarkupString(member.deprecated))</div>
+                    }
+                    @if (member.doc) {
+                        <Prose Html="@member.doc" />
+                    }
+                </section>
+            }
+        }
+    } else {
+        <h1>Not in the reference</h1>
+        <p>There is no export “@name” in “@packageSlug”. The <a href="reference">overview</a> lists the packages.</p>
+    }
+</ReferenceShell>
+
+@code {
+    /** Route parameter: runtime | testing | dotnet | vite-plugin. */
+    @Parameter() packageSlug = "";
+    /** Route parameter: the export name (`NavigationManager`). */
+    @Parameter() name = "";
+
+    private get pkg(): ApiPackage | undefined {
+        return reference.api.find((candidate) => candidate.slug === this.packageSlug);
+    }
+
+    private get symbol(): ApiSymbol | undefined {
+        return this.pkg?.symbols.find((candidate) => candidate.name === this.name);
+    }
+
+    /** Members by role: constructor, properties, methods; static ones last in each. */
+    private get groups(): Array<{ heading: string; members: ApiMember[] }> {
+        const members = this.symbol?.members ?? [];
+        const pick = (kinds: ApiMember["kind"][]): ApiMember[] =>
+            members.filter((member) => kinds.includes(member.kind)).sort((a, b) => Number(a.static ?? false) - Number(b.static ?? false));
+        return [
+            { heading: "Constructor", members: pick(["constructor", "call"]) },
+            { heading: "Properties", members: pick(["property", "accessor", "index"]) },
+            { heading: "Methods", members: pick(["method"]) },
+        ].filter((group) => group.members.length > 0);
+    }
+}

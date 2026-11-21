@@ -1,67 +1,123 @@
-# Sleipnir Ticker — Live-Bitcoin-Viewer
+# Sleipnir Ticker — live Bitcoin viewer
 
-Erste reale App, die **Tsazor** mit **Sleipnir** verdrahtet: eine ASP.NET Core API
-(NuGet `Sleipnir.Server`) relaisiert Binance-WebSocket-Ticker-Daten als
-Command-API mit Server-Push-Events; das Tsazor-Frontend rendert sie live —
-ohne Polling, die Updates kommen per SSE-Event in die Komponenten.
+The reference integration of **Tsazor** with **Sleipnir** (NuGet `Sleipnir.Server` 1.8.1, npm
+`sleipnir-client` / `sleipnir-codegen` 1.8.0): an ASP.NET Core API relays Binance ticker data as
+a command API with server-push events; the Tsazor frontend renders it live — no polling, the
+updates arrive in the components as SSE events. A second part shows what real apps need next:
+per-entity event streams (one job's progress) and server validation errors in a form.
 
-## Starten
+## Running
 
 ```bash
-pnpm --filter sleipnir-ticker api     # API auf :5310 (TICKER_MODE siehe unten)
-pnpm --filter sleipnir-ticker dev     # App auf :5311 (SSE/REST via Vite-Proxy)
+pnpm --filter sleipnir-ticker api     # API on :5310 (TICKER_MODE see below)
+pnpm --filter sleipnir-ticker dev     # app on :5311 (SSE/REST via Vite proxy)
 ```
 
-Der Datenpfad endet nie still: der Binance-Feed `wss://stream.binance.com:9443/
-ws/btcusdt@ticker` wird vom Server per `ClientWebSocket` angebunden (Reconnect
-mit Backoff, proaktiver Reconnect vor Binance 24 h-Close). Wenn Binance nicht
-erreichbar ist, fällt `TICKER_MODE=auto` (Default) nach 10 s auf einen
-Synthetic-Feed (Random Walk) zurück — der Modus steht im `TickerFeedStatus`
-und im Verbindungs-Badge der UI.
+The data path never ends silently: the server connects to the Binance feed
+`wss://stream.binance.com:9443/ws/btcusdt@ticker` via `ClientWebSocket` (reconnect with
+backoff, proactive reconnect before Binance's 24 h close). If Binance is unreachable,
+`TICKER_MODE=auto` (the default) falls back to a synthetic feed (random walk) after 10 s — the
+mode is shown in `TickerFeedStatus` and in the UI's connection badge.
 
 ```bash
 TICKER_MODE=auto|binance|synthetic
 ```
 
-Verify (synthetic, deterministisch): `pnpm --filter sleipnir-ticker verify`
+Verify (synthetic, deterministic): `pnpm --filter sleipnir-ticker verify`
 
-## Der generierte Client (Typesicherheit aus dem Contract)
+## The contract and the generated client
 
-Der TS-Client wird aus der Laufzeit-Discovery der API generiert — keine
-handgeschriebenen Wrapper, die C#-Contracts (records in
-`api/Controllers`/`api/Models`) sind die Quelle für alle Typen:
+The C# records in `api/Controllers` / `api/Models` are the contract. The API project exports it
+to the committed **`api/contract.sleipnir.json`**, and the TS client in `src/api/` is generated
+from that file — codegen and CI never need a running API.
+
+Two drift gates keep the three in step:
+
+| Gate | Where | Fails when |
+|---|---|---|
+| Server | every `dotnet build api` (`Sleipnir.Server.Codegen`) | the C# contract differs from `contract.sleipnir.json` |
+| Client | `pnpm --filter sleipnir-ticker codegen:check` (`sleipnir-gen --selfcheck`, exit 4) | `src/api/` differs from what `contract.sleipnir.json` generates |
+
+After a contract change in C#:
 
 ```bash
-pnpm --filter sleipnir-ticker codegen   # startet ggf. die API selbst, generiert in src/api/
+pnpm --filter sleipnir-ticker codegen --contract   # SLEIPNIR_REGEN_GOLDEN=1 dotnet build api, then generate
+# equivalent by hand:
+SLEIPNIR_REGEN_GOLDEN=1 dotnet build apps/sleipnir-ticker/api   # PowerShell: $env:SLEIPNIR_REGEN_GOLDEN='1'
+pnpm --filter sleipnir-ticker codegen                            # sleipnir-gen --discovery api/contract.sleipnir.json
 ```
 
-- `src/api/` enthält das generierte Resultat (`sleipnir-gen --lang ts
-  --transport rest`) und ist **committed** — Verify braucht keine laufende API.
-- Contract-Drift prüfen: `npx sleipnir-gen … --selfcheck` (Exit 4 bei Drift).
-- Nutzt: `client.market.getTicker()` → `TypedResponse<TickerSnapshot>`
-  (narrowed `data`), Events via `client.market.tickerUpdated(handlers)` →
-  `Promise<SleipnirSubscription>`.
+Commit `contract.sleipnir.json` and `src/api/` together. `codegen --live` generates from the
+running API's discovery instead — handy while exploring, not for the committed client.
 
-## Struktur
+- Generator call: `sleipnir-gen --lang ts --discovery api/contract.sleipnir.json --out src
+  --transport rest` (REST calls + SSE events; the public surface is the same for every
+  `--transport`).
+- Usage: `client.call(client.market.getTicker())` → `TypedResponse<TickerSnapshot>` (narrowed
+  `data`); events via `client.market.tickerUpdated(handlers, { signal })` →
+  `Promise<SleipnirSubscription>` — aborting `signal` ends the subscription.
+- The client sends the contract's hash (`SLEIPNIR_CONTRACT_HASH`) with every request; the
+  server counts calls per client contract (`/api/sleipnir/observability` → `contracts`).
+- **Restore note:** `Sleipnir.Server.Codegen` 1.8.x lists a dependency (`Sleipnir.Codegen.Core`)
+  that is not on nuget.org, so a plain `PackageReference` fails with NU1101. The csproj downloads
+  the package without dependencies (`PackageDownload`) and imports its build targets — the tool is
+  self-contained. Switch back to a `PackageReference` once the dependency is published.
 
-| Teil | Inhalt |
+## Live data: one app-wide stream
+
+`src/TickerStore.ts` holds the app's one SSE subscription (`Market.TickerUpdated`) for the
+page's lifetime. Pages call `this.observe(this.Store)` in `onInitialized`: a re-render per
+change, unsubscribed on dispose.
+
+## Per-entity streams and server validation (`/jobs`)
+
+An analysis job runs over the recorded price history in ten steps.
+
+- **`Jobs.Start(request)`** returns `SleipnirResponse<AnalysisJob>`. The server validates against
+  its own state (label unique among running jobs, no more points than recorded) and answers a
+  failure with code 400, category `InvalidArgument`, and the field errors as JSON in
+  `error.details`:
+
+  ```json
+  { "code": 400, "error": { "message": "The analysis request is invalid.", "category": "InvalidArgument",
+    "details": "{\"label\":[\"The label is required.\"],\"points\":[\"Only 63 points are recorded so far.\"]}" } }
+  ```
+
+  Sleipnir has no field-error shape of its own yet; this convention (keys = the wire names of
+  the parameter's properties) is the app's. `src/Pages/Jobs.tsazor` reads it (`fieldErrorsOf` in
+  `src/jobs.mjs`) and hands it to `ServerValidationErrors` (`@tsazor/runtime`), so each message shows in
+  the field's `<ValidationMessage>`; a new submit clears them, an edited field drops its own.
+- **`Jobs.Progress(jobId)`** is an event per entity. Each job owns a `ReplaySubject`: every
+  subscriber gets the job's history first, then the live steps, then the completion — a page
+  opened late, mid-run or after the end shows the whole job. Events carry `seq` (1, 2, 3, …);
+  `src/job-progress.ts` wraps the call as a source, and `sequenced` drops a `seq` already seen.
+  The page (`/jobs/{jobId}`) observes it with `{ next, complete, error }`: a render per event,
+  `complete` marks the job done; a new job id or disposing the page ends the subscription.
+
+## Structure
+
+| Part | Contents |
 |---|---|
-| `api/` | ASP.NET Core (net9.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated über `IObservable<TickerSnapshot>`), `TickerFeed`-Singleton, `BinanceTickerSource`/`SyntheticTickerSource` hinter `ITickerSource` |
-| `src/TickerStore.ts` | App-weiter Store: 1 SSE-Subscription für die App-Laufzeit, Pages subscriben in `onInitialized` und unsubscriben in `dispose()` |
-| `src/Pages/` | `/` Live-Dashboard (Preis, 24h-Stats, Sparkline, Event-Log) · `/history` Ring-Buffer-Tabelle |
-| `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — Scoped-CSS-Isolation) · `EventLog.tsazor` |
-| `scripts/` | `verify.mjs` (E2E, 15 Checks, self-starting) · `codegen.mjs` |
-| `test/` | `node --test` über die Pure-Helper (`src/formatters.mjs`) |
+| `api/` | ASP.NET Core (net10.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated via `IObservable<TickerSnapshot>`), `JobsController` (Start/List + [SleipnirEvent] Progress per job), `TickerFeed` + `JobRunner` singletons, `BinanceTickerSource`/`SyntheticTickerSource` behind `ITickerSource`, the committed `contract.sleipnir.json` |
+| `src/api/` | Generated client (do not edit; `pnpm codegen`) |
+| `src/TickerStore.ts` | App-wide store: 1 SSE subscription for the app's lifetime |
+| `src/job-progress.ts` | One job's progress stream as an `observe` source (sequenced, completes) |
+| `src/Pages/` | `/` live dashboard (price, 24h stats, sparkline, event log) · `/history` ring-buffer table · `/jobs` form + job list · `/jobs/{jobId}` progress |
+| `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — scoped CSS isolation) · `EventLog.tsazor` |
+| `scripts/` | `verify.mjs` (E2E, self-starting) · `codegen.mjs` (from the contract file; `--check`, `--contract`, `--live`) |
+| `test/` | `node --test` over the pure helpers (`src/formatters.mjs`, `src/jobs.mjs`) |
 
 ## Ports
 
-API :5310 · Vite :5311 (`strictPort`, Proxy: `/api/sleipnir`, `/sleipnirws`).
-Blazing Pizza nutzt :5300/:5301, die Demo :5199.
+API :5310 · Vite :5311 (`strictPort`, proxy: `/api/sleipnir`, `/sleipnirws`).
+Blazing Pizza uses :5300/:5301, the demo :5199.
 
-## Bekannte Grenzen (v1)
+## Known limitations
 
-- **Kein Resume über Reload**: die generierte Client-Oberfläche exponiert kein
-  `router.resume(subscriptionId, lastEventId)` → ein Reload subskribiert neu.
-  Serverseitig bleibt `Resumable = true` (gratis in-process Replay).
-- Sidecar-`TICKER_MODE=auto` hält Binance nur mit 10-s-Budget — danach ist der
-  Feed für diese API-Laufzeit synthetic (Re-Start für erneuten Versuch).
+- **No resume across reload** for the ticker: a reload subscribes again. `sleipnir-client` can
+  resume (`router.resume(subscriptionId, lastEventId, handlers)`), but the generated client
+  does not expose the router; `Resumable = true` stays on the server (in-process replay). The
+  job stream needs no resume: the server replays the whole job to every subscriber.
+- Jobs live in memory (the last 20); a restarted API forgets them.
+- `TICKER_MODE=auto` only tries Binance within a 10 s budget — after that the feed is
+  synthetic for the rest of this API process's lifetime (restart to try again).

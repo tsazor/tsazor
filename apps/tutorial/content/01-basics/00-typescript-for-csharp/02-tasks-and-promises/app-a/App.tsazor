@@ -1,0 +1,16 @@
+@import { loadDashboard, type Dashboard } from "./shop"
+
+@if (dashboard === undefined) {
+    <p>Loading…</p>
+} else {
+    <h1>Hello, @dashboard.user.name</h1>
+    <p class="orders">Orders: @(dashboard.orders?.length ?? "not loaded")</p>
+}
+
+@code {
+    dashboard?: Dashboard;
+
+    override async onInitialized() {
+        this.dashboard = await loadDashboard();
+    }
+}

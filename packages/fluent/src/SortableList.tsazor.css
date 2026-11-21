@@ -1,0 +1,90 @@
+/* SortableList — Fluent 2: items as rows (or chips side by side) on a subtle surface, a grab cursor, a brand ring
+   on an item picked up with the keys, the dragged one dimmed, a brand line where it will land. */
+
+.fui-sortable-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+}
+
+/* An empty list stays a place to drop on. */
+.fui-sortable-list:not(:has(> li)) {
+  min-block-size: calc(var(--fui-height) + var(--fui-spacing-s));
+  border: 1px dashed var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-sortable-list--horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.fui-sortable-list__item {
+  padding: var(--fui-spacing-s) var(--fui-spacing-m);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.fui-sortable-list__item:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-sortable-list__item:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-sortable-list__item--fixed {
+  cursor: default;
+  color: var(--fui-foreground-2);
+}
+
+.fui-sortable-list__item[data-sortable-grabbed] {
+  border-color: var(--fui-brand-background);
+  box-shadow: 0 0 0 1px var(--fui-brand-background), var(--fui-shadow-4);
+}
+
+.fui-sortable-list__item[data-sortable-dragging] {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+/* A list with handles: only the handle grabs; the item takes touch scrolling. */
+.fui-sortable-list:has(.sortable-grab) .fui-sortable-list__item {
+  cursor: default;
+  touch-action: auto;
+}
+
+.fui-sortable-list .sortable-grab {
+  cursor: grab;
+  touch-action: none;
+}
+
+.fui-sortable-list__indicator {
+  z-index: var(--fui-z-dialog);
+  border-radius: 1px;
+  background: var(--fui-brand-background);
+  pointer-events: none;
+}
+
+.fui-sortable-list__hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

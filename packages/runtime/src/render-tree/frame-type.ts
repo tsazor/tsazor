@@ -2,7 +2,7 @@
  * Frame discriminators for the flat render tree, mirroring Blazor's
  * RenderTreeFrame.FrameType.
  */
-export const enum FrameType {
+export enum FrameType {
   /** Element frame; children occupy the frames until its subtree ends. */
   Element = 1,
   /** Text content (string or number rendered as text). */
@@ -19,10 +19,18 @@ export const enum FrameType {
   Markup = 7,
   /** Named event handler attribute payload. */
   EventHandler = 8,
+  /** Captures a reference to the child component instance (Blazor's ComponentReferenceCapture). */
+  ComponentReferenceCapture = 9,
+  /**
+   * An `@attach` on the enclosing element (F2): `attributeName` is the
+   * directive (`@attach`, `@attach:name`), `attributeValue` the attachment.
+   * Sits in the element's attribute run; written by `addAttachment`.
+   */
+  Attachment = 10,
 }
 
 /** Flags carried on attribute frames for event handler directives. */
-export const enum EventHandlerFlags {
+export enum EventHandlerFlags {
   None = 0,
   PreventDefault = 1 << 0,
   StopPropagation = 1 << 1,

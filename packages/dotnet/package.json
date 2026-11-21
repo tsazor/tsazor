@@ -1,0 +1,53 @@
+{
+  "name": "@tsazor/dotnet",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/dotnet"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/dotnet#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Tsazor's .NET backend bridge: OpenAPI ⇒ typed TS client with correct nullability, ProblemDetails/envelope as HttpResult, schema ⇒ DataAnnotations validators, JWT/cookie auth.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "tsazor-dotnet": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./generator": {
+      "types": "./dist/generator.d.ts",
+      "default": "./dist/generator.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "!dist/.tsbuildinfo"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tsazor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.9.2"
+  }
+}

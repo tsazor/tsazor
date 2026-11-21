@@ -1,0 +1,19 @@
+@* Client/App.razor: a page that needs a user shows the login in its place (NotAuthorized), the URL stays. *@
+@import MainLayout from "./Shared/MainLayout.tsazor"
+@import NotFoundLayout from "./Shared/NotFoundLayout.tsazor"
+@import Login from "./Pages/Authentication/Login.tsazor"
+
+<Router>
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@MainLayout">
+            <NotAuthorized>
+                <Login />
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@NotFoundLayout">
+            <p>Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

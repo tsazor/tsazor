@@ -1,14 +1,27 @@
-<hr class="@dividerClass" role="separator" aria-orientation="@orientation" />
+@** A Fluent UI 2 separator line (hr, role="separator" with aria-orientation); orientation
+    horizontal | vertical, appearance default | subtle | stronger. *@
+@import { withAttributes } from "./attributes"
+
+<hr role="separator" @attributes="@this.dividerAttributes" />
 
 @code {
-    /** horizontal (default) | vertical. */
-    @Parameter() orientation: string = "horizontal";
-    /** default | subtle | stronger. */
-    @Parameter() appearance: string = "default";
+    /** Axis: horizontal (default) | vertical. */
+    @Parameter() orientation: "horizontal" | "vertical" = "horizontal";
+    /** Stroke strength: default | subtle | stronger. */
+    @Parameter() appearance: "default" | "subtle" | "stronger" = "default";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get dividerClass(): string {
         let cls = this.orientation === "vertical" ? "fui-divider fui-divider--vertical" : "fui-divider";
         if (this.appearance !== "default") cls += ` fui-divider--${this.appearance}`;
         return cls;
+    }
+
+    private get dividerAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.dividerClass,
+            "aria-orientation": this.orientation,
+        }, this.additionalAttributes);
     }
 }

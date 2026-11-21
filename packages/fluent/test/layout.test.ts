@@ -9,17 +9,21 @@ import { Stack, Grid, Spacer, Typography } from "../dist/index.js";
 
 /** Waits out the microtask render queue plus the settle timer. */
 async function settle(result: RenderResult): Promise<void> {
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 }
 
-/** Renders a component class with string params into a fresh container. */
-async function renderOne(component: unknown, attrs: (b: RenderTreeBuilder) => void): Promise<RenderResult> {
+/**
+ * Renders a component class with string params into a fresh container, with
+ * child content unless the component takes none (an undeclared parameter is
+ * an error, as in Blazor).
+ */
+async function renderOne(component: unknown, attrs: (b: RenderTreeBuilder) => void, withChildContent = true): Promise<RenderResult> {
   const result = await renderTree((b) => {
     b.openComponent(0, component as never);
     attrs(b);
-    b.addAttribute(1, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Child"));
+    if (withChildContent) b.addAttribute(1, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Child"));
     b.closeComponent();
   });
   await settle(result);
@@ -76,7 +80,7 @@ describe("Grid", () => {
 
 describe("Spacer", () => {
   it("fixes the height from the token spacing scale by default", async () => {
-    const result = await renderOne(Spacer, (b) => b.addAttribute(1, "size", "l"));
+    const result = await renderOne(Spacer, (b) => b.addAttribute(1, "size", "l"), false);
     expect(result.container.querySelector(".fui-spacer")!.getAttribute("style")).toContain(
       "height: var(--fui-spacing-l)",
     );
@@ -87,7 +91,7 @@ describe("Spacer", () => {
     const result = await renderOne(Spacer, (b) => {
       b.addAttribute(1, "direction", "horizontal");
       b.addAttribute(2, "size", "xl");
-    });
+    }, false);
     expect(result.container.querySelector(".fui-spacer")!.getAttribute("style")).toContain(
       "width: var(--fui-spacing-xl)",
     );
@@ -101,6 +105,17 @@ describe("Typography", () => {
     const h3 = result.container.querySelector("h3")!;
     expect(h3.className).toContain("fui-typography fui-typography--h3");
     expect(h3.textContent).toContain("Child");
+    result.dispose();
+  });
+
+  it("renders another element with the variant's style through `as` (a page's h1 in an h5's size)", async () => {
+    const result = await renderOne(Typography, (b) => {
+      b.addAttribute(1, "variant", "h5");
+      b.addAttribute(2, "as", "h1");
+    });
+    const h1 = result.container.querySelector("h1")!;
+    expect(h1.className).toContain("fui-typography--h5");
+    expect(result.container.querySelector("h5")).toBeNull();
     result.dispose();
   });
 

@@ -1,0 +1,13 @@
+@* The view state loads before each navigation renders (FluentCMS loads it per request, before the page renders). *@
+@inject ViewState ViewState
+
+<Router OnNavigateAsync="() => this.ViewState.reload()">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <p role="alert">Sorry, there's nothing at this address.</p>
+    </NotFound>
+</Router>

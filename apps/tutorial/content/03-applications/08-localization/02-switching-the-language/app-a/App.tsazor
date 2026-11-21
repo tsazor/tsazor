@@ -1,0 +1,14 @@
+@import { StringLocalizer } from "@tsazor/runtime"
+@inject StringLocalizer L
+<nav class="languages">
+    <button @onclick="@(() => switchTo("en-US"))">English</button>
+    <button @onclick="@(() => switchTo("de-DE"))">Deutsch</button>
+</nav>
+<h1>@L.get("Title")</h1>
+<p class="greeting">@L.get("Greeting", { name: "Marta" })</p>
+
+@code {
+    switchTo(name: string) {
+        // Switch the culture here.
+    }
+}

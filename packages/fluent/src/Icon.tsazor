@@ -1,43 +1,51 @@
-<svg class="fui-icon" width="@this.size" height="@this.size" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-     aria-hidden="@this.hiddenValue" aria-label="@this.ariaLabel" role="@this.role" focusable="false">
-    <path d="@this.path" />
-</svg>
+@** An inline SVG icon, drawn in currentColor: a `value` (an `IconValue`: a generated set's, or an app's own made with
+    `icon()` from @tsazor/ui). Decorative (aria-hidden) by default; with a
+    title (or ariaLabel) it gets role="img". Without a value it renders nothing. *@
+@import { MarkupString } from "@tsazor/runtime"
+@import { type IconValue } from "@tsazor/ui"
+@import { iconSize } from "@tsazor/ui/kit"
+@import { withAttributes } from "./attributes"
+
+@if (this.value !== undefined) {
+    <svg @attributes="@this.iconAttributes(this.value)">@(new MarkupString(this.value.content))</svg>
+}
 
 @code {
-    /** Icon name from the built-in set: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove. */
-    @Parameter() name?: string;
-    /** Pixel size (width/height); defaults to the 16px body icon size. */
-    @Parameter() size: number = 16;
+    /** The icon (Fluent UI Blazor's `Value`): a generated set's value, or an app's own from `icon()`. */
+    @Parameter() value?: IconValue;
+    /** Pixel size (width/height). By default the icon's own size, as in Fluent UI Blazor (`Size20` is 20px). */
+    @Parameter() size?: number;
+    /** The icon's color (any CSS color); by default the text color around it. */
+    @Parameter() color?: string;
+    /** The accessible name (Fluent UI Blazor's `Title`); without it (or ariaLabel) the icon is decorative. */
+    @Parameter() title?: string;
     /** Accessible label — hides the icon from AT unless a label is given. */
     @Parameter() ariaLabel?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
-    private get path(): string {
-        return Icon.paths[this.name ?? ""] ?? Icon.paths["check"] as string;
+    private get pixels(): number {
+        return this.size ?? (this.value === undefined ? 16 : iconSize(this.value));
     }
 
-    /** aria-hidden takes string semantics (booleans render as empty attributes). */
-    private get hiddenValue(): string {
-        return this.ariaLabel === undefined ? "true" : "false";
+    private get label(): string | undefined {
+        return this.ariaLabel ?? this.title;
     }
 
-    private get role(): string | null {
-        return this.ariaLabel === undefined ? null : "img";
+    private iconAttributes(icon: IconValue): Record<string, unknown> {
+        const label = this.label;
+        return withAttributes({
+            class: "fui-icon",
+            width: this.pixels,
+            height: this.pixels,
+            viewBox: icon.viewBox,
+            fill: "currentColor",
+            style: this.color === undefined ? null : `color: ${this.color}`,
+            // aria-hidden takes string semantics (booleans render as empty attributes).
+            "aria-hidden": label === undefined ? "true" : "false",
+            "aria-label": label,
+            role: label === undefined ? null : "img",
+            focusable: "false",
+        }, this.additionalAttributes);
     }
-
-    /** Inline-SVG technique (pre-clarified local decision): single-path strokes, no sprite, no icon package. */
-
-    private static paths: Record<string, string> = {
-        "chevron-left": "M12 3L5 10l7 7",
-        "chevron-right": "M8 3l7 7-7 7",
-        "close": "M3 3l14 14M17 3L3 17",
-        "check": "M3 11l5 5L17 6",
-        "arrow-left": "M17 10H3m0 0l6-6m-6 6l6 6",
-        "arrow-right": "M3 10h14m0 0l-6-6m6 6l-6 6",
-        "arrow-up": "M10 17V3m0 0L4 9m6-6l6 6",
-        "arrow-down": "M10 3v14m0 0l6-6m-6 6l-6-6",
-        "search": "M9 3a6 6 0 100 12A6 6 0 009 3zm9 15l-4.3-4.3",
-        "add": "M10 3v14M3 10h14",
-        "remove": "M3 10h14",
-    };
 }

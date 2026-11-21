@@ -44,12 +44,12 @@
 
     private placeOrder = async (): Promise<void> => {
         this.isSubmitting = true;
-        try {
-            const newOrderId = await this.OrdersClient.placeOrder(this.order);
+        const result = await this.OrdersClient.placeOrder(this.order);
+        if (result.ok) {
             this.OrderState.resetOrder();
-            this.NavigationManager.navigateTo(`myorders/${newOrderId}`);
-        } catch (err) {
-            console.error("Placing the order failed:", err);
+            this.NavigationManager.navigateTo(`myorders/${result.body}`);
+        } else {
+            console.error("Placing the order failed:", problemMessage(result));
             this.isSubmitting = false;
         }
     };

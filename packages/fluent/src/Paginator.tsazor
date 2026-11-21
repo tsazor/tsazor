@@ -1,0 +1,81 @@
+@** Pages a DataGrid through a shared PaginationState (QuickGrid's Paginator) in Fluent UI 2 style:
+    the row count, "Page 2 of 7", and buttons for the first, previous, next and last page. Pass the
+    same state to the grid: `<DataGrid Pagination="pagination">` … `<Paginator State="pagination" />`. With
+    `pageSizeOptions` it offers the rows per page (MudBlazor's TablePager); a choice goes back to the first page. *@
+@import { PaginationState } from "@tsazor/ui"
+@import { ChevronDoubleLeft20Regular, ChevronDoubleRight20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+
+@if (state.totalItemCount !== undefined) {
+    <nav class="fui-paginator" aria-label="@(ariaLabel ?? t("paginator.label"))">
+        @if (pageSizeOptions !== undefined && pageSizeOptions.length > 0) {
+            <label class="fui-paginator__size">
+                <span>@(pageSizeLabel ?? t("paginator.pageSize"))</span>
+                <select class="fui-input fui-select fui-paginator__size-select" value="@String(state.itemsPerPage)" @onchange="changePageSize">
+                    @foreach (const option of pageSizeOptions) {
+                        <option value="@String(option)">@option</option>
+                    }
+                </select>
+            </label>
+        }
+        <span class="fui-paginator__count">
+            @if (summaryContent) { @summaryContent } else { <text>@t.plural("paginator.items", state.totalItemCount)</text> }
+        </span>
+        <div class="fui-pagination">
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")" aria-disabled="@(canGoBack ? null : "true")" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")" aria-disabled="@(canGoBack ? null : "true")" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
+            @if (this.showPageNumber) {
+                <span class="fui-paginator__page" aria-current="page" aria-live="polite">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span>
+            }
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")" aria-disabled="@(canGoForward ? null : "true")" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")" aria-disabled="@(canGoForward ? null : "true")" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
+        </div>
+    </nav>
+}
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The paging state, shared with the grid. */
+    @Parameter() state!: PaginationState;
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Replaces the row count ("120 items"). */
+    @Parameter() summaryContent?: RenderFragment;
+    /** The rows per page to choose from (10, 25, 50, 100); without them the page size stays the state's. */
+    @Parameter() pageSizeOptions?: number[];
+    /** The page size choice's label (MudBlazor's RowsPerPageString). */
+    @Parameter() pageSizeLabel?: string;
+    /** The current page and the count between the arrows ("Page 2 of 7"; MudDataGridPager's ShowPageNumber). Default true. */
+    @Parameter() showPageNumber: boolean = true;
+
+    private observed?: PaginationState;
+    private stopObserving?: () => void;
+
+    protected override onParametersSet(): void {
+        if (this.state === this.observed) return;
+        this.stopObserving?.();
+        this.observed = this.state;
+        this.stopObserving = this.observe(this.state);
+    }
+
+    private get lastPage(): number {
+        return this.state.lastPageIndex ?? 0;
+    }
+
+    private get canGoBack(): boolean {
+        return this.state.currentPageIndex > 0;
+    }
+
+    private get canGoForward(): boolean {
+        return this.state.currentPageIndex < this.lastPage;
+    }
+
+    private go(pageIndex: number): Promise<void> {
+        return this.state.setCurrentPageIndexAsync(pageIndex);
+    }
+
+    private changePageSize(e: Event): Promise<void> {
+        return this.state.setItemsPerPageAsync(Number((e.target as HTMLSelectElement).value));
+    }
+}

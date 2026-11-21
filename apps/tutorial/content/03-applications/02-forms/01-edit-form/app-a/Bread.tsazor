@@ -1,0 +1,28 @@
+@page "/bread"
+<h2>Pre-order bread</h2>
+<p>Reserve today's loaf — we hold it until noon.</p>
+<div class="order">
+    <label>Name<input @bind="order.name" /></label>
+    <label>How many<input type="number" @bind="order.quantity" min="1" max="10" /></label>
+    <label>Bread
+        <select @bind="order.bread">
+            <option value="sourdough">Sourdough</option>
+            <option value="rye">Rye</option>
+            <option value="ciabatta">Ciabatta</option>
+        </select>
+    </label>
+    <label class="pickup"><input type="checkbox" @bind="order.pickup" /> Pick up at eight</label>
+    <button @onclick="handleOrder">Reserve</button>
+    @if (submitted) {
+        <p class="success">Reserved: @order.quantity × @order.bread for @order.name.</p>
+    }
+</div>
+
+@code {
+    order = { name: "", quantity: 1, bread: "sourdough", pickup: true };
+    submitted = false;
+
+    handleOrder() {
+        this.submitted = true;
+    }
+}

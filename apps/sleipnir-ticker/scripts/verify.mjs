@@ -9,12 +9,15 @@
  *   snapshot renders → ≥2 live updates arrive via SSE without interaction
  *   → sparkline populated (scoped CSS isolation) → event log populated
  *   → /history table → navigate back: subscription survives the route change
+ *   → /jobs: server field errors under their fields → a valid job streams its
+ *     progress to completion → late and mid-run subscribers get the history
  *   → zero console/page errors throughout
  *
  * Run: node scripts/verify.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const APP = "http://localhost:5311";
 const API = "http://localhost:5310";
@@ -32,11 +35,11 @@ async function reachable(url) {
 
 async function ensureServices() {
     if (!(await reachable(`${API}/api/sleipnir/discovery`))) {
-        spawned.push(spawn("dotnet", ["run", "--project", "api"], { stdio: "ignore", shell: true, env: { ...process.env, TICKER_MODE: "synthetic" } }));
+        spawned.push(spawn("dotnet run --project api", { stdio: "ignore", shell: true, env: { ...process.env, TICKER_MODE: "synthetic" } }));
         console.log("started API on :5310 (synthetic)");
     }
     if (!(await reachable(APP))) {
-        spawned.push(spawn("npx", ["vite", "--port", "5311", "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
+        spawned.push(spawn("npx vite --port 5311 --strictPort", { shell: true, stdio: "ignore", env: { ...process.env } }));
         console.log("started vite dev server on :5311");
     }
     const deadline = Date.now() + 30_000;
@@ -49,7 +52,7 @@ async function ensureServices() {
 function stopSpawned() {
     for (const child of spawned) {
         try {
-            spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", shell: true });
+            spawnSync(`taskkill /pid ${child.pid} /T /F`, { stdio: "ignore", shell: true });
         } catch {
             /* best effort */
         }
@@ -81,7 +84,7 @@ async function main() {
     );
     check(envelope.data?.mode === "synthetic", "verify runs against the synthetic feed");
 
-    const browser = await chromium.launch({ channel: "msedge", headless: true });
+    const browser = await launchBrowser(playwright);
     const page = await browser.newPage();
     const errors = [];
     page.on("console", (m) => {
@@ -94,6 +97,9 @@ async function main() {
         /* --- Initial render --- */
         await page.goto(`${APP}/`, { waitUntil: "load" });
         await page.waitForSelector(".ticker-price .price", { timeout: 15_000 });
+        // The first render shows the "—" placeholder (loading state) until the
+        // snapshot call resolves — wait for a real price before sampling.
+        await page.waitForFunction(() => /\d/.test(document.querySelector(".ticker-price .price")?.textContent ?? ""), null, { timeout: 15_000 });
         const readPrice = async () => {
             const t = (await text(".ticker-price .price")).replace(/^\$/, "").replace(/,/g, "");
             return Number(t);
@@ -122,6 +128,13 @@ async function main() {
         /* --- Sparkline (populated, scoped) + event log --- */
         const polyPoints = await page.locator("svg.sparkline-svg polyline").first().getAttribute("points");
         check(polyPoints !== null && polyPoints.split(" ").length > 40, "sparkline polyline carries a populated point set");
+        // Elements created outside the SVG namespace are HTMLUnknownElement and
+        // paint nothing — assert the browser really draws the line.
+        const drawn = await page.locator("svg.sparkline-svg polyline").first().evaluate((el) => ({
+            ns: el.namespaceURI,
+            width: typeof el.getBBox === "function" ? el.getBBox().width : 0,
+        }));
+        check(drawn.ns === "http://www.w3.org/2000/svg" && drawn.width > 0, `sparkline is drawn as SVG (ns=${drawn.ns}, bbox width=${drawn.width})`);
         check((await page.locator(".list-group-item").count()) >= 2, "event log shows received ticks");
         const scopeAttr = await page.evaluate(() => {
             const box = document.querySelector(".sparkline-box");
@@ -141,6 +154,65 @@ async function main() {
         check(Number.isFinite(afterReturn) && afterReturn > 1, "returning from /history re-renders the panel");
         const survivedWindow = await collectDistinct(2, 20);
         check(survivedWindow >= 2, "SSE subscription survives the route change (a new tick arrives unprompted)");
+
+        /* --- /jobs: server validation errors land under their fields --- */
+        await page.locator(".nav a[href='/jobs']").click();
+        await page.waitForSelector(".job-form", { timeout: 10_000 });
+        await page.fill("#job-label", "");
+        await page.fill("#job-points", "100000");
+        await page.locator(".job-form button[type=submit]").click();
+        await page.waitForSelector(".field-points .validation-message", { timeout: 10_000 });
+        const labelError = await text(".field-label .validation-message");
+        const pointsError = await text(".field-points .validation-message");
+        check(labelError === "The label is required.", `server field error under Label (${labelError})`);
+        check(/^Only \d+ points are recorded so far\.$/.test(pointsError), `server field error under Points (${pointsError})`);
+        check(page.url().endsWith("/jobs"), "an invalid job does not navigate");
+        // Editing a field drops that field's server message, and only that one.
+        await page.fill("#job-points", "20");
+        await page.locator("#job-points").blur();
+        await page.waitForTimeout(300);
+        check(
+            (await page.locator(".field-points .validation-message").count()) === 0
+                && (await page.locator(".field-label .validation-message").count()) === 1,
+            "editing a field clears its server error, the other stays",
+        );
+
+        /* --- a valid job: its page streams progress to completion --- */
+        await page.fill("#job-label", `verify ${Date.now()}`);
+        await page.locator("#job-label").blur();
+        await page.locator(".job-form button[type=submit]").click();
+        await page.waitForURL(/\/jobs\/\d+$/, { timeout: 10_000 });
+        const jobUrl = page.url();
+        const completed = () => document.querySelector(".job-state")?.textContent?.trim() === "completed";
+        await page.waitForFunction(completed, null, { timeout: 15_000 });
+        const events = await page.locator(".job-page .list-group-item").count();
+        check(events === 11, `the job page shows every progress event (${events}/11), then the stream completes`);
+        check((await page.locator(".job-result dd").count()) === 4, "the last event carries the result");
+        check((await page.locator(".job-page .progress").first().getAttribute("aria-valuenow")) === "100", "progress bar at 100");
+
+        /* --- a late subscriber: opened after the end, it still gets history + completion --- */
+        await page.goto(jobUrl, { waitUntil: "load" });
+        await page.waitForFunction(completed, null, { timeout: 10_000 });
+        const replayed = await page.locator(".job-page .seq").allTextContents();
+        check(replayed.length === 11 && replayed[0] === "#1", `a late subscriber gets the job's history from seq 1 (${replayed.length} events)`);
+
+        /* --- a subscriber that joins mid-run: history first, then live, no duplicates --- */
+        const started = await fetch(`${API}/api/sleipnir/json`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                controller: "Jobs",
+                method: "Start",
+                id: "verify-job",
+                params: [{ parameterName: "request", num: -1, data: { label: `mid ${Date.now()}`, points: 20 } }],
+            }),
+        }).then((r) => r.json());
+        check(typeof started.data?.id === "number", "Jobs.Start answers with the new job");
+        await page.waitForTimeout(1000);
+        await page.goto(`${APP}/jobs/${started.data?.id}`, { waitUntil: "load" });
+        await page.waitForFunction(completed, null, { timeout: 15_000 });
+        const seqs = (await page.locator(".job-page .seq").allTextContents()).map((s) => Number(s.replace("#", "")));
+        check(seqs.length === 11 && seqs.every((s, i) => s === i + 1), `a mid-run subscriber sees seq 1…11 once each (${seqs.join(",")})`);
     } finally {
         if (errors.length > 0) {
             console.log("console/page errors:");

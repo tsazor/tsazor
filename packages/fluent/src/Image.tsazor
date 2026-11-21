@@ -1,0 +1,62 @@
+@** A Fluent UI 2 image (Fluent UI Blazor's FluentImage, MudBlazor's MudImage): `source` with its `alternateText` —
+    what the image says, or "" for one that only decorates. `fit` (none, contain, cover, fill, scale-down, center)
+    and `position` place it in its `width` and `height`; `shape` square, rounded or circular; `bordered`, `shadow`;
+    `block` puts it on a line of its own; `fluid` scales it down with its container (MudBlazor's `Fluid`). It loads
+    when it nears the view (`loading` lazy, the default). *@
+@import { withAttributes } from "./attributes"
+
+<img @attributes="@this.imageAttributes" />
+
+@code {
+    /** The image's address (`Source`; MudBlazor's `Src`). */
+    @Parameter() source?: string;
+    /** What the image says ("" for one that only decorates; `AlternateText`; MudBlazor's `Alt`). */
+    @Parameter() alternateText?: string;
+    /** The width: pixels as a number, or any CSS length. */
+    @Parameter() width?: number | string;
+    /** The height: pixels as a number, or any CSS length. */
+    @Parameter() height?: number | string;
+    /** How the image fills its box (`Fit`; MudBlazor's `ObjectFit`). */
+    @Parameter() fit?: "none" | "contain" | "cover" | "fill" | "scale-down" | "center";
+    /** Where it sits in its box ("top", "50% 20%"; MudBlazor's `ObjectPosition`). */
+    @Parameter() position?: string;
+    /** square (default), rounded or circular (`Shape`). */
+    @Parameter() shape: "square" | "rounded" | "circular" = "square";
+    /** A thin border (`Bordered`). */
+    @Parameter() bordered: boolean = false;
+    /** A shadow (`Shadow`; MudBlazor's `Elevation`). */
+    @Parameter() shadow: boolean = false;
+    /** On a line of its own (`Block`). */
+    @Parameter() block: boolean = false;
+    /** Never wider than its container, its height following (MudBlazor's `Fluid`). */
+    @Parameter() fluid: boolean = false;
+    /** lazy (default): loads when it nears the view; eager: at once. */
+    @Parameter() loading: "lazy" | "eager" = "lazy";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get imageAttributes(): Record<string, unknown> {
+        let cls = "fui-image";
+        if (this.shape !== "square") cls += ` fui-image--${this.shape}`;
+        if (this.bordered) cls += " fui-image--bordered";
+        if (this.shadow) cls += " fui-image--shadow";
+        if (this.block) cls += " fui-image--block";
+        if (this.fluid) cls += " fui-image--fluid";
+        const style = [
+            this.fit && `object-fit: ${this.fit === "center" ? "none" : this.fit}`,
+            this.fit === "center" && "object-position: center",
+            this.position && `object-position: ${this.position}`,
+            typeof this.width === "string" && `width: ${this.width}`,
+            typeof this.height === "string" && `height: ${this.height}`,
+        ].filter(Boolean).join("; ");
+        return withAttributes({
+            class: cls,
+            src: this.source,
+            alt: this.alternateText,
+            width: typeof this.width === "number" ? this.width : undefined,
+            height: typeof this.height === "number" ? this.height : undefined,
+            loading: this.loading,
+            style: style === "" ? undefined : style,
+        }, this.additionalAttributes);
+    }
+}

@@ -1,0 +1,182 @@
+name: CI
+
+# Only when started by hand (Actions → CI → Run workflow): the repository is private, so every
+# minute costs, and every check runs locally first — `pnpm ci:local` (this check job in WSL) and
+# `pnpm gates` (the browser jobs). Start it before a merge to main or a release.
+on:
+  workflow_dispatch:
+
+# A newer run of the same branch makes the running one obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Build, test, API snapshot, tarball smoke
+    # Pinned: the same Ubuntu as `pnpm ci:local` (WSL), not whatever ubuntu-latest becomes.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The packages first: on a fresh checkout @tsazor/cli's dist/bin.js does
+      # not exist at install time, so pnpm links no `tsazor` bin. A second
+      # install after the package build links it for the apps' `tsazor check`.
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      # Build before test: tests import the packages' dist output.
+      - run: pnpm -r build
+      - run: pnpm -r test
+      - name: API snapshot (S1)
+        run: pnpm api:check
+      - name: The framework's texts page is current (docs/library-texts.md)
+        run: node scripts/library-texts-doc.mjs --check
+      - name: Tarball smoke
+        run: pnpm smoke
+      - name: Release rehearsal (R2) — the tarballs checked, published to a fresh Verdaccio, npm create tsazor from it
+        run: pnpm rehearsal
+
+  e2e:
+    name: E2E gates (real browser)
+    needs: check
+    # The verify scripts are written for Windows (Edge channel, taskkill
+    # cleanup) — run them where they are developed.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-dotnet@v4
+        with:
+          # The apps target net10.0 (LTS); the newest SDK (11) builds them, as on a developer's machine.
+          dotnet-version: |
+            10.0.x
+            11.0.x
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - name: Tutorial
+        run: pnpm --filter tutorial verify
+      - name: Tutorial as GitHub Pages serves it (R4)
+        run: |
+          pnpm --filter tutorial build:pages
+          pnpm --filter tutorial verify:pages
+        env:
+          TUTORIAL_BASE: /Tsazor/
+      - name: Blazing Pizza
+        run: pnpm --filter blazing-pizza verify
+      - name: Gallery
+        run: pnpm --filter gallery verify
+      - name: Demo under a strict CSP (E1)
+        run: pnpm --filter demo verify:csp
+      - name: Web Workers — @tsazor/worker
+        run: pnpm --filter demo verify:worker
+      - name: Accessibility — @tsazor/fluent (E9)
+        run: pnpm --filter gallery verify:a11y
+      - name: Accessibility — @tsazor/bootstrap (E9)
+        run: pnpm --filter demo verify:a11y
+      - name: One set of pages, two skins — the same checks on both
+        run: pnpm --filter skins verify
+      - name: Blazor parity — Blazor's own E2E tests against Tsazor's components (apps/blazor-parity)
+        run: pnpm --filter blazor-parity verify
+      - name: The starter — npm create tsazor with each library, from the packed packages (R3)
+        run: pnpm --filter starter verify
+      - name: Incremental migration — Blazor Server + Tsazor behind YARP (E6)
+        run: pnpm --filter migration-sample verify
+      - name: The FluentCMS port — upstream FluentCMS, the BFF and the app (docs/port-fluentcms.md)
+        run: pnpm --filter fluentcms verify
+      - name: The fullstackhero port — its original's Playwright suite, unchanged (docs/port-fullstackhero.md)
+        run: pnpm --filter fullstackhero verify
+      - name: Sleipnir ticker (synthetic mode)
+        run: |
+          dotnet build apps/sleipnir-ticker/api
+          pnpm --filter sleipnir-ticker codegen:check
+          pnpm --filter sleipnir-ticker verify
+
+  # The browser gates in Firefox and WebKit (Playwright's builds; WebKit is
+  # close to Safari, not Safari) — docs/browser-support.md.
+  engines:
+    needs: check
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    env:
+      TSAZOR_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - name: Install ${{ matrix.browser }}
+        run: pnpm --filter demo exec playwright-core install ${{ matrix.browser }}
+      - name: Tutorial
+        run: pnpm --filter tutorial verify
+      - name: Blazing Pizza
+        run: pnpm --filter blazing-pizza verify
+      - name: Gallery
+        run: pnpm --filter gallery verify
+      - name: Demo under a strict CSP
+        run: pnpm --filter demo verify:csp
+      - name: Web Workers
+        run: pnpm --filter demo verify:worker
+      - name: Accessibility — @tsazor/fluent
+        run: pnpm --filter gallery verify:a11y
+      - name: Accessibility — @tsazor/bootstrap
+        run: pnpm --filter demo verify:a11y
+      - name: One set of pages, two skins
+        run: pnpm --filter skins verify
+      - name: Blazor parity — Blazor's own E2E tests
+        run: pnpm --filter blazor-parity verify
+      - name: The starter
+        run: pnpm --filter starter verify
+
+  # The .NET side (docs/design-aspnetcore.md): Tsazor.AspNetCore's tests, both NuGet packages, and `dotnet new tsazor`
+  # end to end — the npm packages from a fresh Verdaccio, the apps built, published and driven in Edge.
+  dotnet:
+    name: .NET — Tsazor.AspNetCore and dotnet new tsazor
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+            11.0.x
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - name: Tsazor.AspNetCore — built for net10.0 and net11.0, its tests
+        run: dotnet test dotnet/Tsazor.slnx -c Release
+      - name: Pack — Tsazor.AspNetCore, Tsazor.Templates (the template's client from create-tsazor)
+        run: |
+          dotnet pack dotnet/src/Tsazor.AspNetCore -c Release
+          dotnet pack dotnet/templates -c Release
+      - name: dotnet new tsazor — each --ui built, the Bootstrap app published, served and run in development
+        run: node dotnet/scripts/template-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: .release/nuget/*.nupkg

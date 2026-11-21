@@ -1,0 +1,58 @@
+h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.8rem;
+}
+
+.lead {
+    color: var(--fg-muted);
+    line-height: 1.6;
+}
+
+.components {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+th {
+    border-bottom-width: 2px;
+    font-weight: 600;
+}
+
+td:first-child {
+    white-space: nowrap;
+}
+
+code,
+td ::deep code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--bg-sunken);
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+}
+
+.tag {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+    color: var(--fg-muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+    td:first-child {
+        white-space: normal;
+    }
+}

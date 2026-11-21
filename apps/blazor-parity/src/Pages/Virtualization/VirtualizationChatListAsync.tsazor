@@ -1,0 +1,67 @@
+@page "/virtualization/chat-list-async"
+@import type { ChatMessage } from "./models"
+
+<p>
+    <b>Chat List Async (newest at bottom)</b>:<br />
+    <button id="async-chat-finish-loading" @onclick="finishLoading">Finish loading</button>
+    <div id="async-chat-container" style="background-color: #f5f5f5; height: 300px; overflow-y: auto;">
+        <Virtualize ItemsProvider="getItems" ItemSize="40">
+            <ItemContent>
+                <div @key="context.id"
+                     id="async-chat-msg-@context.index"
+                     class="async-chat-message"
+                     data-index="@context.index"
+                     style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 90%); padding: 4px; box-sizing: border-box;">
+                    <span class="msg-index">@context.index</span>
+                </div>
+            </ItemContent>
+            <Placeholder>
+                <div class="async-chat-placeholder"
+                     style="height: @(context.size)px; background-color: #ccc; padding: 4px; box-sizing: border-box;">
+                    Loading @(context.index)...
+                </div>
+            </Placeholder>
+        </Virtualize>
+    </div>
+</p>
+
+@code {
+    allItems: ChatMessage[] = [];
+    nextId = 0;
+    loadingTcs: Deferred = deferred();
+
+    protected override onInitialized(): void {
+        this.allItems = range(0, 500).map((i) => ({
+            id: this.nextId++,
+            index: i,
+            height: 20 + (i * 37 % 1981),
+            hue: (i * 47) % 360,
+        }));
+    }
+
+    async getItems(request: VirtualizeItemsProviderRequest): Promise<VirtualizeItemsProviderResult<ChatMessage>> {
+        const registration = onAbort(request.signal, () => {
+            this.loadingTcs.reject(request.signal.reason);
+            this.loadingTcs = deferred();
+            this.stateHasChanged();
+        });
+
+        try {
+            await this.loadingTcs.promise;
+        } catch (error) {
+            registration();
+            throw error;
+        }
+
+        registration();
+
+        const items = this.allItems.slice(request.startIndex, request.startIndex + request.count);
+
+        return { items, totalItemCount: this.allItems.length };
+    }
+
+    finishLoading(): void {
+        this.loadingTcs.resolve();
+        this.loadingTcs = deferred();
+    }
+}

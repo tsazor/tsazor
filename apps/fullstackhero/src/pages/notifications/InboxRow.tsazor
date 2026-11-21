@@ -1,0 +1,48 @@
+@* pages/notifications/inbox.tsx's Row: one notification — the unread dot, the source, the title with its type and
+   time, the body, a link when it has one (a new tab for an absolute URL), and "Mark read" while unread. (The name Row
+   is too general here, and NotificationRow is the bell's: components/notifications.) *@
+@import { CheckCheck, ExternalLink } from "lucide"
+@import type { NotificationDto } from "@/api/notifications"
+
+<li class="@cn("grid grid-cols-[auto_auto_1fr_auto] items-start gap-3 px-1 py-3.5 text-sm", unread && "bg-[oklch(from_var(--color-accent-signal)_l_c_h_/_0.03)]")">
+    <span aria-hidden="true"
+          class="@cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", unread ? "bg-[var(--color-accent-signal)]" : "bg-transparent border border-[var(--color-border-strong)]")"></span>
+    <Badge variant="muted" class="font-mono uppercase tracking-[0.14em]">
+        @notif.source
+    </Badge>
+    <div class="min-w-0">
+        <div class="flex flex-wrap items-baseline gap-x-2">
+            <span class="font-medium">@notif.title</span>
+            <code class="code-chip">@notif.type</code>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+                @(new Date(notif.createdAtUtc).toLocaleString())
+            </span>
+        </div>
+        @if (notif.body) {
+            <p class="mt-0.5 text-[13px] text-[var(--color-muted-foreground)]">
+                @notif.body
+            </p>
+        }
+        @if (notif.link) {
+            <a href="@notif.link" target="@(notif.link.startsWith("http") ? "_blank" : null)" rel="noopener noreferrer"
+               class="mt-1 inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-foreground)] hover:underline">
+                <Icon icon="@ExternalLink" class="h-3 w-3" />
+                Open
+            </a>
+        }
+    </div>
+    @if (unread) {
+        <Button variant="ghost" size="sm" onClick="@(() => onMarkRead?.invokeAsync())">
+            <Icon icon="@CheckCheck" class="mr-1 h-3.5 w-3.5" /> Mark read
+        </Button>
+    }
+</li>
+
+@code {
+    @Parameter() notif!: NotificationDto;
+    @Parameter() onMarkRead?: EventCallback;
+
+    private get unread(): boolean {
+        return !this.notif.readAtUtc;
+    }
+}

@@ -1,0 +1,4 @@
+.not-ported {
+    color: var(--fui-foreground-2);
+    font-style: italic;
+}

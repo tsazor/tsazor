@@ -1,0 +1,29 @@
+<Project>
+  <!--
+    The .NET side of Tsazor (docs/design-aspnetcore.md). One version for everything that is released together:
+    the NuGet packages carry the npm packages' lockstep version (D-P1), read from @tsazor/runtime's package.json.
+  -->
+  <PropertyGroup>
+    <_TsazorRuntimeManifest>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../packages/runtime/package.json'))</_TsazorRuntimeManifest>
+    <_TsazorVersionField>$([System.Text.RegularExpressions.Regex]::Match('$(_TsazorRuntimeManifest)', '"version"\s*:\s*"[^"]+"'))</_TsazorVersionField>
+    <TsazorVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(_TsazorVersionField)', '^"version"\s*:\s*"|"$', ''))</TsazorVersion>
+    <Version>$(TsazorVersion)</Version>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Authors>The Tsazor authors</Authors>
+    <Copyright>Copyright (c) 2026 The Tsazor authors</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/tsazor/tsazor</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/tsazor/tsazor</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../.release/nuget</PackageOutputPath>
+  </PropertyGroup>
+
+  <Target Name="TsazorCheckVersion" BeforeTargets="Build;Pack">
+    <Error Condition="'$(TsazorVersion)' == ''" Text="No version in packages/runtime/package.json." />
+  </Target>
+</Project>

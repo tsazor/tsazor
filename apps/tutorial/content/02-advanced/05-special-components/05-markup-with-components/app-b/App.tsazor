@@ -1,0 +1,9 @@
+@import { html } from "./page"
+@import { fromHtml } from "./markup"
+@import OrderButton from "./OrderButton.tsazor"
+
+@content
+
+@code {
+    readonly content = fromHtml(html, { "order-button": OrderButton });
+}

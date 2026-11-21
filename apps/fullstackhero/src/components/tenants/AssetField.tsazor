@@ -1,0 +1,22 @@
+@* tenant-branding-card.tsx's AssetField: a brand asset URL, with a tiny inline preview thumbnail — it reassures the
+   operator the URL points to an actually-loadable image; a failing load just hides it (no error UI necessary). *@
+
+<Field id="@id" label="@label">
+    <div class="flex items-center gap-2">
+        <Input id="@id" value="@value" valueChanged="@(next => onChange?.invokeAsync(next))" placeholder="https://cdn.example.com/logo.svg" spellcheck="false" autocomplete="off" class="font-mono text-[12.5px]" />
+        @if (value) {
+            <img src="@value" alt="" @onerror="hide" class="h-9 w-9 shrink-0 rounded-lg object-contain ring-1 ring-inset ring-[var(--color-border)] bg-[var(--color-background)]" />
+        }
+    </div>
+</Field>
+
+@code {
+    @Parameter() id: string = "";
+    @Parameter() label: string = "";
+    @Parameter() value: string = "";
+    @Parameter() onChange?: EventCallback<string>;
+
+    private hide(event: Event): void {
+        (event.target as HTMLImageElement).style.display = "none";
+    }
+}

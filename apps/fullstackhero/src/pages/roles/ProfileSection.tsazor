@@ -1,0 +1,96 @@
+@* pages/roles/detail.tsx's ProfileSection: the role's name and description. react-hook-form + zodResolver become
+   EditForm + StandardSchemaValidator over the original's zod schema; `isDirty` is the model compared with the role's
+   values (react-hook-form's defaultValues), so the fields bind per keystroke (InputText's `immediate`: without it,
+   InputText binds on change, and Save would stay disabled until the field loses focus); an invalid submit focuses
+   the first invalid field (FocusOnInvalidSubmit, react-hook-form's shouldFocusError). Reset puts the values back,
+   and a changed role (after a save) re-syncs the form, as the original's `reset()` effect. System roles can't be
+   renamed. *@
+@import { ShieldCheck } from "lucide"
+@import { z } from "zod"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { upsertRole, type RoleDto } from "@/api/roles"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { inputClass } from "@/components/ui/variants"
+
+<EditForm Model="@model" OnValidSubmit="@submit">
+    <StandardSchemaValidator Schema="@ProfileSection.profileSchema" />
+    <FocusOnInvalidSubmit />
+    <SettingsSection title="Profile" icon="@ShieldCheck" description="@(disabled ? "Name and description — system roles cannot be renamed." : "Name and description shown to operators when assigning users to this role.")">
+        <Footer>
+            <div class="flex items-center gap-2">
+                <Button type="submit" disabled="@(!isDirty || submitting || disabled)" class="h-9 rounded-lg px-4 text-[13px]">
+                    @(submitting ? "Saving…" : "Save profile")
+                </Button>
+                <Button type="button" variant="outline" onClick="@reset" disabled="@(!isDirty || submitting)" class="h-9 rounded-lg px-4 text-[13px]">
+                    Reset
+                </Button>
+            </div>
+        </Footer>
+        <ChildContent>
+            <div class="grid gap-4 md:grid-cols-2">
+                <Field id="name" label="Name" required for="name">
+                    <InputText immediate id="name" disabled="@disabled" class="@inputClass" @bind-Value="model.name" />
+                </Field>
+                <Field id="description" label="Description" for="description">
+                    <InputText immediate id="description" class="@inputClass" @bind-Value="model.description" />
+                </Field>
+            </div>
+        </ChildContent>
+    </SettingsSection>
+</EditForm>
+
+@code {
+    @Parameter() role!: RoleDto;
+    @Parameter() disabled: boolean = false;
+
+    private static readonly profileSchema = z.object({
+        name: z.string().trim().min(2, "At least 2 characters.").max(64),
+        description: z.string().trim().max(256).optional(),
+    });
+
+    private model = { name: "", description: "" };
+    private syncedRole?: RoleDto;
+    private submitting = false;
+
+    /** The original's `useEffect(() => reset(…), [role])`: a new role object re-syncs the form. */
+    protected override onParametersSet(): void {
+        if (this.role !== this.syncedRole) {
+            this.syncedRole = this.role;
+            this.reset();
+        }
+    }
+
+    /** react-hook-form's defaultValues. */
+    private get defaults(): { name: string; description: string } {
+        return { name: this.role.name, description: this.role.description ?? "" };
+    }
+
+    /** react-hook-form's formState.isDirty. */
+    private get isDirty(): boolean {
+        const defaults = this.defaults;
+        return this.model.name !== defaults.name || this.model.description !== defaults.description;
+    }
+
+    /** react-hook-form's reset(): back to the defaults (a new model: the form's validation state starts over). */
+    private reset(): void {
+        this.model = this.defaults;
+    }
+
+    private async submit(): Promise<void> {
+        const values = ProfileSection.profileSchema.parse(this.model);
+        this.submitting = true;
+        try {
+            const result = await upsertRole({ id: this.role.id, name: values.name, description: values.description?.trim() ? values.description : null });
+            toast.success("Role updated");
+            void queryClient.invalidateQueries({ queryKey: ["roles"] });
+            void queryClient.invalidateQueries({ queryKey: ["roles", result.id] });
+        } catch (err) {
+            const detail = err instanceof ApiRequestError ? err.problem?.detail ?? err.problem?.title ?? err.message : (err as Error).message;
+            toast.error("Update failed", { description: detail });
+        } finally {
+            this.submitting = false;
+        }
+    }
+}

@@ -1,0 +1,20 @@
+@page "/"
+@import { testPages } from "../test-pages"
+@inject NavigationManager navigation
+
+<h1>Blazor parity</h1>
+<p>Blazor's own E2E test pages, ported to Tsazor. Choose one to mount it, as Blazor's BasicTestApp does.</p>
+
+<select id="test-selector" @onchange="mount">
+    <option value="">Choose a test page…</option>
+    @foreach (const testPage of testPages) {
+        <option value="@testPage.route">@testPage.name</option>
+    }
+</select>
+
+@code {
+    private mount(e: Event): void {
+        const route = (e.target as HTMLSelectElement).value;
+        if (route !== "") this.navigation.navigateTo(route);
+    }
+}

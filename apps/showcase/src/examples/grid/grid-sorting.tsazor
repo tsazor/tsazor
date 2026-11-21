@@ -1,0 +1,12 @@
+@** A sortable grid: Sortable on a column lets a click on its header sort by it (the direction
+    toggles); IsDefaultSortColumn sorts by a column before the first click, with
+    InitialSortDirection in the other order if the column starts descending. *@
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" Sortable="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Sortable="@true" IsDefaultSortColumn="@true" InitialSortDirection="descending" Format="(v) => v.toFixed(2)" Align="end" />
+</DataGrid>
+
+@code {
+}

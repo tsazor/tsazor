@@ -1,0 +1,67 @@
+@** A sparkline: a small line without axes, for a table cell or a card — `data` across `width` × `height` px, the last
+    value marked, `area` filled below. A screen reader reads it as an image: its `ariaLabel` and where it goes
+    ("Loaves: from 98 to 182, now 150"). *@
+@import { areaPath, linearScale, linePath } from "./chart-math"
+@import { libraryTexts } from "@tsazor/ui"
+
+<svg @attributes="@this.rootAttributes" width="@this.width" height="@this.height" viewBox="@(`0 0 ${this.width} ${this.height}`)" role="img" aria-label="@this.label">
+    @if (this.points.length > 0) {
+        @if (this.area) {
+            <path class="tz-sparkline__area" d="@areaPath(this.points, this.height - 1, this.smooth)" />
+        }
+        <path class="tz-sparkline__line" d="@linePath(this.points, this.smooth)" stroke-width="@this.strokeWidth" />
+        <circle class="tz-sparkline__dot" cx="@this.points[this.points.length - 1]!.x" cy="@this.points[this.points.length - 1]!.y" r="2.5" />
+    }
+</svg>
+
+@code {
+    /** The values, in order. */
+    @Parameter() data: number[] = [];
+    /** Its width in px (100). */
+    @Parameter() width: number = 100;
+    /** Its height in px (24). */
+    @Parameter() height: number = 24;
+    /** The area under the line filled. */
+    @Parameter() area: boolean = false;
+    /** A smooth line instead of a straight one. */
+    @Parameter() smooth: boolean = false;
+    /** The line's width (1.5). */
+    @Parameter() strokeWidth: number = 1.5;
+    /** The line's color; by default the skin's first chart color. */
+    @Parameter() color?: string;
+    /** What it shows, for screen readers ("Loaves"); by default the library text "Trend". */
+    @Parameter() ariaLabel?: string;
+    /** A value as the text alternative writes it. */
+    @Parameter() format?: (value: number) => string;
+    /** `@attributes` on the svg (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly t = libraryTexts();
+
+    private get points(): { x: number; y: number }[] {
+        const data = this.data;
+        if (data.length === 0) return [];
+        const low = Math.min(...data);
+        const high = Math.max(...data);
+        // Room for the dot and the stroke at the edges.
+        const pad = 3;
+        const x = linearScale([0, Math.max(1, data.length - 1)], [pad, this.width - pad]);
+        const y = high === low ? () => this.height / 2 : linearScale([low, high], [this.height - pad, pad]);
+        return data.map((value, i) => ({ x: Math.round(x(i) * 100) / 100, y: Math.round(y(value) * 100) / 100 }));
+    }
+
+    private get label(): string {
+        const data = this.data;
+        const label = this.ariaLabel ?? this.t("sparkline.label");
+        if (data.length === 0) return this.t("sparkline.noValues", { label });
+        const write = this.format ?? ((value: number) => new Intl.NumberFormat(this.t.locale, { maximumFractionDigits: 2 }).format(value));
+        return this.t("sparkline.summary", { label, low: write(Math.min(...data)), high: write(Math.max(...data)), last: write(data[data.length - 1]!) });
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        const extra = this.additionalAttributes ?? {};
+        const cls = ["tz-sparkline", typeof extra.class === "string" ? extra.class : null].filter(Boolean).join(" ");
+        const style = this.color === undefined ? extra.style : `--tz-chart-color: ${this.color}${typeof extra.style === "string" ? `; ${extra.style}` : ""}`;
+        return { ...extra, class: cls, style };
+    }
+}

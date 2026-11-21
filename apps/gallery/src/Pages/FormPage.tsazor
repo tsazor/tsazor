@@ -9,7 +9,7 @@
 
 @if (this.submitted) {
     <p class="form-done">
-        Thanks, @this.model.name — the form was saved. <Badge color="success">valid</Badge>
+        Thanks, @this.model.name — the form was saved. <Badge intent="success">valid</Badge>
     </p>
 }
 
@@ -34,12 +34,46 @@
         <div class="field">
             <TextArea @bind="this.model.notes" label="Notes" rows="3" id="form-notes" />
         </div>
-        <Button type="submit" appearance="primary">Save</Button>
+        <Button type="submit" intent="primary">Save</Button>
     </FluentForm>
     <p class="hint">Submit while empty → inline errors. Fill name ≥ 2 chars, age ≥ 0, topic, terms → submit succeeds.</p>
 </div>
 
+<h2>Wizard</h2>
+<div class="card">
+    <Wizard @bind-value="this.wizardStep" onFinish="@this.finishWizard" stepSequence="visited" displayStepNumber="all" ariaLabel="Sign-up steps">
+        <Steps>
+            <WizardStep label="Account" summary="Who you are">
+                <FluentForm Model="@this.account" Validators="@this.accountRules">
+                    <div class="field">
+                        <TextInput @bind="this.account.email" label="E-mail" type="email" id="wizard-email" />
+                    </div>
+                </FluentForm>
+            </WizardStep>
+            <WizardStep label="Plan" summary="What you need">
+                <RadioGroup label="Plan" @bind-value="this.account.plan" options="@this.plans" />
+            </WizardStep>
+            <WizardStep label="Review">
+                <p>@this.account.email on the @this.account.plan plan.</p>
+            </WizardStep>
+        </Steps>
+    </Wizard>
+    <p class="wizard-done" aria-live="polite">@this.wizardDone</p>
+</div>
+
 @code {
+    private wizardStep = 0;
+    private wizardDone = "";
+    private readonly account = { email: "", plan: "starter" };
+    private readonly plans = [{ value: "starter", label: "Starter" }, { value: "team", label: "Team" }];
+    private readonly accountRules = {
+        email: (value: unknown) => (/^[^@\s]+@[^@\s]+$/.test(String(value ?? "")) ? null : "An e-mail address, please."),
+    };
+
+    private finishWizard(): void {
+        this.wizardDone = `Signed up ${this.account.email}.`;
+    }
+
     private model = { name: "", age: 0, topic: "", agree: false, notes: "" };
     private submitted = false;
 

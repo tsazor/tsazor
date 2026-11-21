@@ -1,4 +1,5 @@
 @page "/dialog"
+@import { Button } from "@tsazor/fluent"
 
 <h1>Dialog</h1>
 <p class="intro">
@@ -7,34 +8,26 @@
     backdrop.
 </p>
 
-<Button appearance="primary" onClick="@(() => this.openDialog())">Open dialog</Button>
+<Button intent="primary" onClick="@(() => this.openDialog())">Open dialog</Button>
 
 <p class="echo">Confirmations: <strong>@this.confirmed</strong></p>
 
-<Dialog isOpen="@this.open" title="Delete order" id="demo-dialog" onClosed="@(() => this.handleClosed())" footer="@this.footerFragment">
-    The order and its line items will be removed. This cannot be undone.
-    <p class="dialog-interactive">
-        Scroll the page behind — the body is locked while this is open.
-    </p>
+<Dialog isOpen="@this.open" title="Delete order" id="demo-dialog" onClosed="@(() => this.handleClosed())">
+    <ChildContent>
+        The order and its line items will be removed. This cannot be undone.
+        <p class="dialog-interactive">
+            Scroll the page behind — the body is locked while this is open.
+        </p>
+    </ChildContent>
+    <Footer>
+        <Button appearance="subtle" onClick="@(() => this.handleClosed())">Cancel</Button>
+        <Button intent="primary" onClick="@(() => this.confirm())">Delete</Button>
+    </Footer>
 </Dialog>
 
 @code {
     private open = false;
     private confirmed = 0;
-
-    /** Dialog footer: Cancel + Delete, built as a fragment. */
-    private footerFragment: RenderFragment = (b) => {
-        b.openComponent(0, Button);
-        b.addAttribute(1, "appearance", "subtle");
-        b.addAttribute(2, "onClick", EventCallback.bind(this, () => this.handleClosed()));
-        b.addContent(3, "Cancel");
-        b.closeComponent();
-        b.openComponent(4, Button);
-        b.addAttribute(5, "appearance", "primary");
-        b.addAttribute(6, "onClick", EventCallback.bind(this, () => this.confirm()));
-        b.addContent(7, "Delete");
-        b.closeComponent();
-    };
 
     private setOpenTo(value: boolean): void {
         this.open = value;

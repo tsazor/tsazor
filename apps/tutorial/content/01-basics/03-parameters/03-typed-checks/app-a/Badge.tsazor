@@ -1,0 +1,5 @@
+<span class="badge">@count new @(count === 1 ? "message" : "messages")</span>
+
+@code {
+    @Parameter() count = 0;
+}

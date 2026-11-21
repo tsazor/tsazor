@@ -1,0 +1,10 @@
+.menu {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e3e6ea;
+}
+
+.menu .active {
+    font-weight: 600;
+}

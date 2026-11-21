@@ -1,0 +1,22 @@
+@import { searchFruit } from "./fruit"
+
+<input @bind="query" placeholder="Search for fruit" />
+
+<p>@status</p>
+<ul>
+    @foreach (const fruit of results) {
+        <li>@fruit</li>
+    }
+</ul>
+
+@code {
+    query = "";
+    results: string[] = [];
+    status = "Type to search.";
+
+    async search() {
+        this.status = "Searching…";
+        this.results = await searchFruit(this.query);
+        this.status = `${this.results.length} found for “${this.query}”`;
+    }
+}

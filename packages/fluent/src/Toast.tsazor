@@ -1,5 +1,13 @@
-@using @tsazor/runtime
-<div class="@this.toastClass" role="@this.liveRole" aria-live="polite" aria-atomic="true">
+@** A single Fluent UI 2 toast: optional title, message and Close button, announced politely
+    (role="alert" for intent danger, otherwise role="status"). App-wide toasts go through the
+    `Toaster` service and a ToastRegion; this one is for placing a toast yourself. *@
+@import type { Intent } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { statusColor } from "./vocabulary"
+@import { Dismiss20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+
+<div @attributes="@this.toastAttributes">
     <div class="fui-toast__content">
         @if (this.title) {
             <div class="fui-toast__title">@this.title</div>
@@ -9,32 +17,45 @@
         }
     </div>
     @if (this.dismissible) {
-        <button type="button" class="fui-toast__close" aria-label="Close" @onclick="this.close">&times;</button>
+        <button type="button" class="fui-toast__close" aria-label="@t("close")" @onclick="this.close"><Icon value="@Dismiss20Regular" size="16" /></button>
     }
 </div>
 
 @code {
-    /** Severity: info (default) | success | warning | error. */
-    @Parameter() severity: string = "info";
+    private readonly t = libraryTexts();
+
+    /** The status: info (default), success, warning, danger or neutral. */
+    @Parameter() intent: Intent = "info";
     /** Optional headline. */
     @Parameter() title?: string;
     /** Message body. */
     @Parameter() childContent?: RenderFragment;
-    /** Shows the close button (toasts inside ToastProvider are dismissible by default). */
+    /** Shows the close button. */
     @Parameter() dismissible: boolean = true;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Fired when the user closes the toast. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
 
-    /** role=alert for error (assertive), otherwise status. */
+    /** role=alert for danger (assertive), otherwise status (polite); no aria-live of its own, which would
+        make a danger toast polite too. */
     private get liveRole(): string {
-        return this.severity === "error" ? "alert" : "status";
+        return this.intent === "danger" ? "alert" : "status";
     }
 
     private get toastClass(): string {
-        return `fui-toast fui-toast--${this.severity}`;
+        return `fui-toast fui-toast--${statusColor(this.intent)}`;
     }
 
-    private close(e: MouseEvent): void {
-        this.onDismissed?.invokeAsync(e);
+    private get toastAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.toastClass,
+            role: this.liveRole,
+            "aria-atomic": "true",
+        }, this.additionalAttributes);
+    }
+
+    private close(e: MouseEvent): Promise<void> | undefined {
+        return this.onDismissed?.invokeAsync(e);
     }
 }

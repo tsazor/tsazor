@@ -1,0 +1,120 @@
+@* Client/Pages/Catalog/AddEditProductModal.razor(.cs): a product's fields, its brand picked from all brands
+   (MudAutocomplete T="int" — here an Autocomplete of brand ids, shown by their names), and its picture: shrunk to
+   400 × 400 as a PNG before the upload (RequestImageFileAsync), viewed in a new tab, or removed. A new product's
+   barcode is set once; editing shows it disabled. *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "@tsazor/runtime"
+@import { AddEditProductCommand, emptyUploadRequest, UploadType, type GetAllBrandsResponse } from "../../Application/Catalog"
+@import { addEditProductValidators } from "../../Application/Validators/Catalog"
+@import { extensionOf, toBase64 } from "../../Extensions/Files"
+@inject ProductManager productManager
+@inject BrandManager brandManager
+@inject Toaster toaster
+
+<FluentForm model="@addEditProductModel" validators="@validators" onValidSubmit="@saveAsync" novalidate>
+    <Dialog title="@(isNew ? L("Add Product") : L("Update Product"))">
+        <ChildContent>
+            <div class="bh-form-grid">
+                @if (!isNew) {
+                    <NumberInput label="@L("Id")" @bind-Value="addEditProductModel.id" disabled />
+                }
+                <TextInput label="@L("Name")" @bind-Value="addEditProductModel.name" />
+                <TextInput label="@L("Description")" @bind-Value="addEditProductModel.description" />
+                <Autocomplete TOption="number" label="@L("Brand")" multiple="false" items="@brandIds" optionText="@brandName"
+                              @bind-selectedOption="addEditProductModel.brandId" />
+                <NumberInput label="@L("Rate")" @bind-Value="addEditProductModel.rate" step="0.01" />
+                <TextInput label="@L("Barcode")" @bind-Value="addEditProductModel.barcode" disabled="@(!isNew)" />
+                <div class="bh-product-image">
+                    @if (addEditProductModel.imageDataURL) {
+                        <img class="bh-product-image__preview" src="@addEditProductModel.imageDataURL" alt="@addEditProductModel.name" />
+                    }
+                    <InputFile @ref="fileInput" hidden accept="image/*" OnChange="@uploadFiles" />
+                    <div class="bh-product-image__actions">
+                        <Button appearance="transparent" size="small" iconStart="@Icons.CloudArrowUp" onClick="@chooseFile">@L("Upload")</Button>
+                        @if (addEditProductModel.imageDataURL) {
+                            <Button appearance="transparent" size="small" iconStart="@Icons.Eye" href="@addEditProductModel.imageDataURL" target="_blank" rel="noopener">@L("View")</Button>
+                            <Button appearance="transparent" intent="danger" size="small" iconStart="@Icons.Delete" onClick="@deleteImage">@L("Delete")</Button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            @if (isNew) {
+                <Button type="submit" intent="success">@L("Save")</Button>
+            } else {
+                <Button type="submit" intent="secondary">@L("Update")</Button>
+            }
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() addEditProductModel = new AddEditProductCommand();
+
+    private readonly L = localizerFor("AddEditProductModal");
+    private readonly validators = addEditProductValidators(localizerFor("AddEditProductCommandValidator"));
+    private brands: GetAllBrandsResponse[] = [];
+    private fileInput?: InputFile;
+
+    private get isNew(): boolean {
+        return this.addEditProductModel.id === 0;
+    }
+
+    private get brandIds(): number[] {
+        return this.brands.map((brand) => brand.id);
+    }
+
+    /** ToStringFunc: a brand id's name. */
+    private readonly brandName = (id: number): string => this.brands.find((brand) => brand.id === id)?.name ?? "";
+
+    protected override async onInitialized(): Promise<void> {
+        await this.loadImageAsync();
+        await this.loadBrandsAsync();
+    }
+
+    private async loadBrandsAsync(): Promise<void> {
+        const data = await this.brandManager.getAllAsync();
+        if (data.succeeded) this.brands = data.data;
+    }
+
+    private async loadImageAsync(): Promise<void> {
+        if (this.isNew) return;
+        const data = await this.productManager.getProductImageAsync(this.addEditProductModel.id);
+        if (data.succeeded && data.data) this.addEditProductModel.imageDataURL = data.data;
+    }
+
+    private chooseFile(): void {
+        (this.fileInput?.element as HTMLInputElement | undefined)?.click();
+    }
+
+    private async uploadFiles(e: InputFileChangeEventArgs): Promise<void> {
+        if (e.fileCount === 0) return;
+        const format = "image/png";
+        const imageFile = await requestImageFileAsync(e.file, format, 400, 400);
+        const data = await toBase64(imageFile);
+        this.addEditProductModel.imageDataURL = `data:${format};base64,${data}`;
+        this.addEditProductModel.uploadRequest = { data, uploadType: UploadType.Product, extension: extensionOf(e.file.name), fileName: null };
+    }
+
+    private deleteImage(): void {
+        this.addEditProductModel.imageDataURL = null;
+        this.addEditProductModel.uploadRequest = emptyUploadRequest;
+    }
+
+    private async saveAsync(): Promise<void> {
+        const response = await this.productManager.saveAsync(this.addEditProductModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close(response.data);
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

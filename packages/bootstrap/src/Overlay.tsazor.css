@@ -1,0 +1,52 @@
+/* Overlay — a busy state over its container (position: relative) or, full screen, over the page. */
+
+.tz-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--tz-overlay-background);
+  /* Over a card, the card's rounded corners. */
+  border-radius: inherit;
+  outline: 0;
+  animation: tz-overlay-enter 0.15s linear;
+}
+
+.tz-overlay--full-screen {
+  position: fixed;
+  /* Over Bootstrap's modal (1055), under its popovers (1070). */
+  z-index: 1060;
+}
+
+/* Interactive: the background lets presses through, the content takes its own. */
+.tz-overlay--interactive {
+  pointer-events: none;
+}
+
+.tz-overlay--interactive > .tz-overlay__content {
+  pointer-events: auto;
+}
+
+.tz-overlay__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  color: var(--bs-body-color);
+}
+
+@keyframes tz-overlay-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tz-overlay {
+    animation: none;
+  }
+}

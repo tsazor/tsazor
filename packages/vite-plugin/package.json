@@ -1,6 +1,16 @@
 {
   "name": "@tsazor/vite-plugin",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/vite-plugin"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/vite-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Vite plugin for Tsazor (.tsazor): compile, route manifest, HMR.",
   "main": "./dist/index.js",
@@ -9,28 +19,38 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./client": "./client.d.ts"
   },
   "files": [
-    "dist"
+    "dist",
+    "client.d.ts",
+    "!dist/.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -b && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:vite --external:esbuild --external:postcss",
+    "build": "tsc -b && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:vite --external:esbuild --external:postcss --external:typescript --external:@tsazor/lsp",
     "test": "vitest run"
   },
   "dependencies": {
-    "@jridgewell/gen-mapping": "^0.3.8",
-    "@jridgewell/trace-mapping": "^0.3.25",
-    "@tsazor/compiler": "workspace:*",
-    "@tsazor/workspace": "workspace:*",
+    "@tsazor/lsp": "workspace:*",
     "esbuild": "^0.28.2",
-    "postcss": "^8.5.6"
+    "postcss": "^8.5.6",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
+    "@jridgewell/gen-mapping": "^0.3.8",
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
     "vite": "^7.1.7",
     "vitest": "^3.2.7"
   }

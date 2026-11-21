@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+@* The same header as the Blazor app's MainLayout.razor (and the same /app.css), so a user does not
+   notice which part serves a page — only the badge on the right tells. *@
+<div class="shell" data-app="tsazor">
+    <header class="topbar">
+        <span class="brand">Bakery admin</span>
+        <nav aria-label="Main">
+            @* Pages of the Blazor app: full page loads (target="_top" is not intercepted). *@
+            <a href="/" target="_top">Home</a>
+            <NavLink Href="orders">Orders</NavLink>
+            <a href="/customers" target="_top">Customers</a>
+        </nav>
+        <AuthorizeView>
+            <Authorized>
+                <span class="user">@context.user.name</span>
+                <form method="post" action="/auth/logout"><button type="submit">Sign out</button></form>
+            </Authorized>
+        </AuthorizeView>
+        <span class="served-by">Tsazor</span>
+    </header>
+    <main>@Body</main>
+</div>

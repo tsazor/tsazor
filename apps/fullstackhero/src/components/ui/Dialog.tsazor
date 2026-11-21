@@ -1,0 +1,20 @@
+@* components/ui/dialog.tsx: Radix's Dialog.Root — the open state its parts share (DialogContent, DialogTitle,
+   DialogDescription). React's `open`/`onOpenChange` is `@bind-open`; the parts take it as a cascading value. *@
+@import { uniqueId } from "@tsazor/ui"
+
+<CascadingValue Value="@this">@childContent</CascadingValue>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    @Parameter() childContent?: RenderFragment;
+
+    /** The title's and the description's ids, for the content's aria-labelledby and aria-describedby. */
+    readonly titleId = uniqueId("dialog-title");
+    readonly descriptionId = uniqueId("dialog-description");
+
+    /** Radix's onOpenChange: the parts ask, the owner of `open` decides. */
+    setOpen(open: boolean): Promise<void> | undefined {
+        return this.openChanged?.invokeAsync(open);
+    }
+}

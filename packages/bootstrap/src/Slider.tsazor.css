@@ -1,0 +1,173 @@
+/* Slider — Bootstrap's .form-range with what it lacks: tick marks with labels, a value label, a small size and a
+   vertical one (the input stands up, min at the bottom). */
+
+.tz-slider {
+  --tz-slider-thumb: 1rem;
+  --tz-slider-rail: 0.5rem;
+  --tz-slider-length: 10rem;
+}
+
+.tz-slider__control {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tz-slider__rail {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.tz-slider--labelled-ticks .tz-slider__rail {
+  padding-bottom: 1.5rem;
+}
+
+/* Small: a thinner track and a smaller thumb. */
+.tz-slider--small {
+  --tz-slider-thumb: 0.75rem;
+  --tz-slider-rail: 0.25rem;
+}
+
+.tz-slider--small .form-range {
+  height: 1.25rem;
+}
+
+.tz-slider--small .form-range::-webkit-slider-runnable-track {
+  height: var(--tz-slider-rail);
+}
+
+.tz-slider--small .form-range::-moz-range-track {
+  height: var(--tz-slider-rail);
+}
+
+.tz-slider--small .form-range::-webkit-slider-thumb {
+  width: var(--tz-slider-thumb);
+  height: var(--tz-slider-thumb);
+  margin-top: calc((var(--tz-slider-rail) - var(--tz-slider-thumb)) / 2);
+}
+
+.tz-slider--small .form-range::-moz-range-thumb {
+  width: var(--tz-slider-thumb);
+  height: var(--tz-slider-thumb);
+}
+
+/* The marks under the track, one per step, at the thumb's center for their value. */
+.tz-slider__ticks {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% + var(--tz-slider-rail));
+  pointer-events: none;
+}
+
+.tz-slider--labelled-ticks .tz-slider__ticks {
+  top: calc((100% - 1.5rem) / 2 + var(--tz-slider-rail));
+}
+
+.tz-slider__tick {
+  position: absolute;
+  inset-inline-start: calc(var(--tz-slider-thumb) / 2 + (100% - var(--tz-slider-thumb)) * var(--tz-slider-tick));
+  width: 1px;
+  height: 0.25rem;
+  background: var(--bs-secondary-color);
+}
+
+.tz-slider__tick-label {
+  position: absolute;
+  top: 0.375rem;
+  inset-inline-start: 0;
+  translate: -50% 0;
+  font-size: 0.875em;
+  color: var(--bs-secondary-color);
+  white-space: nowrap;
+}
+
+.tz-slider__tick-label:dir(rtl) {
+  translate: 50% 0;
+}
+
+/* The first and the last label end with the track, not half beyond it. */
+.tz-slider__tick:first-child .tz-slider__tick-label {
+  translate: calc(var(--tz-slider-thumb) / -2) 0;
+}
+
+.tz-slider__tick:last-child .tz-slider__tick-label {
+  translate: calc(var(--tz-slider-thumb) / 2 - 100%) 0;
+}
+
+.tz-slider__tick:first-child .tz-slider__tick-label:dir(rtl) {
+  translate: calc(var(--tz-slider-thumb) / 2) 0;
+}
+
+.tz-slider__tick:last-child .tz-slider__tick-label:dir(rtl) {
+  translate: calc(100% - var(--tz-slider-thumb) / 2) 0;
+}
+
+.tz-slider__value {
+  min-width: 3ch;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* Vertical: the input stands up; the track and the thumb's offset turn with it. */
+.tz-slider--vertical .tz-slider__control {
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+
+.tz-slider--vertical .tz-slider__rail {
+  flex: none;
+  height: var(--tz-slider-length);
+}
+
+.tz-slider--vertical.tz-slider--labelled-ticks .tz-slider__rail {
+  padding-bottom: 0;
+}
+
+.tz-slider--vertical .form-range {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 1.5rem;
+  height: 100%;
+}
+
+.tz-slider--vertical .form-range::-webkit-slider-runnable-track {
+  width: var(--tz-slider-rail);
+  height: 100%;
+}
+
+.tz-slider--vertical .form-range::-moz-range-track {
+  width: var(--tz-slider-rail);
+  height: 100%;
+}
+
+.tz-slider--vertical .form-range::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: calc((var(--tz-slider-rail) - var(--tz-slider-thumb)) / 2);
+}
+
+.tz-slider--vertical .tz-slider__ticks,
+.tz-slider--vertical.tz-slider--labelled-ticks .tz-slider__ticks {
+  inset-inline: auto;
+  left: calc(0.75rem + var(--tz-slider-rail));
+  top: 0;
+  bottom: 0;
+}
+
+.tz-slider--vertical .tz-slider__tick {
+  inset-inline-start: 0;
+  bottom: calc(var(--tz-slider-thumb) / 2 + (100% - var(--tz-slider-thumb)) * var(--tz-slider-tick));
+  width: 0.25rem;
+  height: 1px;
+}
+
+.tz-slider--vertical .tz-slider__tick .tz-slider__tick-label,
+.tz-slider--vertical .tz-slider__tick .tz-slider__tick-label:dir(rtl) {
+  top: auto;
+  inset-inline-start: 0.5rem;
+  translate: 0 -50%;
+}
+
+.tz-slider--vertical .tz-slider__value {
+  text-align: start;
+}

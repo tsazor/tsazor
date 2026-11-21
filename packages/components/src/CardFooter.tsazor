@@ -1,5 +1,0 @@
-<div class="card-footer">@childContent</div>
-
-@code {
-    @Parameter() childContent?: RenderFragment;
-}

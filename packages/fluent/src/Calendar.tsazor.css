@@ -1,0 +1,177 @@
+/* Calendar — Fluent 2 (Fluent UI Blazor's FluentCalendar): a title with the month and two arrows, then the days in
+   28px cells. Today is a brand circle; a picked day a brand tint with a brand stroke; a ruled-out day is struck
+   through; the days of the months around are dimmed. */
+
+.fui-calendar {
+  --fui-calendar-cell: 28px;
+  --fui-calendar-gap: 2px;
+  --fui-calendar-picked: color-mix(in srgb, var(--fui-brand-background) 14%, var(--fui-background-1));
+  --fui-calendar-preview: color-mix(in srgb, var(--fui-brand-background) 7%, var(--fui-background-1));
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+  user-select: none;
+}
+
+.fui-calendar--disabled {
+  color: var(--fui-foreground-disabled);
+}
+
+.fui-calendar__header {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-calendar-gap);
+  padding-inline-start: var(--fui-spacing-s);
+}
+
+.fui-calendar__title {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: var(--fui-font-weight-semibold);
+  color: inherit;
+  text-align: start;
+}
+
+button.fui-calendar__title {
+  cursor: pointer;
+  border-radius: var(--fui-radius-sm);
+}
+
+button.fui-calendar__title:hover {
+  color: var(--fui-brand-background);
+}
+
+.fui-calendar__step {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--fui-calendar-cell);
+  block-size: var(--fui-calendar-cell);
+  padding: 0;
+  border: none;
+  border-radius: var(--fui-radius-md);
+  background: none;
+  color: var(--fui-foreground-3);
+  cursor: pointer;
+}
+
+.fui-calendar__step:hover:not(:disabled) {
+  background: var(--fui-control-fill-hover);
+  color: var(--fui-foreground-1);
+}
+
+.fui-calendar__step:disabled {
+  color: var(--fui-foreground-disabled);
+  cursor: default;
+}
+
+.fui-calendar__title:focus-visible,
+.fui-calendar__step:focus-visible,
+.fui-calendar__grid td:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-calendar__grid {
+  border-collapse: separate;
+  border-spacing: var(--fui-calendar-gap);
+  text-align: center;
+}
+
+.fui-calendar__weekday {
+  inline-size: var(--fui-calendar-cell);
+  block-size: var(--fui-calendar-cell);
+  padding: 0;
+  font-weight: var(--fui-font-weight-semibold);
+  font-size: var(--fui-font-size-caption);
+  color: var(--fui-foreground-2);
+}
+
+.fui-calendar__day,
+.fui-calendar__period {
+  position: relative;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--fui-radius-sm);
+  cursor: pointer;
+}
+
+.fui-calendar__day {
+  inline-size: var(--fui-calendar-cell);
+  block-size: var(--fui-calendar-cell);
+}
+
+.fui-calendar__period {
+  inline-size: calc(var(--fui-calendar-cell) * 2 + var(--fui-calendar-gap) * 2);
+  block-size: calc(var(--fui-calendar-cell) * 1.5);
+}
+
+.fui-calendar:not(.fui-calendar--disabled) :is(.fui-calendar__day, .fui-calendar__period):not([aria-disabled="true"]):hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-calendar__day--inactive,
+.fui-calendar__day--disabled,
+.fui-calendar__period--disabled,
+.fui-calendar [aria-disabled="true"] {
+  cursor: default;
+}
+
+.fui-calendar__day--inactive,
+.fui-calendar__day--disabled,
+.fui-calendar__period--disabled {
+  color: var(--fui-foreground-disabled);
+}
+
+/* A ruled-out day is struck through. */
+.fui-calendar__day--disabled:not(.fui-calendar__day--inactive)::before,
+.fui-calendar__period--disabled::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 80%;
+  block-size: 1px;
+  background: currentColor;
+  translate: -50% -50%;
+  rotate: -45deg;
+}
+
+.fui-calendar__day--preview {
+  background: var(--fui-calendar-preview);
+}
+
+.fui-calendar__day--selected,
+.fui-calendar__period--selected {
+  background: var(--fui-calendar-picked);
+  border-color: var(--fui-brand-background);
+}
+
+.fui-calendar:not(.fui-calendar--disabled) :is(.fui-calendar__day--selected, .fui-calendar__period--selected):hover {
+  background: var(--fui-calendar-picked);
+}
+
+/* A range is one band: the days between its ends without strokes. */
+.fui-calendar--range .fui-calendar__day--selected:not(.fui-calendar__day--range-start, .fui-calendar__day--range-end) {
+  border-color: transparent;
+}
+
+.fui-calendar__day--today:not(.fui-calendar__day--selected),
+.fui-calendar__period--today:not(.fui-calendar__period--selected) {
+  color: var(--fui-foreground-on-brand);
+  background: var(--fui-brand-background);
+}
+
+.fui-calendar__day--today:not(.fui-calendar__day--selected) {
+  border-radius: var(--fui-radius-circular);
+}
+
+.fui-calendar:not(.fui-calendar--disabled) :is(.fui-calendar__day--today:not(.fui-calendar__day--selected), .fui-calendar__period--today:not(.fui-calendar__period--selected)):hover {
+  background: var(--fui-brand-background-hover);
+}

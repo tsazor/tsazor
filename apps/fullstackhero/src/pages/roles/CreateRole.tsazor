@@ -1,0 +1,11 @@
+@* pages/roles/create.tsx: creating a role is a dialog on the list page now; a bookmarked /roles/new goes to /roles
+   (React Router's `<Navigate to="/roles" replace />`). Signed-in only, as ProtectedRoute around it. *@
+@page "/roles/new"
+@authorize
+@inject NavigationManager navigation
+
+@code {
+    protected override onInitialized(): void {
+        this.navigation.navigateTo("/roles", { replaceHistoryEntry: true });
+    }
+}

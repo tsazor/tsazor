@@ -1,0 +1,33 @@
+@** One example of a showcase page: its title and description, the live demo, and the .tsazor
+    source the demo really runs, with the copy button. The source is read by id from the
+    `virtual:showcase-sources` module (a vite plugin reads src/examples fresh). *@
+@import { Typography } from "@tsazor/bootstrap"
+@import CodeBlock from "./CodeBlock.tsazor"
+@import { sources } from "virtual:showcase-sources"
+
+<section class="sz-example">
+    <Typography Variant="h3">@title</Typography>
+    @if (description) {
+        <Typography class="sz-example-note" As="p">@description</Typography>
+    }
+    <div class="sz-example-demo">@childContent</div>
+    <CodeBlock Code="@this.code" />
+</section>
+
+@code {
+    /** The card's title. */
+    @Parameter() title!: string;
+    /** One sentence on when to use the demo's pattern. */
+    @Parameter() description?: string;
+    /** The example's id: its path under src/examples, which is the source's key. */
+    @Parameter() id!: string;
+    /** The live demo. */
+    @Parameter() childContent?: RenderFragment;
+
+    /** The example's source for the code block (the page misses it when the id is wrong). */
+    private get code(): string {
+        const code = sources[this.id];
+        if (code === undefined) throw new Error(`Showcase: no source read for example "${this.id}".`);
+        return code;
+    }
+}

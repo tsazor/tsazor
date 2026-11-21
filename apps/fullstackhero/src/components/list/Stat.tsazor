@@ -1,0 +1,27 @@
+@* components/list/stat.tsx: a single KPI tile — mono-caps label, display value, muted hint — with a uniform
+   min-height so a row of them stays gridlocked when one hint wraps. React's `value`/`hint: ReactNode` are text or
+   the ValueContent/HintContent slots. *@
+@import { cn } from "@/lib/cn"
+@import { TONE_VALUE_CLASS, type StatTone } from "./tone"
+
+<div class="@cn("card-shell flex h-full min-h-[96px] flex-col justify-between rounded-xl px-5 py-4", additionalAttributes?.class as string)">
+    <div class="meta text-[var(--color-muted-foreground)]">@label</div>
+    <div class="@cn("text-display mt-2 text-[26px] font-semibold leading-none tracking-[-0.02em]", TONE_VALUE_CLASS[tone])">
+        @if (valueContent) { @valueContent } else { @value }
+    </div>
+    @if (hintContent || hint) {
+        <div class="mt-1 truncate text-[12px] text-[var(--color-muted-foreground)]">
+            @if (hintContent) { @hintContent } else { @hint }
+        </div>
+    }
+</div>
+
+@code {
+    @Parameter() label!: string;
+    @Parameter() value?: string;
+    @Parameter() valueContent?: RenderFragment;
+    @Parameter() hint?: string;
+    @Parameter() hintContent?: RenderFragment;
+    @Parameter() tone: StatTone = "default";
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

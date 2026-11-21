@@ -1,0 +1,29 @@
+h1 {
+    margin: 0 0 1rem;
+    font-size: 2rem;
+}
+
+.toc {
+    margin: 0 0 2rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.toc-heading {
+    margin: 0 0 0.5rem;
+    font-size: 0.9rem;
+}
+
+.toc ol {
+    columns: 2 16rem;
+    margin: 0;
+    padding-left: 1.25rem;
+    line-height: 1.8;
+}
+
+.toc ::deep code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+}

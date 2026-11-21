@@ -1,0 +1,169 @@
+@page "/content"
+@import { Markdown } from "@tsazor/markdown"
+@import { skin } from "../skin"
+
+<Typography Variant="h1">Content</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">Avatars</Typography>
+    <div class="demo-row avatars">
+        @foreach (const person of people) {
+            <Avatar Name="@person" Color="colorful" Tooltip="@person" />
+        }
+        <Avatar Name="Rye Baker" Size="48" Color="brand" Active="@true" />
+        <Avatar Name="Away" Size="48" Active="@false" />
+        <Avatar Size="48" />
+        <Avatar Name="Marta Bauer" Size="48" Shape="square" Color="teal" OnClick="@(() => this.picked = "Marta Bauer")" />
+    </div>
+    <Typography Variant="caption"><span class="picked" role="status">@(picked === "" ? "Nobody picked." : `Picked ${picked}.`)</span></Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Chips</Typography>
+    <ChipSet TValue="string" SelectionMode="multiple" CheckMark="@true" AriaLabel="Breads" @bind-SelectedValues="breads">
+        @foreach (const bread of allBreads) {
+            <Chip Text="@bread" />
+        }
+    </ChipSet>
+    <Typography Variant="caption"><span class="chip-choice">@(breads.length === 0 ? "No bread chosen." : `Chosen: ${breads.join(", ")}.`)</span></Typography>
+    <ChipSet TValue="string" SelectionMode="none" AllClosable="@true" AriaLabel="Tags" OnClose="@((tag: string) => this.tags = this.tags.filter((t) => t !== tag))" class="tag-set">
+        @foreach (const tag of tags) {
+            <Chip @key="tag" Text="@tag" Intent="info" />
+        }
+    </ChipSet>
+    <div class="demo-row chip-row">
+        <Chip TValue="string" Text="Solid" Appearance="solid" Intent="primary" />
+        <Chip TValue="string" Text="Outline" Appearance="outline" Intent="success" />
+        <Chip TValue="string" Text="Small" Size="small" Intent="warning" />
+        <Chip TValue="string" Text="Rounded" Shape="rounded" Intent="danger" />
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Timeline</Typography>
+    <div class="timelines">
+        <Timeline Position="end" aria-label="Order history" class="order-history">
+            @foreach (const step of history) {
+                <TimelineItem Intent="@step.intent" Appearance="@step.appearance">
+                    <ItemOpposite>@step.when</ItemOpposite>
+                    <ItemContent>@step.what</ItemContent>
+                </TimelineItem>
+            }
+        </Timeline>
+        <Timeline aria-label="Week" class="week">
+            <TimelineItem Intent="success" Appearance="solid"><ItemContent>Monday: rye</ItemContent></TimelineItem>
+            <TimelineItem Intent="primary"><ItemContent>Tuesday: spelt</ItemContent></TimelineItem>
+            <TimelineItem><ItemContent>Wednesday: pretzels</ItemContent></TimelineItem>
+        </Timeline>
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Markdown</Typography>
+    <div class="markdown-editor">
+        <TextArea Label="Text" Rows="10" Immediate="@true" @bind-Value="text" />
+        <div class="markdown-preview" aria-label="Preview" role="region">
+            <Markdown Value="@text" Breaks="@true" TableClass="@tableClass" />
+        </div>
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Highlighter</Typography>
+    <TextInput Label="Find on the menu" Immediate="@true" @bind-Value="menuSearch" Help="Separate words with spaces or commas." />
+    <ul class="menu-list">
+        @foreach (const item of menu) {
+            <li><Highlighter Text="@item" HighlightedText="@menuSearch" Delimiters=" ," UntilNextBoundary="@true" /></li>
+        }
+    </ul>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Carousel</Typography>
+    <Carousel AriaLabel="Today's bread" AutoCycleTime="3000" class="carousel-dark bread-carousel" @bind-SelectedIndex="slide">
+        <CarouselItem><div class="bread-slide">Rye with caraway, fresh at seven.</div></CarouselItem>
+        <CarouselItem><div class="bread-slide">Sourdough, a day's rest in the dough.</div></CarouselItem>
+        <CarouselItem><div class="bread-slide">Spelt rolls, still warm at noon.</div></CarouselItem>
+    </Carousel>
+    <Typography Variant="caption">Slide <span class="carousel-index">@slide</span>.</Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Links and images</Typography>
+    <div class="demo-row">
+        <Link Href="/forms">Order form</Link>
+        <Link Href="/data" Appearance="subtle">Order list</Link>
+        <Link Href="https://example.org/bakery" Target="_blank" IconEnd="@openIcon">Our bakery</Link>
+        <Link OnClick="@(() => this.linkResult = "Undone.")">Undo</Link>
+        <Link Href="/forms" Disabled="@true">Archive</Link>
+        <span class="link-result" role="status">@linkResult</span>
+    </div>
+    <p>Fresh bread every morning: see the <Link Href="/data" Inline="@true">order list</Link> for today.</p>
+    <div class="demo-row">
+        <Image Source="@loaf" AlternateText="A rye loaf" Width="96" Height="64" Shape="rounded" Bordered="@true" />
+        <Image Source="@loaf" AlternateText="" Width="64" Height="64" Shape="circular" Fit="cover" Shadow="@true" />
+    </div>
+</section>
+
+<ScrollToTop />
+
+<section class="demo">
+    <Typography Variant="h2">Text nobody checked</Typography>
+    <Typography Variant="caption">An agent's answer or a user's comment is shown as it comes: what could run is removed.</Typography>
+    <div class="markdown-untrusted">
+        <Markdown Value="@untrusted" TableClass="@tableClass" />
+    </div>
+</section>
+
+@code {
+    private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra"];
+    private menuSearch = "rye, sour";
+    private slide = 0;
+    private linkResult = "";
+    private readonly openIcon = { name: "open", viewBox: "0 0 16 16", content: '<path d="M9 2h5v5h-1.5V4.6L7 10.1 5.9 9l5.5-5.5H9zM3 4h4v1.5H4.5v7h7V10H13v4H3z"/>' };
+    /** A loaf in SVG, so the demo needs no file. */
+    private readonly loaf = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 64"><rect width="96" height="64" fill="#f3e1c0"/><ellipse cx="48" cy="38" rx="36" ry="18" fill="#a0612b"/><path d="M26 32q6-6 12 0M44 30q6-6 12 0M62 32q6-6 12 0" stroke="#f3e1c0" stroke-width="3" fill="none"/></svg>')}`;
+    private readonly menu = ["Rye bread with caraway", "Sourdough loaf, light rye", "Spelt rolls", "Pretzels <with> coarse salt"];
+    private picked = "";
+    private readonly history = [
+        { when: "06:10", what: "Baked", intent: "success" as const, appearance: "solid" as const },
+        { when: "07:30", what: "Packed", intent: "primary" as const, appearance: "solid" as const },
+        { when: "12:00 – 12:30", what: "Picked up at the back door", intent: "neutral" as const, appearance: "outline" as const },
+    ];
+    private readonly allBreads = ["Rye", "Sourdough", "Spelt", "Pretzel"];
+    private breads: string[] = ["Rye"];
+    private tags = ["urgent", "gluten-free", "pickup"];
+
+    /** Bootstrap draws tables with its `.table` class; Fluent's tokens style them in markdown.css. */
+    private readonly tableClass = skin === "bootstrap" ? "table" : undefined;
+
+    private text = [
+        "## Order 1042",
+        "",
+        "**Rye** bread, *sliced*, for ~~Monday~~ Tuesday.",
+        "",
+        "- [x] baked",
+        "- [ ] picked up",
+        "",
+        "| Item | Count |",
+        "|---|---|",
+        "| Rye | 2 |",
+        "| Pretzel | 4 |",
+        "",
+        "> Ring the bell at the back door.",
+        "",
+        "Call `bakery.pickup(1042)` or see [the hours](https://example.com/hours).",
+    ].join("\n");
+
+    /** What a hostile text would try: a script, an event handler, a javascript: link, a style that covers the page. */
+    private readonly untrusted = [
+        "Here is your summary.",
+        "",
+        "<script>window.__xss = 'script'</script>",
+        "<img src=\"missing.png\" alt=\"chart\" onerror=\"window.__xss = 'onerror'\">",
+        "",
+        "[Open the report](javascript:window.__xss='link') · [The docs](https://example.com/docs) · [Orders](/data)",
+        "",
+        "<div style=\"position:fixed;inset:0;background:red\">covered</div>",
+    ].join("\n");
+}

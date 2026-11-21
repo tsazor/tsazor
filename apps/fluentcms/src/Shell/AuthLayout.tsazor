@@ -1,0 +1,16 @@
+@* The sign-in pages' layout (FluentCMS's AuthLayout): the form on the left, the welcome on the right. *@
+
+<div class="auth-shell">
+    <div class="auth-form">
+        <div class="auth-form-inner">
+            <PluginsSection name="Main" />
+        </div>
+    </div>
+    <div class="auth-welcome">
+        <div class="auth-welcome-inner">
+            <img src="/files/images/logo-dark.svg" alt="FluentCMS" height="40" />
+            <h1>Welcome to FluentCMS</h1>
+            <p>Building and managing content has never been easier. Experience the power of AI with FluentCMS.</p>
+        </div>
+    </div>
+</div>

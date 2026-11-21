@@ -1,0 +1,117 @@
+@page "/actions"
+@import { Toaster, tooltip } from "@tsazor/bootstrap"
+@import { icons } from "../skin-icons"
+@inject Toaster toaster
+
+<Typography Variant="h1">Actions</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">Buttons</Typography>
+    <div class="demo-row">
+        <Button Intent="primary" OnClick="@(() => this.clicks++)">Primary</Button>
+        <Button Intent="secondary">Secondary</Button>
+        <Button Intent="success">Success</Button>
+        <Button Intent="danger">Danger</Button>
+        <Button Intent="primary" Appearance="outline">Outline</Button>
+        <Button Intent="primary" Appearance="subtle">Subtle</Button>
+        <Button Intent="primary" Appearance="transparent">Transparent</Button>
+        <Button Size="small">Small</Button>
+        <Button Size="large">Large</Button>
+        <Button Disabled="@true">Disabled</Button>
+    </div>
+    <Typography Variant="caption">Primary clicked <span class="clicks">@clicks</span> times.</Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Icons on components</Typography>
+    <div class="demo-row icons-demo">
+        <Button Intent="primary" IconStart="@icons.save">Save</Button>
+        <Button IconEnd="@icons.more">More</Button>
+        <Button Appearance="subtle" AriaLabel="Delete" IconStart="@icons.delete" />
+        <Badge Intent="success" IconStart="@icons.star" IconLabel="Starred">Featured</Badge>
+        <Dropdown Label="File" Intent="secondary">
+            <DropdownItem IconStart="@icons.add">New</DropdownItem>
+            <DropdownItem IconStart="@icons.folder">Open</DropdownItem>
+            <DropdownItem IconStart="@icons.settings">Settings</DropdownItem>
+        </Dropdown>
+    </div>
+    <Typography Variant="caption">The skin's own set; every icon is on the <a href="/icons">Icons</a> page.</Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Toolbar</Typography>
+    <Toolbar AriaLabel="Order list">
+        <Button Appearance="subtle" AriaLabel="New order" IconStart="@icons.add" OnClick="@(() => this.used("New order"))" />
+        <Button Appearance="subtle" AriaLabel="Save the list" IconStart="@icons.save" OnClick="@(() => this.used("Save the list"))" />
+        <Button Appearance="subtle" AriaLabel="Print the list" IconStart="@icons.print" OnClick="@(() => this.used("Print the list"))" />
+        <Divider Orientation="vertical" />
+        <ButtonGroup AriaLabel="Density">
+            <Button Intent="@(density === "compact" ? "primary" : "secondary")" aria-pressed="@(density === "compact" ? "true" : "false")" OnClick="@(() => this.density = "compact")">Compact</Button>
+            <Button Intent="@(density === "roomy" ? "primary" : "secondary")" aria-pressed="@(density === "roomy" ? "true" : "false")" OnClick="@(() => this.density = "roomy")">Roomy</Button>
+        </ButtonGroup>
+        <Divider Orientation="vertical" />
+        <Dropdown Label="Export" Intent="secondary">
+            <DropdownItem OnSelect="@(() => this.used("Export as CSV"))">As CSV</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.used("Export as PDF"))">As PDF</DropdownItem>
+        </Dropdown>
+        <TextInput AriaLabel="Find an order" Placeholder="Find an order" Type="search" @bind-Value="find" />
+    </Toolbar>
+    <Typography Variant="caption"><span class="toolbar-choice">@toolbarChoice</span> Density: <span class="toolbar-density">@density</span>.</Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Button group, menu, tooltip, popover</Typography>
+    <div class="demo-row">
+        <ButtonGroup AriaLabel="View">
+            <Button Intent="@(view === "day" ? "primary" : "secondary")" OnClick="@(() => this.view = "day")">Day</Button>
+            <Button Intent="@(view === "week" ? "primary" : "secondary")" OnClick="@(() => this.view = "week")">Week</Button>
+            <Button Intent="@(view === "month" ? "primary" : "secondary")" OnClick="@(() => this.view = "month")">Month</Button>
+        </ButtonGroup>
+        <span class="view-choice">View: @view</span>
+        <Dropdown Label="Order actions" Intent="secondary">
+            <DropdownItem OnSelect="@(() => this.chose("Copy"))">Copy</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Print"))">Print</DropdownItem>
+            <DropdownItem Disabled="@true">Refund</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Archive"))">Archive</DropdownItem>
+        </Dropdown>
+        <Tooltip Text="Print the order list">
+            <Button Appearance="subtle" AriaLabel="Print" IconStart="@icons.print" />
+        </Tooltip>
+        <button type="button" class="tooltip-attached" @attach="tooltip('Saved a minute ago', 'bottom')">Attachment tooltip</button>
+        <Popover Label="Opening hours" Title="Opening hours">
+            <p>Mon–Fri 6–18, Sat 7–13.</p>
+        </Popover>
+    </div>
+    <Typography Variant="caption"><span class="menu-choice">@choice</span></Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">A menu in a blurred, clipping bar</Typography>
+    @* A sticky header's backdrop blur and a slide-in transform make `position: fixed` relative to the bar, and its
+       overflow clips: the overlays leave it through the browser's top layer (Radix's Portal without a portal). *@
+    <div class="clipping-bar">
+        <Dropdown Label="Bar actions" Intent="secondary">
+            <DropdownItem OnSelect="@(() => this.chose("Pin"))">Pin</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Share"))">Share</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Hide the bar"))">Hide the bar</DropdownItem>
+        </Dropdown>
+    </div>
+</section>
+
+@code {
+    private clicks = 0;
+    private view = "week";
+    private choice = "Nothing chosen yet.";
+    private toolbarChoice = "No tool used yet.";
+    private density = "compact";
+    private find = "";
+
+    private chose(action: string): void {
+        this.choice = `Chose ${action}.`;
+        this.toaster.show({ message: `${action}: done.`, intent: "success" });
+    }
+
+    private used(tool: string): void {
+        this.toolbarChoice = `Used ${tool}.`;
+    }
+}

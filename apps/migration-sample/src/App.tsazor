@@ -1,0 +1,21 @@
+@inject NavigationManager Navigation
+
+<Router>
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@MainLayout">
+            <NotAuthorized>
+                @* The Blazor app's login page; it comes back here afterwards. *@
+                <LeaveApp To="@loginUrl" />
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <LeaveApp />
+    </NotFound>
+</Router>
+
+@code {
+    private get loginUrl(): string {
+        return `/account/login?returnUrl=${encodeURIComponent("/" + this.Navigation.baseRelativePath)}`;
+    }
+}

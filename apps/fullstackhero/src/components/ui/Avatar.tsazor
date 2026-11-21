@@ -1,0 +1,60 @@
+@* components/ui/avatar.tsx: a circular surface with the brand-mark vocabulary — the conic gradient under a top-edge
+   highlight, the user's initials on top; an image covers it when `src` is set (and falls back to the initials when
+   it fails to load). An optional status dot anchors at the bottom-right and pulses for `online`. *@
+@import { cn } from "@/lib/cn"
+
+<span aria-label="@name" class="@cn("relative inline-flex shrink-0", halo && ["rounded-full", "shadow-[0_0_0_4px_var(--color-primary-soft),0_8px_28px_-8px_oklch(from_var(--color-primary)_l_c_h_/_0.35)]"], additionalAttributes?.class as string)">
+    <span class="@cn("brand-mark grid place-items-center overflow-hidden rounded-full", "font-semibold tracking-tight text-[var(--color-primary-foreground)]", "shadow-[0_1px_0_oklch(1_0_0_/_0.22)_inset,0_4px_14px_-4px_oklch(from_var(--color-primary)_l_c_h_/_0.45)]", sizeClass[size])">
+        @if (src && failedSrc !== src) {
+            <img src="@src" alt="@(name ?? "")" referrerpolicy="no-referrer" loading="lazy" decoding="async" width="@sizePx[size]" height="@sizePx[size]"
+                 @onerror="() => failedSrc = src" class="h-full w-full object-cover" />
+        } else {
+            <span class="relative z-[2] leading-none">@initials</span>
+        }
+    </span>
+    @if (dotColor) {
+        <span aria-hidden="true" class="@cn("absolute bottom-0 right-0 rounded-full ring-2 ring-[var(--color-surface-1)]", status === "online" && "pulse-dot", dotSize[size])"
+              style="background-color: @dotColor; color: @dotColor"></span>
+    }
+</span>
+
+@code {
+    /** Display name; up to two leading characters become the fallback initials. */
+    @Parameter() name?: string | null;
+    /** Optional image URL. Falls back to the initials when missing or fails to load. */
+    @Parameter() src?: string | null;
+    @Parameter() size: "xs" | "sm" | "md" | "lg" = "md";
+    /** When set, emits a small status dot at the bottom-right (pulsing for online). */
+    @Parameter() status?: "online" | "offline" | "warning";
+    /** Adds a soft brand halo around the avatar (used in the dropdown hero). */
+    @Parameter() halo: boolean = false;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The image that failed to load (a new `src` tries again, as the original's `key`). */
+    private failedSrc?: string | null;
+
+    private readonly sizeClass = { xs: "h-5 w-5 text-[10px]", sm: "h-7 w-7 text-[11px]", md: "h-9 w-9 text-[13px]", lg: "h-12 w-12 text-[16px]" };
+    // Pixel dims mirror sizeClass. Setting width + height on the <img> prevents avatar swap-in from triggering CLS.
+    private readonly sizePx = { xs: 20, sm: 28, md: 36, lg: 48 };
+    private readonly dotSize = { xs: "h-1 w-1", sm: "h-1.5 w-1.5", md: "h-2 w-2", lg: "h-2.5 w-2.5" };
+
+    private get initials(): string {
+        if (!this.name) return "?";
+        const trimmed = this.name.trim();
+        if (trimmed.length === 0) return "?";
+        return trimmed.split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("");
+    }
+
+    private get dotColor(): string | undefined {
+        switch (this.status) {
+            case "online":
+                return "var(--color-success)";
+            case "warning":
+                return "var(--color-warning)";
+            case "offline":
+                return "var(--color-muted-foreground)";
+            default:
+                return undefined;
+        }
+    }
+}

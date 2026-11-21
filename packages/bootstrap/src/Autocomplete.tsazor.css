@@ -1,0 +1,55 @@
+/* Autocomplete — a .form-control that holds the chips and the input, focused as one; the options in a .dropdown-menu
+   the component places. */
+
+.tz-autocomplete__field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: calc(1.5em + 0.75rem + calc(var(--bs-border-width) * 2));
+  padding-block: 0.25rem;
+}
+
+.tz-autocomplete__field:focus-within {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.tz-autocomplete__input {
+  flex: 1 1 8ch;
+  min-width: 8ch;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--bs-body-color);
+}
+
+.tz-autocomplete__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+.tz-autocomplete__remove {
+  width: 0.5em;
+  height: 0.5em;
+  padding: 0.125em;
+  background-size: 0.5em;
+}
+
+.tz-autocomplete__list {
+  position: fixed;
+  min-width: 12.5rem;
+  max-height: 17.5rem;
+  overflow: auto;
+}
+
+.tz-autocomplete__option {
+  cursor: pointer;
+}
+
+.tz-autocomplete__option[aria-selected="true"] {
+  font-weight: 600;
+}

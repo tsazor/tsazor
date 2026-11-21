@@ -1,0 +1,161 @@
+@page "/{lessonTrack}/{slug}"
+@inject TutorialState State
+@inject NavigationManager Navigation
+@import { compilerClient } from "../engine/compiler-client"
+@import CodeEditor from "../Shell/CodeEditor.tsazor"
+
+@if (current && text) {
+    <PageTitle>@pageTitle</PageTitle>
+    <div class="tutorial">
+        <TopBar LessonTrack="@trackValue" Current="@current" Lessons="@lessons" />
+        <div class="body">
+            <LessonText Current="@current" LessonTrack="@trackValue" Previous="@previous" Next="@next" />
+            <div class="workbench">
+                <div class="editor-pane">
+                    <div class="toolbar">
+                        <FileTabs Files="@fileNames" Active="@active" Diagnostics="@diagnostics" OnSelect="selectFile" />
+                        <div class="actions">
+                            <button type="button" class="action open-playground" @onclick="openPlayground" title="Continue with these files in the playground">Playground</button>
+                            <button type="button" class="action" @onclick="reset" title="Back to the start of this lesson">Reset</button>
+                            <button type="button" class="action action--primary" @onclick="solve" disabled="@(!current.lesson.b)" title="Show the solution">Solve</button>
+                        </div>
+                    </div>
+                    <div class="editor-host">
+                        <CodeEditor Files="@files" Active="@active" Revision="@revision" Diagnostics="@diagnostics" OnEdit="edit" @ref="editor" />
+                    </div>
+                    <ProblemsPanel Items="@diagnostics" Compiling="@compiling" CompileError="@compileError" OnPick="reveal" />
+                </div>
+                <Preview Build="@build" Stale="@hasErrors" />
+            </div>
+        </div>
+    </div>
+} else {
+    <NotFoundPanel />
+}
+
+@code {
+    @Parameter() lessonTrack = "";
+    @Parameter() slug = "";
+
+    private current?: LessonRef;
+    private lessons: LessonRef[] = [];
+    private files: LessonFiles = {};
+    private active = "";
+    /** Bumped whenever the editor must reload its files (lesson change, Solve, Reset). */
+    private revision = 0;
+    private build?: ProjectBuild;
+    private diagnostics: Diagnostic[] = [];
+    private compiling = false;
+    private compileError?: string;
+    private loadedSlug = "";
+    private compileTimer?: ReturnType<typeof setTimeout>;
+    private editor?: CodeEditor;
+
+    private get trackValue(): Track {
+        return isTrack(this.lessonTrack) ? this.lessonTrack : "ts";
+    }
+
+    private get text() {
+        return this.current?.lesson.text[this.trackValue];
+    }
+
+    /** Compile errors stop the preview; type errors (`tsazor check`) don't — the code still runs. */
+    private get hasErrors(): boolean {
+        return this.diagnostics.some((d) => d.severity === "error" && d.source !== "types");
+    }
+
+    private get pageTitle(): string {
+        return `${this.text?.title ?? "Lesson"} · Tsazor tutorial`;
+    }
+
+    private get previous(): LessonRef | undefined {
+        return this.current ? this.lessons[this.current.index - 1] : undefined;
+    }
+
+    private get next(): LessonRef | undefined {
+        return this.current ? this.lessons[this.current.index + 1] : undefined;
+    }
+
+    private get fileNames(): string[] {
+        return Object.keys(this.files);
+    }
+
+    protected override onParametersSet(): void {
+        if (!isTrack(this.lessonTrack)) {
+            this.current = undefined;
+            return;
+        }
+        this.State.preferredTrack = this.lessonTrack;
+        this.State.rememberLesson(this.lessonTrack, this.slug);
+        this.lessons = this.State.lessons(this.lessonTrack);
+        this.current = this.State.find(this.lessonTrack, this.slug);
+        if (!this.current || this.current.lesson.slug === this.loadedSlug) return;
+        this.loadedSlug = this.current.lesson.slug;
+        this.load(this.State.workspace(this.current.lesson), this.text!.focus);
+    }
+
+    private load(files: LessonFiles, focus: string): void {
+        this.files = files;
+        this.active = focus in files ? focus : Object.keys(files)[0] ?? "";
+        this.revision++;
+        this.diagnostics = [];
+        void this.compile();
+    }
+
+    private selectFile(file: string): void {
+        this.active = file;
+    }
+
+    private edit(change: { file: string; text: string }): void {
+        this.files = { ...this.files, [change.file]: change.text };
+        this.State.saveWorkspace(this.current!.lesson, this.files);
+        clearTimeout(this.compileTimer);
+        this.compileTimer = setTimeout(() => void this.compile(), 250);
+    }
+
+    private solve(): void {
+        const lesson = this.current!.lesson;
+        if (!lesson.b) return;
+        this.State.saveWorkspace(lesson, { ...lesson.b });
+        this.load({ ...lesson.b }, this.active);
+    }
+
+    private reset(): void {
+        const lesson = this.current!.lesson;
+        this.State.saveWorkspace(lesson, { ...lesson.a });
+        this.load({ ...lesson.a }, this.active);
+    }
+
+    /** Continues in the playground with the lesson's current files. */
+    private openPlayground(): void {
+        this.State.playground = { ...this.files };
+        this.Navigation.navigateTo("playground");
+    }
+
+    private reveal(diagnostic: Diagnostic): void {
+        this.active = diagnostic.file;
+        this.editor?.reveal(diagnostic.file, diagnostic.line, diagnostic.column);
+    }
+
+    private async compile(): Promise<void> {
+        this.compiling = true;
+        const outcome = await compilerClient.compile(this.files, (types) => {
+            // The type check (`tsazor check`) follows the build.
+            this.diagnostics = [...(this.build?.diagnostics ?? []), ...types];
+            this.stateHasChanged();
+        });
+        if (!outcome) return; // superseded by a newer edit
+        this.compiling = false;
+        this.compileError = outcome.error;
+        if (outcome.build) {
+            this.build = outcome.build;
+            // Keep the previous type diagnostics until the new check arrives (no flicker).
+            this.diagnostics = [...outcome.build.diagnostics, ...this.diagnostics.filter((d) => d.source === "types")];
+        }
+        this.stateHasChanged();
+    }
+
+    dispose(): void {
+        clearTimeout(this.compileTimer);
+    }
+}

@@ -1,0 +1,32 @@
+@* components/list/page-header.tsx: the editorial top stack of a page that isn't a list — a SectionRule, the display
+   title with an optional badge, the description, the actions. *@
+@import type { SectionCrumb } from "@/components/section-crumb"
+
+<div class="@cn("space-y-6 fsh-enter", additionalAttributes?.class as string)">
+    <SectionRule crumbs="@crumbs" trailing="@trailing" />
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-baseline gap-3">
+                <h1 class="font-display text-4xl font-semibold tracking-tight md:text-5xl">@title</h1>
+                @badge
+            </div>
+            @if (descriptionContent || description) {
+                <p class="mt-2 max-w-2xl text-sm text-[var(--color-muted-foreground)]">@if (descriptionContent) { @descriptionContent } else { @description }</p>
+            }
+        </div>
+        @if (actions) {
+            <div class="flex shrink-0 flex-wrap items-center gap-2">@actions</div>
+        }
+    </div>
+</div>
+
+@code {
+    @Parameter() crumbs: readonly SectionCrumb[] = [];
+    @Parameter() trailing?: RenderFragment;
+    @Parameter() title: string = "";
+    @Parameter() badge?: RenderFragment;
+    @Parameter() description?: string;
+    @Parameter() descriptionContent?: RenderFragment;
+    @Parameter() actions?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

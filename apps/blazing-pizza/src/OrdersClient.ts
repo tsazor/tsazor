@@ -1,36 +1,41 @@
 /**
- * Port of BlazingPizza.Client/OrdersClient.cs against TsazorHttp.
+ * Port of BlazingPizza.Client/OrdersClient.cs — HTTP no longer goes through
+ * app-owned TsazorHttp calls but through the PizzaApiClient generated from
+ * api/openapi.json (@tsazor/dotnet, roadmap 5.2). Errors are HttpResult values
+ * (ProblemDetails via problemMessage), no throw before the body is readable.
  * The vite dev proxy makes /specials, /toppings, /orders & /notifications
- * same-origin — exactly the workshop's configured HttpClient base.
+ * same-origin — hence relative paths without a baseUrl.
  */
+import type { HttpResult } from "@tsazor/dotnet";
 import { TsazorHttp } from "@tsazor/runtime";
-import type { Order, OrderWithStatus, Topping } from "./models";
+import type { Order, OrderWithStatus, PizzaSpecial, Topping } from "./models";
+import { PizzaApiClient } from "./api/pizza-api";
 
 export class OrdersClient {
-  private readonly http = new TsazorHttp();
+  private readonly api = new PizzaApiClient(new TsazorHttp());
 
-  getToppings(): Promise<Topping[]> {
-    return this.http.getJson<Topping[]>("/toppings");
+  getSpecials(): Promise<HttpResult<PizzaSpecial[]>> {
+    return this.api.getSpecials();
   }
 
-  getOrders(): Promise<OrderWithStatus[]> {
-    return this.http.getJson<OrderWithStatus[]>("/orders");
+  getToppings(): Promise<HttpResult<Topping[]>> {
+    return this.api.getToppings();
   }
 
-  getOrder(orderId: number): Promise<OrderWithStatus> {
-    return this.http.getJson<OrderWithStatus>(`/orders/${orderId}`);
+  getOrders(): Promise<HttpResult<OrderWithStatus[]>> {
+    return this.api.getOrders();
   }
 
-  /** Returns the new order's id (the original posted and read an int). */
-  async placeOrder(order: Order): Promise<number> {
-    const result = await this.http.postJson<number | { orderId: number }>("/orders", order);
-    return typeof result === "number" ? result : result.orderId;
+  getOrder(orderId: number): Promise<HttpResult<OrderWithStatus>> {
+    return this.api.getOrder(orderId);
   }
 
-  subscribeToNotifications(subscription: unknown): Promise<unknown> {
-    return this.http.putJson("/notifications/subscribe", subscription);
+  /** Returns the new order's id as the posted int (HttpResult<number>). */
+  placeOrder(order: Order): Promise<HttpResult<number>> {
+    return this.api.placeOrder(order);
+  }
+
+  subscribeToNotifications(subscription: Record<string, unknown>): Promise<HttpResult<Record<string, unknown>>> {
+    return this.api.subscribeToNotifications(subscription);
   }
 }
-
-// @inject services are imported as default (codegen convention).
-export default OrdersClient;

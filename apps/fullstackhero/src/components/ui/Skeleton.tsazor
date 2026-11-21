@@ -1,0 +1,8 @@
+@* components/ui/skeleton.tsx: a placeholder block with the shimmer of globals.css (`.skeleton`). *@
+@import { withClass } from "@/lib/attributes"
+
+<div @attributes="@withClass("skeleton h-4 w-full", additionalAttributes)"></div>
+
+@code {
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

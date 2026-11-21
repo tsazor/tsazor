@@ -1,16 +1,31 @@
-<Router Found="@found" NotFound="@notFound" />
+@* A hash switch instead of the Router, as in the other apps: the bench measures the framework, not a router.
+   RouterApp.tsazor is the same app with Tsazor's Router in hash mode (`vite build --mode router`). *@
+@import Todo from "./Pages/Todo.tsazor"
+@import Rows from "./Pages/Rows.tsazor"
+@import Cards from "./Pages/Cards.tsazor"
+<nav class="bench-nav">
+    <a href="#/todo" class="@(this.isRows ? "" : "active")">Todo</a>
+    <a href="#/rows" class="@(this.isRows ? "active" : "")">Rows</a>
+</nav>
+<main>
+    @if (this.isRows) {
+        <Rows />
+    } else if (this.isCards) {
+        <Cards />
+    } else {
+        <Todo />
+    }
+</main>
 
 @code {
-    private found = (routeData: RouteData): RenderFragment => (b: RenderTreeBuilder) => {
-        b.openComponent(0, RouteView);
-        b.addAttribute(1, "RouteData", routeData);
-        b.addAttribute(2, "DefaultLayout", BenchLayout);
-        b.closeComponent();
-    };
+    private hash = location.hash || "#/todo";
+    private get isRows(): boolean { return this.hash.startsWith("#/rows"); }
+    private get isCards(): boolean { return this.hash.startsWith("#/cards"); }
 
-    private notFound = (b: RenderTreeBuilder) => {
-        b.openElement(0, "nav");
-        b.addAttribute(1, "class", "bench-nav");
-        b.closeElement();
-    };
+    protected override onInitialized(): void {
+        window.addEventListener("hashchange", () => {
+            this.hash = location.hash || "#/todo";
+            this.stateHasChanged();
+        });
+    }
 }

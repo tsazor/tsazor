@@ -1,0 +1,17 @@
+/* AuthLogin — a copied template of the extended library (§2.4): a centered card, restrained. */
+
+.tz-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 22rem;
+  margin: 4rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: var(--bs-border-radius, 0.375rem);
+  background: var(--bs-body-bg);
+}
+
+.tz-auth .btn[type="submit"] {
+  width: 100%;
+}

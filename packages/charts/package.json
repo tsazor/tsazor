@@ -1,0 +1,69 @@
+{
+  "name": "@tsazor/charts",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/charts"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/charts#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Charts for Tsazor: line, area, bar, stacked bar, donut and pie charts and sparklines as SVG in the skin's tokens, accessible as figures with their numbers in a table.",
+  "keywords": [
+    "tsazor",
+    "tsazor-components",
+    "charts",
+    "svg"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./charts.css": "./dist/charts.css",
+    "./tsazor-components.json": "./dist/tsazor-components.json"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "tsazor": {
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": [
+        "@tsazor/charts/charts.css"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/testing": "workspace:*",
+    "@tsazor/ui": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

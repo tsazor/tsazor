@@ -1,0 +1,236 @@
+@* pages/users/list.tsx: the directory — searched (a 250ms debounce) and filtered (status, email, role) by the server,
+   12 per page with the previous page kept while the next one loads; cards on mobile, a grid table on desktop. "New
+   user" opens the create dialog. A changed filter goes back to page 1 (the original's effect on the filters). *@
+@page "/users"
+@authorize({ policy: "Permissions.Users.View" })
+@import { ChevronLeft, ChevronRight, Plus, Users } from "lucide"
+@import { keepPreviousData } from "@tanstack/query-core"
+@import { searchUsers, type UserDto } from "@/api/users"
+@import { listRoles } from "@/api/roles"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import CreateUserDialog from "@/components/users/CreateUserDialog.tsazor"
+@import { triToBool, type Tri } from "./tri"
+@import Segmented from "./Segmented.tsazor"
+@import UserDesktopRow from "./UserDesktopRow.tsazor"
+@import UserMobileCard from "./UserMobileCard.tsazor"
+@inject NavigationManager navigation
+
+<div class="space-y-4 sm:space-y-6">
+    <EntityPageHeader icon="@Users" title="Directory" total="@(data?.totalCount ?? null)" unit="account"
+                      description="@(data ? `${data.totalCount} ${data.totalCount === 1 ? "account" : "accounts"} on this tenant.` : "Loading the roster…")">
+        <Button onClick="@(() => createOpen = true)" class="h-9 flex-1 gap-1.5 rounded-lg px-4 text-[13px] font-semibold sm:flex-none">
+            <Icon icon="@Plus" class="size-4" /> New user
+        </Button>
+    </EntityPageHeader>
+
+    @* Filter row *@
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="relative w-full max-w-sm">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+            </span>
+            <input type="search" value="@searchInput" @oninput="this.onSearch" placeholder="Search name, username, email…" aria-label="Search users"
+                   class="h-9 w-full rounded-md border border-[var(--color-input)] bg-transparent pl-9 pr-3 font-mono text-[12.5px] outline-none transition-colors placeholder:text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)] focus-visible:border-[var(--color-ring)] focus-visible:ring-[3px] focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]" />
+        </div>
+
+        <Segmented label="Status" @bind-value="activeFilter" @bind-value:after="resetPage" options="@activeOptions" />
+        <Segmented label="Email" @bind-value="confirmedFilter" @bind-value:after="resetPage" options="@confirmedOptions" />
+
+        <Select label="Role" @bind-value="roleId" @bind-value:after="resetPage" options="@roleOptions" placeholder="Any role" minWidth="9rem" />
+    </div>
+
+    @if (usersQuery.result.isError) {
+        <ErrorBand message="@(usersQuery.result.error instanceof ApiRequestError ? usersQuery.result.error.problem?.detail ?? usersQuery.result.error.message : "Failed to load users.")" />
+    }
+
+    @if (usersQuery.result.isLoading && items.length === 0) {
+        <div role="status" class="py-12 text-center font-mono text-sm uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+            Loading…
+        </div>
+    }
+
+    @if (!usersQuery.result.isLoading && items.length === 0 && !usersQuery.result.isError) {
+        <div class="py-16 text-center">
+            <p class="font-display text-2xl text-[var(--color-foreground)]">No matches.</p>
+            <p class="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                @(searchActive ? "Adjust filters or invite a new user." : "Register the first member to seed this tenant.")
+            </p>
+            @if (searchActive) {
+                <Button variant="outline" class="mt-4 h-9 rounded-lg px-4 text-[13px]" onClick="@clearFilters">Clear filters</Button>
+            }
+        </div>
+    }
+
+    @if (items.length > 0) {
+        <div>
+            <p class="mb-3 text-[12px] font-medium text-[var(--color-muted-foreground)]">
+                @(data?.totalCount ?? 0) user@((data?.totalCount ?? 0) !== 1 ? "s" : "") found
+            </p>
+
+            @* Mobile card list *@
+            <div class="space-y-2 md:hidden">
+                @foreach (const [i, user] of items.entries()) {
+                    <UserMobileCard @key="user.id ?? i" user="@user" index="@(baseIndex + i + 1)" onClick="@(() => open(user))" />
+                }
+            </div>
+
+            @* Desktop table *@
+            <div class="hidden overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs md:block">
+                @* Table header *@
+                <div class="@(`grid items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-muted)]/40 px-4 py-2.5 ${UserDesktopRow.columns}`)">
+                    <span class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Name</span>
+                    <span class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Username</span>
+                    <span class="hidden text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] lg:block">Status</span>
+                    <span></span>
+                </div>
+
+                <ol class="divide-y divide-[var(--color-border)]">
+                    @foreach (const [i, user] of items.entries()) {
+                        <UserDesktopRow @key="user.id ?? i" user="@user" onClick="@(() => open(user))" />
+                    }
+                </ol>
+            </div>
+        </div>
+    }
+
+    @* Pagination *@
+    @if (data && data.totalPages > 1) {
+        <div class="flex items-center justify-between text-xs">
+            <span class="font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">@pageBadge</span>
+            <div class="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled="@(!data.hasPrevious || usersQuery.result.isFetching)" onClick="@(() => pageNumber = Math.max(1, pageNumber - 1))" class="h-9 rounded-lg px-3 text-[13px]">
+                    <Icon icon="@ChevronLeft" class="mr-1 h-3.5 w-3.5" /> Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled="@(!data.hasNext || usersQuery.result.isFetching)" onClick="@(() => pageNumber = pageNumber + 1)" class="h-9 rounded-lg px-3 text-[13px]">
+                    Next <Icon icon="@ChevronRight" class="ml-1 h-3.5 w-3.5" />
+                </Button>
+            </div>
+        </div>
+    }
+
+    <CreateUserDialog @bind-open="createOpen" />
+</div>
+
+@code {
+    private static readonly pageSize = 12;
+
+    private pageNumber = 1;
+    private searchInput = "";
+    private searchTerm = "";
+    private activeFilter: Tri = "any";
+    private confirmedFilter: Tri = "any";
+    private roleId = "";
+    private createOpen = false;
+    private timer?: ReturnType<typeof setTimeout>;
+
+    private readonly activeOptions: ReadonlyArray<{ value: Tri; label: string }> = [
+        { value: "any", label: "Any" },
+        { value: "yes", label: "Active" },
+        { value: "no", label: "Disabled" },
+    ];
+    private readonly confirmedOptions: ReadonlyArray<{ value: Tri; label: string }> = [
+        { value: "any", label: "Any" },
+        { value: "yes", label: "Confirmed" },
+        { value: "no", label: "Pending" },
+    ];
+
+    private readonly rolesQuery = new Query(() => ({
+        queryKey: ["roles"],
+        queryFn: listRoles,
+        staleTime: 5 * 60_000,
+    }));
+
+    private readonly usersQuery = new Query(() => {
+        const { pageNumber, searchTerm, activeFilter, confirmedFilter, roleId } = this;
+        const pageSize = UsersList.pageSize;
+        return {
+            queryKey: ["users", { pageNumber, pageSize, searchTerm, activeFilter, confirmedFilter, roleId }],
+            queryFn: () =>
+                searchUsers({
+                    pageNumber,
+                    pageSize,
+                    search: searchTerm || undefined,
+                    isActive: triToBool(activeFilter),
+                    emailConfirmed: triToBool(confirmedFilter),
+                    roleId: roleId || undefined,
+                }),
+            placeholderData: keepPreviousData,
+        };
+    });
+
+    protected override onInitialized(): void {
+        this.observe(this.rolesQuery);
+        this.observe(this.usersQuery);
+    }
+
+    private get data() {
+        return this.usersQuery.result.data;
+    }
+
+    private get items(): UserDto[] {
+        return this.data?.items ?? [];
+    }
+
+    private get baseIndex(): number {
+        return ((this.data?.pageNumber ?? 1) - 1) * (this.data?.pageSize ?? UsersList.pageSize);
+    }
+
+    private get pageBadge(): string {
+        const data = this.data;
+        if (!data) return "—";
+        const p = String(data.pageNumber).padStart(2, "0");
+        const t = String(Math.max(data.totalPages, 1)).padStart(2, "0");
+        return `Page ${p} of ${t}`;
+    }
+
+    private get roleOptions(): SelectOption[] {
+        return (this.rolesQuery.result.data ?? []).map((r) => ({ value: r.id ?? "", label: r.name ?? r.id ?? "" }));
+    }
+
+    private get filtersActive(): boolean {
+        return this.activeFilter !== "any" || this.confirmedFilter !== "any" || this.roleId !== "";
+    }
+
+    private get searchActive(): boolean {
+        return this.searchTerm.length > 0 || this.filtersActive;
+    }
+
+    private onSearch(event: Event): void {
+        this.searchInput = (event.target as HTMLInputElement).value;
+        this.debounceSearch();
+    }
+
+    /** The original's effect on the search input: 250ms later it becomes the search term, from page 1. */
+    private debounceSearch(): void {
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+            this.searchTerm = this.searchInput;
+            this.pageNumber = 1;
+            this.stateHasChanged();
+        }, 250);
+    }
+
+    /** The original's effect on the filters: a changed filter starts at page 1. */
+    private resetPage(): void {
+        this.pageNumber = 1;
+    }
+
+    private clearFilters(): void {
+        this.searchInput = "";
+        this.debounceSearch();
+        this.activeFilter = "any";
+        this.confirmedFilter = "any";
+        this.roleId = "";
+        this.resetPage();
+    }
+
+    private open(user: UserDto): void {
+        if (user.id) this.navigation.navigateTo(`/users/${user.id}`);
+    }
+
+    dispose(): void {
+        clearTimeout(this.timer);
+    }
+}

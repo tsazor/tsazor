@@ -1,0 +1,16 @@
+@* pages/health/page.tsx's StatusGlyph: a probe's status in a KPI tile — "Healthy" with a pulsing dot, else the
+   status as text. *@
+@import type { HealthStatus } from "@/api/health"
+
+@if (status === "Healthy") {
+    <span class="inline-flex items-center gap-2">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span>Healthy</span>
+    </span>
+} else {
+    <span>@status</span>
+}
+
+@code {
+    @Parameter() status: HealthStatus = "";
+}

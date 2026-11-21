@@ -1,0 +1,20 @@
+@page "/reference/language"
+@import reference from "virtual:tutorial-reference"
+
+<PageTitle>Language · Tsazor reference</PageTitle>
+<ReferenceShell Section="language">
+    <h1>Language reference</h1>
+    <nav class="toc" aria-label="On this page">
+        <h2 class="toc-heading">On this page</h2>
+        <ol>
+            @foreach (const heading of topLevel) {
+                <li @key="heading.id"><a href="@("reference/language#" + heading.id)">@(new MarkupString(heading.html))</a></li>
+            }
+        </ol>
+    </nav>
+    <Prose Html="@reference.language.html" />
+</ReferenceShell>
+
+@code {
+    private readonly topLevel = reference.language.headings.filter((heading) => heading.level === 2);
+}

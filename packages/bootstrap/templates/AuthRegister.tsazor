@@ -1,0 +1,46 @@
+@page "/register"
+@** The register page, copied in (`npx @tsazor/bootstrap add AuthRegister`) and then the app's: a
+    card over the skins' Form, the rules on the model (required, the e-mail's shape, the password's
+    length, the confirmation compared); the registration is yours — `onValidSubmit` is the TODO. *@
+@import { EditContext, DataAnnotationsValidator, Required, EmailAddress, MinLength, Compare } from "@tsazor/runtime"
+@import { RegisterCredentials } from "./register-credentials"
+
+<Form Model="@credentials" OnValidSubmit="@this.onValidSubmit" OnInvalidSubmit="@this.onInvalidSubmit">
+    <DataAnnotationsValidator />
+    <section class="tz-auth">
+        <Typography Variant="h2">Register</Typography>
+        <FormField Label="Display name" Id="register-name" For="displayName" Help="The name the team sees.">
+            <TextInput @bind-Value="@credentials.displayName" Required="@true" Placeholder="Their name" maxlength="40" />
+        </FormField>
+        <FormField Label="E-mail" Id="register-email" For="email">
+            <TextInput @bind-Value="@credentials.email" Type="email" Autocomplete="email" Placeholder="person@organization.example" Required="@true" />
+        </FormField>
+        <FormField Label="Password" Id="register-password" For="password" Help="At least 8 characters.">
+            <TextInput @bind-Value="@credentials.password" Type="password" Autocomplete="new-password" Required="@true" />
+        </FormField>
+        <FormField Label="Confirm the password" Id="register-confirm" For="confirm">
+            <TextInput @bind-Value="@credentials.confirm" Type="password" Autocomplete="new-password" Required="@true" />
+        </FormField>
+        <Button Intent="primary" Type="submit" Disabled="@busy">Register</Button>
+        <Typography Variant="caption">An account already? <a href="/login">Sign in</a>.</Typography>
+    </section>
+</Form>
+
+@code {
+    private credentials = new RegisterCredentials();
+    private busy = false;
+
+    /** The valid submit is yours (TODO): register at your API, route to the sign-in or in. */
+    private async onValidSubmit(context: EditContext): Promise<void> {
+        void context;
+        this.busy = true;
+        this.stateHasChanged();
+        // TODO: your auth API — e.g. await register(this.credentials);
+        this.busy = false;
+        this.stateHasChanged();
+    }
+
+    private onInvalidSubmit(context: EditContext): void {
+        void context;
+    }
+}

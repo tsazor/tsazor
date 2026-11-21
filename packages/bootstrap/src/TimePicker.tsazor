@@ -1,0 +1,257 @@
+@** A Bootstrap time picker (an `.input-group` of a `.form-control` and a button, the times in a `.dropdown-menu`;
+    Fluent UI Blazor's FluentTimePicker, MudBlazor's MudTimePicker; InputBase — bind it with @bind-value): a text field
+    for the time as the locale writes it ("2:30 PM", "14:30"; ISO works too) and a list of times below it, from
+    startHour to endHour every increment minutes (the ARIA combobox pattern: ArrowDown, ArrowUp or Alt+ArrowDown open
+    it on the value, the arrows, Home and End move, Enter picks, Escape closes; the focus stays in the field). The
+    value is an ISO time ("14:30:00", what .NET writes for a TimeOnly). disabledTimeFunc rules times out of the list.
+    renderStyle native takes the browser's time input instead. Text that is no time goes to validation as it was
+    typed. Validation state and message as with TextInput — the same parameters as the Fluent skin's TimePicker. *@
+@import {
+    anchoredPosition, createLayer, dismissible, parseIsoTime, uniqueId, type HourCycle, type IsoTime,
+} from "@tsazor/ui"
+@import {
+    edgeEnabledOption, FieldState, formatTimeField, formatTimePickerValue, initialTimeOption, nextEnabledOption,
+    normalizeIsoTime, parseTimeField, timeFieldPlaceholder, timeOptions,
+} from "@tsazor/ui/kit"
+@import { withClass } from "./attributes"
+@import { Clock } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
+
+@inherits InputBase<string>
+
+<div class="mb-3 tz-time-picker">
+    @if (this.label) {
+        <label class="form-label" for="@this.field.id(this.id)">@this.label</label>
+    }
+    @if (this.renderStyle === "native") {
+        <input @ref="element" id="@this.field.id(this.id)" type="time" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.nativeValue" @onchange="this.nativeChange" />
+    } else {
+        <div class="input-group" @ref="fieldBox">
+            <input @ref="element" id="@this.field.id(this.id)" type="text" role="combobox" autocomplete="off" aria-autocomplete="none"
+                   aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId" aria-activedescendant="@this.activeId"
+                   placeholder="@this.placeholderText" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel"
+                   @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @onchange="this.handleChange" @onkeydown="this.keydown" />
+            <button type="button" class="btn btn-outline-secondary" tabindex="-1" aria-label="@(this.buttonLabel ?? t("timePicker.button"))" title="@(this.buttonLabel ?? t("timePicker.button"))"
+                    aria-controls="@this.listId" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)"
+                    @ref="button" @onmousedown:preventDefault @onclick="this.toggle"><Icon value="@Clock" /></button>
+        </div>
+        @if (this.open) {
+            <ul class="dropdown-menu show tz-time-picker__list" role="listbox" id="@this.listId" aria-label="@(this.label ?? this.ariaLabel ?? this.buttonLabel ?? t("timePicker.button"))" @ref="list" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position">
+                @for (let i = 0; i < this.options.length; i++) {
+                    <li class="@this.optionClass(i)" role="option" id="@this.optionId(i)" aria-selected="@(this.options[i] === this.selected ? "true" : "false")"
+                        aria-disabled="@(this.optionDisabled[i] ? "true" : null)" @onmousedown:preventDefault @onclick="() => this.pickAt(i)">@this.optionText(this.options[i]!)</li>
+                }
+            </ul>
+        }
+    }
+    @if (this.help) {
+        <div class="form-text" id="@this.field.helpId(this.id)">@this.help</div>
+    }
+    @if (this.message) {
+        <div class="invalid-feedback d-block" role="alert" id="@this.field.messageId(this.id)">@this.message</div>
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The field's label (clicking it focuses the text field). */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** The text field's placeholder; by default the locale's pattern ("hh:mm AM/PM"). */
+    @Parameter() placeholder?: string;
+    /** The list's first hour, 0–23 (`StartHour`). */
+    @Parameter() startHour: number = 8;
+    /** The list's last hour, up to 24 (`EndHour`). */
+    @Parameter() endHour: number = 18;
+    /** The minutes between the list's times (`Increment`). */
+    @Parameter() increment: number = 15;
+    /** Rules times out of the list (`DisabledTimeFunc`). */
+    @Parameter() disabledTimeFunc?: (time: IsoTime) => boolean;
+    /** The list of times (default), or the browser's own time input (`RenderStyle`'s Native). */
+    @Parameter() renderStyle: "list" | "native" = "list";
+    /** The locale of the text ("de-DE"; `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
+    @Parameter() locale?: string;
+    /** 12 hours with AM and PM, or 24, instead of the locale's (MudBlazor's `AmPm`). */
+    @Parameter() hourCycle?: HourCycle;
+    /** The button's and the list's name. */
+    @Parameter() buttonLabel?: string;
+    /** Disables the field and the button. */
+    @Parameter() disabled: boolean = false;
+    /** Shows the value without letting it change. */
+    @Parameter() readOnly: boolean = false;
+    /** Marks the field as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The text field's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** The text field's accessible name when there is no label. */
+    @Parameter() ariaLabel?: string;
+
+    private readonly field = new FieldState("tz-time-picker");
+    private readonly listId = uniqueId("tz-time-picker-list");
+    private open = false;
+    private active = -1;
+    private scrollPending = false;
+    private fieldBox?: HTMLDivElement;
+    private button?: HTMLButtonElement;
+    private list?: HTMLUListElement;
+
+    /** The list is an overlay layer: inside a Modal, Escape closes the list first. */
+    private readonly layer = createLayer();
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.setOpen(false), ignore: () => [this.fieldBox] });
+    private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
+
+    private get locales(): string {
+        return this.locale ?? this.t.locale;
+    }
+
+    private get options(): IsoTime[] {
+        return timeOptions(this.startHour, this.endHour, this.increment);
+    }
+
+    private get optionDisabled(): boolean[] {
+        const rule = this.disabledTimeFunc;
+        return this.options.map((time) => rule?.(time) ?? false);
+    }
+
+    /** The value as an ISO time in its full form, when it is one. */
+    private get selected(): IsoTime | undefined {
+        return normalizeIsoTime(this.currentValue ?? "");
+    }
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.valueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id, this.field.validity(this.fieldClass) === "invalid"), ...this.additionalAttributes };
+    }
+
+    private get placeholderText(): string {
+        return this.placeholder ?? timeFieldPlaceholder(this.locales, this.hourCycle, this.t);
+    }
+
+    /** The value as the field writes it; text that is no time stays as typed. */
+    private get text(): string {
+        return formatTimePickerValue(this.currentValue ?? "", this.locales, this.hourCycle);
+    }
+
+    /** The native input's value: "14:30" (with the seconds when there are some). */
+    private get nativeValue(): string {
+        const parts = parseIsoTime(this.currentValue ?? "");
+        if (parts === undefined) return "";
+        const time = this.selected!;
+        return parts.seconds === 0 ? time.slice(0, 5) : time;
+    }
+
+    private get activeId(): string | null {
+        return this.open && this.active >= 0 ? this.optionId(this.active) : null;
+    }
+
+    private optionId(index: number): string {
+        return `${this.listId}-${index}`;
+    }
+
+    private optionText(time: IsoTime): string {
+        return formatTimeField(time, this.locales, this.hourCycle);
+    }
+
+    private optionClass(index: number): string {
+        let cls = "dropdown-item tz-time-picker__option";
+        if (this.options[index] === this.selected) cls += " active";
+        if (index === this.active) cls += " tz-time-picker__option--active";
+        if (this.optionDisabled[index]) cls += " disabled";
+        return cls;
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.scrollPending || this.list === undefined) return;
+        this.scrollPending = false;
+        // The active time in view, within the list only (the page doesn't move).
+        const option = this.list.querySelector<HTMLElement>(`#${CSS.escape(this.optionId(this.active))}`);
+        if (option === null) return;
+        const top = option.offsetTop;
+        const bottom = top + option.offsetHeight;
+        if (top < this.list.scrollTop) this.list.scrollTop = top;
+        else if (bottom > this.list.scrollTop + this.list.clientHeight) this.list.scrollTop = bottom - this.list.clientHeight;
+    }
+
+    private handleChange(e: Event): void {
+        const text = (e.target as HTMLInputElement).value;
+        // Empty clears; a time becomes ISO; anything else goes to validation as typed.
+        this.currentValue = text.trim() === "" ? "" : parseTimeField(text, this.locales) ?? text;
+    }
+
+    private nativeChange(e: Event): void {
+        const value = (e.target as HTMLInputElement).value;
+        this.currentValue = value === "" ? "" : normalizeIsoTime(value) ?? value;
+    }
+
+    private keydown(e: KeyboardEvent): void {
+        if (this.disabled || this.readOnly) return;
+        const disabled = this.optionDisabled;
+        if (!this.open) {
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+            e.preventDefault();
+            // On what the field says now: a typed time counts before its change event.
+            const typed = parseTimeField((e.target as HTMLInputElement).value, this.locales);
+            this.openAt(initialTimeOption(this.options, typed ?? this.currentValue ?? undefined, disabled));
+            return;
+        }
+        let next: number | undefined;
+        switch (e.key) {
+            case "ArrowDown": next = nextEnabledOption(this.active, 1, disabled); break;
+            case "ArrowUp": next = nextEnabledOption(this.active < 0 ? 0 : this.active, -1, disabled); break;
+            case "Home": next = edgeEnabledOption(1, disabled); break;
+            case "End": next = edgeEnabledOption(-1, disabled); break;
+            case "Enter":
+                e.preventDefault();
+                if (this.active >= 0) this.pickAt(this.active);
+                return;
+            case "Tab":
+                this.setOpen(false);
+                return;
+            default:
+                return;
+        }
+        e.preventDefault();
+        if (next >= 0) {
+            this.active = next;
+            this.scrollPending = true;
+        }
+    }
+
+    private toggle(): void {
+        if (this.open) {
+            this.setOpen(false);
+            return;
+        }
+        this.element?.focus({ preventScroll: true });
+        this.openAt(initialTimeOption(this.options, this.currentValue ?? undefined, this.optionDisabled));
+    }
+
+    private openAt(active: number): void {
+        this.active = active;
+        this.scrollPending = true;
+        this.setOpen(true);
+    }
+
+    private setOpen(open: boolean): void {
+        if (this.open === open) return;
+        this.open = open;
+        this.stateHasChanged();
+    }
+
+    private pickAt(index: number): void {
+        if (this.optionDisabled[index]) return;
+        this.currentValue = this.options[index]!;
+        this.setOpen(false);
+    }
+}

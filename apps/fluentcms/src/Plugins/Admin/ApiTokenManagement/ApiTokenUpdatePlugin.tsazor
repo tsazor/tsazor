@@ -1,0 +1,43 @@
+@inherits BasePlugin
+@import type { Policy } from "../../../api/models"
+@import { ApiTokenUpdateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Update API Token" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model!.name" label="Name" placeholder="Enter Name" required />
+    <TextArea @bind-Value="this.model!.description" label="Description" placeholder="Enter Description" />
+    <DateInput @bind-Value="this.model!.expireAt" label="Expire At" />
+    <Switch @bind-Value="this.model!.enabled" label="Enabled" />
+    <PluginFormPolicies value="@this.model!.policies" policies="@this.policies" label="Policies" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private model?: ApiTokenUpdateRequest;
+    private policies: Policy[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        this.policies = ensureOk(await this.api.apiTokenGetPolicies()) ?? [];
+        const token = ensureOk(await this.api.apiTokenGetById(this.id ?? ""));
+        this.model = Object.assign(new ApiTokenUpdateRequest(), {
+            id: token.id,
+            name: token.name ?? "",
+            description: token.description,
+            // The date input takes the day; the API answers with a time too.
+            expireAt: token.expireAt?.slice(0, 10) ?? null,
+            enabled: token.enabled,
+            // One policy per area, in the areas' order, with the token's actions.
+            policies: this.policies.map((policy) => ({
+                area: policy.area,
+                actions: token.policies?.find((own) => own.area === policy.area)?.actions ?? [],
+            })),
+        });
+    }
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.apiTokenUpdate(this.model!));
+        this.navigateBack();
+    }
+}

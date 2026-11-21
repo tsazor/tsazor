@@ -1,47 +1,84 @@
-@typeparam TRow
-<table class="@this.tableClass" role="table">
-    <thead class="fui-table__head">@this.headerContent</thead>
-    <tbody class="fui-table__body">
-        @if (this.items.length === 0) {
-            <tr class="fui-table__empty"><td colspan="@this.colSpan">@this.emptyText</td></tr>
-        }
-        @for (let i = 0; i < this.items.length; i++) {
-            @this.rowFor(i)
-        }
-    </tbody>
-</table>
+@** A Fluent UI 2 table, in one of two ways: `items` with a `rowContent` template builds one row per item (and
+    `headerContent` the thead), with an empty-state row when there are none; or `childContent` holds the table's
+    rows as written (thead, tbody). The same parameters as the Bootstrap skin's Table. For column-driven tables —
+    sorting, paging, selection — use DataGrid. *@
+@import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
+
+@typeparam TItem
+
+@if (this.responsive) {
+    <div class="fui-table-wrap fui-table-wrap--scroll">@this.table</div>
+} else {
+    @this.table
+}
 
 @code {
-    /** Rows to render (filter/sort/paging live in the host app). */
-    @Parameter() items: TRow[] = [];
-    /** Thead content (column headers). */
+    private readonly t = libraryTexts();
+
+    /** The items, one row each through `rowContent` (filter, sort and paging live in the host app). */
+    @Parameter() items?: readonly TItem[];
+    /** The thead's content (the column headers) when the rows come from `items`. */
     @Parameter() headerContent?: RenderFragment;
-    /** Builds the row fragment for one item. */
-    @Parameter() rowContent?: (item: TRow) => RenderFragment;
-    /** Zebra striping on alternate rows. */
+    /** One item's row (`RenderFragment<TItem>`): `<RowContent Context="order"><tr>…</tr></RowContent>`. */
+    @Parameter() rowContent?: (item: TItem) => RenderFragment;
+    /** The table's content as written — thead, tbody and rows — when there are no `items`. */
+    @Parameter() childContent?: RenderFragment;
+    /** Shades alternating rows. */
     @Parameter() striped: boolean = false;
-    /** Hover highlight per row. */
+    /** Draws borders on all cells. */
+    @Parameter() bordered: boolean = false;
+    /** Highlights the row under the pointer. */
     @Parameter() hover: boolean = false;
-    /** Dense row heights. */
-    @Parameter() compact: boolean = false;
-    /** Text for the empty-state row. */
-    @Parameter() emptyText: string = "No entries";
-    /** Column count for the empty-state colspan. */
+    /** Dense rows (Fluent's compact table). */
+    @Parameter() small: boolean = false;
+    /** The dark palette for the table, whatever the page's theme. */
+    @Parameter() dark: boolean = false;
+    /** Wraps the table for horizontal scrolling. */
+    @Parameter() responsive: boolean = false;
+    /** The empty-state row's text when `items` is empty; by default the library text "No entries". */
+    @Parameter() emptyText?: string;
+    /** How many columns the empty-state row spans. */
     @Parameter() colSpan: number = 1;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly table: RenderFragment = @<table role="table" @attributes="@this.tableAttributes">
+        @if (this.fromItems) {
+            <thead class="fui-table__head">@this.headerContent</thead>
+            <tbody class="fui-table__body">
+                @if (this.rows.length === 0) {
+                    <tr class="fui-table__empty"><td colspan="@this.colSpan">@(this.emptyText ?? this.t("noEntries"))</td></tr>
+                }
+                @for (const item of this.rows) {
+                    @this.rowContent?.(item)
+                }
+            </tbody>
+        } else {
+            @this.childContent
+        }
+    </table>;
+
+    /** The rows come from `items` (and `rowContent`); otherwise the child content is the table's. */
+    private get fromItems(): boolean {
+        return this.items !== undefined || this.rowContent !== undefined;
+    }
+
+    private get rows(): readonly TItem[] {
+        return this.items ?? [];
+    }
 
     private get tableClass(): string {
         let cls = "fui-table";
         if (this.striped) cls += " fui-table--striped";
+        if (this.bordered) cls += " fui-table--bordered";
         if (this.hover) cls += " fui-table--hover";
-        if (this.compact) cls += " fui-table--compact";
+        if (this.small) cls += " fui-table--compact";
+        if (this.dark) cls += " fui-table--dark";
         return cls;
     }
 
-    /** Builds one row fragment; returns null while no rowContent was given. */
-    private rowFor(index: number): RenderFragment | undefined {
-        const render = this.rowContent;
-        const item = this.items[index];
-        if (!render || !item) return undefined;
-        return render(item);
+    private get tableAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.tableClass, "data-fluent-theme": this.dark ? "dark" : undefined }, this.additionalAttributes);
     }
 }

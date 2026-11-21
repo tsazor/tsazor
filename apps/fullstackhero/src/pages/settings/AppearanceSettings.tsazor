@@ -1,0 +1,49 @@
+@* pages/settings/appearance.tsx: AppearanceSettings — theme picker. ThemeProvider carries a binary light/dark today;
+   a future "Follow system" mode would extend the provider to a tri-state. Persistence is handled by the provider
+   (here the ThemeService); we just call setTheme. *@
+@page "/settings/appearance"
+@layout SettingsLayout
+@authorize
+@import { Moon, Palette, Sun, type IconNode } from "lucide"
+@import SettingsLayout from "./SettingsLayout.tsazor"
+@inject ThemeService theme
+
+<div class="space-y-5 fsh-enter">
+    @* Theme *@
+    <SettingsSection title="Theme" icon="@Palette" description="Console looks good in both modes — the editorial-terminal language is built around tone-neutral surfaces with a single chartreuse accent that reads identically on either.">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            @foreach (const mode of AppearanceSettings.modes) {
+                const active = theme.theme === mode.value;
+                <button @key="mode.value" type="button" @onclick="() => theme.setTheme(mode.value)" aria-pressed="@(active ? "true" : "false")"
+                        class="@cn("group/card relative overflow-hidden flex flex-col items-start gap-2 rounded-xl border p-4 text-left", "transition-colors duration-[var(--duration-default)]", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2", active ? "border-[var(--color-accent-signal)] bg-[oklch(from_var(--color-accent-signal)_l_c_h_/_0.08)]" : "border-[var(--color-border)] bg-[var(--color-card)] hover:bg-[var(--color-muted)]")">
+                    <div class="flex w-full items-center justify-between">
+                        <span class="@cn("grid h-8 w-8 place-items-center rounded-md", active ? "bg-[oklch(from_var(--color-accent-signal)_l_c_h_/_0.12)] text-[var(--color-accent-signal)]" : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]")">
+                            <Icon icon="@mode.icon" class="h-4 w-4" />
+                        </span>
+                        @if (active) {
+                            <span class="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-accent-signal)]">Active</span>
+                        }
+                    </div>
+                    <span class="@cn("text-sm font-semibold tracking-tight", active && "text-[var(--color-accent-signal)]")">@mode.label</span>
+                    <span class="text-xs leading-relaxed text-[var(--color-muted-foreground)]">@mode.blurb</span>
+                </button>
+            }
+        </div>
+    </SettingsSection>
+
+    @* Density — placeholder for a future compact toggle *@
+    <SettingsSection title="Density" icon="@Palette" description="Compact mode will reduce card padding and row height for data-dense screens — similar to the dashboard's density toggle.">
+        <Button variant="outline" size="sm" disabled>Compact rows · coming soon</Button>
+    </SettingsSection>
+</div>
+
+@code {
+    static readonly modes: { value: "light" | "dark"; label: string; icon: IconNode; blurb: string }[] = [
+        { value: "light", label: "Light", icon: Sun, blurb: "Paper-white surfaces, magazine-print mood." },
+        { value: "dark", label: "Dark", icon: Moon, blurb: "Console-default. Lower glare for long sessions." },
+    ];
+
+    protected override onInitialized(): void {
+        this.observe(this.theme.changes);
+    }
+}

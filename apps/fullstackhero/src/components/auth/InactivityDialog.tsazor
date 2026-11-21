@@ -1,0 +1,77 @@
+@* components/auth/inactivity-dialog.tsx: the inactivity warning — a forced-choice modal (no Escape, no overlay
+   dismiss, no close X) whose centerpiece is an SVG countdown ring that drains as the seconds tick and shifts tone
+   primary → amber → red, pulsing in the final stretch. Respects prefers-reduced-motion. The original builds it on
+   Radix's raw primitives to opt out of DialogContent's close affordance; here it is its own overlay on the same
+   behaviors, without the dismiss. *@
+@import { ShieldAlert } from "lucide"
+@import { focusTrap, scrollLock } from "@tsazor/ui"
+@import { topLayer, topLayerClass } from "@/lib/top-layer"
+
+@if (open) {
+    <div popover="manual" class="@topLayerClass" @attach="topLayer()">
+        <div class="fixed inset-0 z-50 bg-[oklch(0_0_0_/_0.45)] backdrop-blur-[6px] data-[state=open]:animate-fsh-overlay-in" data-state="open" @attach="lock"></div>
+        <div role="dialog" aria-modal="true" aria-labelledby="inactivity-title" aria-describedby="inactivity-desc" data-state="open" tabindex="-1" @attach="trap"
+             class="fixed left-1/2 top-1/2 z-50 w-full max-w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-7 text-center shadow-xl outline-none data-[state=open]:animate-fsh-dialog-in">
+            @* Countdown ring *@
+            <div class="relative mx-auto mb-5 size-[132px]">
+                <svg viewBox="0 0 120 120" class="size-full -rotate-90" aria-hidden="true">
+                    <circle cx="60" cy="60" r="@RING_RADIUS" fill="none" stroke-width="7" class="stroke-[var(--color-muted)]" />
+                    <circle cx="60" cy="60" r="@RING_RADIUS" fill="none" stroke-width="7" stroke-linecap="round" stroke="@tone"
+                            stroke-dasharray="@RING_CIRCUMFERENCE" stroke-dashoffset="@dashOffset"
+                            class="@cn("motion-safe:transition-[stroke-dashoffset,stroke] motion-safe:duration-1000 motion-safe:ease-linear", urgent && "motion-safe:animate-pulse")" />
+                </svg>
+                <div class="absolute inset-0 grid place-items-center">
+                    <div class="flex flex-col items-center">
+                        <span class="font-display text-[34px] font-bold leading-none tabular-nums tracking-tight" style="color: @tone">@Math.max(0, secondsLeft)</span>
+                        <span class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">seconds</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-1.5 flex items-center justify-center gap-2">
+                <Icon icon="@ShieldAlert" class="size-4 text-[var(--color-primary)]" />
+                <h2 id="inactivity-title" class="font-display text-[18px] font-semibold tracking-tight text-[var(--color-foreground)]">Still there?</h2>
+            </div>
+            <p id="inactivity-desc" class="mx-auto max-w-[300px] text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
+                You've been inactive for a while. We'll sign you out shortly to keep your account secure.
+            </p>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+                <Button variant="outline" onClick="@onSignOut" class="sm:min-w-[120px]">Sign out now</Button>
+                <Button onClick="@onStay" class="sm:min-w-[120px]" autofocus>I'm here</Button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() secondsLeft: number = 0;
+    @Parameter() totalSeconds: number = 0;
+    @Parameter() onStay?: EventCallback;
+    @Parameter() onSignOut?: EventCallback;
+
+    private readonly RING_RADIUS = 52;
+    private readonly RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+    // The trap focuses "I'm here" (autofocus), as the original's autoFocus.
+    private readonly trap = focusTrap({ initialFocus: (element) => element.querySelector<HTMLElement>("[autofocus]") });
+    private readonly lock = scrollLock();
+
+    private get fraction(): number {
+        return this.totalSeconds > 0 ? Math.max(0, Math.min(1, this.secondsLeft / this.totalSeconds)) : 0;
+    }
+
+    private get dashOffset(): number {
+        return this.RING_CIRCUMFERENCE * (1 - this.fraction);
+    }
+
+    private get tone(): string {
+        if (this.fraction > 0.5) return "var(--color-primary)";
+        if (this.fraction > 0.2) return "var(--color-warning)";
+        return "var(--color-destructive)";
+    }
+
+    private get urgent(): boolean {
+        return this.secondsLeft <= 10;
+    }
+}

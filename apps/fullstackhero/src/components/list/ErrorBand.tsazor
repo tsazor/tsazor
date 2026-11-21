@@ -1,0 +1,17 @@
+@* components/list/error-band.tsx: the inline failure surface between toolbar and content — a mono-caps eyebrow on
+   a destructive tint. *@
+@import { AlertTriangle } from "lucide"
+
+<div role="alert" class="flex items-start gap-2.5 rounded-md border border-[var(--color-destructive)]/40 bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.08)] px-3.5 py-2.5 text-sm text-[var(--color-destructive)]">
+    <Icon icon="@AlertTriangle" class="mt-0.5 h-4 w-4 shrink-0" />
+    <div class="min-w-0">
+        <span class="meta mr-2 text-[var(--color-destructive)]">@kind ·</span>
+        <span class="text-[var(--color-destructive)]">@message</span>
+    </div>
+</div>
+
+@code {
+    @Parameter() message!: string;
+    /** Optional eyebrow override, e.g. "TIMEOUT". Default: "FAILURE". */
+    @Parameter() kind: string = "failure";
+}

@@ -1,0 +1,25 @@
+@inherits BasePlugin
+@import { RoleUpdateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Update Role" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model!.name" label="Name" placeholder="Enter Name" required />
+    <TextArea @bind-Value="this.model!.description" label="Description" placeholder="Enter Description" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private model?: RoleUpdateRequest;
+
+    protected override async onInitialized(): Promise<void> {
+        const role = ensureOk(await this.api.roleGetById(this.id ?? ""));
+        this.model = Object.assign(new RoleUpdateRequest(), { id: role.id, name: role.name ?? "", description: role.description });
+    }
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.roleUpdate(this.model!));
+        this.navigateBack();
+    }
+}

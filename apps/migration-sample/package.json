@@ -1,0 +1,24 @@
+{
+  "name": "migration-sample",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Incremental migration (E6): a Blazor Server app and Tsazor pages side by side behind a YARP gateway, one auth cookie.",
+  "scripts": {
+    "build": "tsazor check && vite build",
+    "check": "tsazor check",
+    "dev": "vite",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@tsazor/dotnet": "workspace:*",
+    "@tsazor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  }
+}

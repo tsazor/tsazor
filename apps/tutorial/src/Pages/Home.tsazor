@@ -1,0 +1,112 @@
+@page "/"
+@inject TutorialState State
+@import { TRACK_LABELS, type LessonRef } from "../TutorialState"
+@import type { Track } from "../content-types"
+
+<PageTitle>Tsazor tutorial</PageTitle>
+<div class="home">
+    <SiteBar Current="home" />
+
+    <main class="home-main">
+        <section class="intro">
+            <h1>Build web apps with components — in TypeScript</h1>
+            <p class="lead">
+                Tsazor is a component framework: you write each piece of your UI as a <code>.tsazor</code> file,
+                HTML with <code>@@</code> expressions plus a TypeScript class, and the compiler turns it into a small,
+                fast JavaScript module. If you know Blazor, it's Blazor's component model with TypeScript in place of C#.
+            </p>
+            <p>
+                The tutorial runs entirely in your browser: an editor and a live preview next to every lesson, no
+                install. Each lesson poses one small task. You can always look at the solution.
+            </p>
+        </section>
+
+        @if (resume) {
+            <section class="resume">
+                <a class="button button--primary" href="@hrefOf(resume, resumeTrack)">Continue: @resume.lesson.text[resumeTrack]!.title</a>
+                <span class="resume-where">@TRACK_LABELS[resumeTrack] track · @resume.chapter.title</span>
+            </section>
+        }
+
+        <section class="tracks" aria-labelledby="tracks-title">
+            <h2 id="tracks-title">Choose your track</h2>
+            <p>Both tracks build the same apps. They differ in what they explain.</p>
+            <div class="track-cards">
+                <article class="track-card @(track === "blazor" ? "track-card--chosen" : null)">
+                    <h3>I know Blazor</h3>
+                    <p>
+                        Starts with a short chapter on TypeScript for C# developers, then points out what's the same
+                        as in Razor and what differs.
+                    </p>
+                    <div class="track-actions">
+                        <a class="button @(track === "blazor" ? "button--primary" : null)" href="@startOf("blazor")">Start the Blazor track</a>
+                        <button type="button" class="link" aria-pressed="@(track === "blazor" ? "true" : "false")" @onclick="@(() => choose("blazor"))">Show its chapters</button>
+                    </div>
+                </article>
+                <article class="track-card @(track === "ts" ? "track-card--chosen" : null)">
+                    <h3>I come from TypeScript or the web</h3>
+                    <p>
+                        Explains every concept from scratch, for developers who know TypeScript, React, Vue or
+                        Svelte, or plain HTML and JavaScript.
+                    </p>
+                    <div class="track-actions">
+                        <a class="button @(track === "ts" ? "button--primary" : null)" href="@startOf("ts")">Start the TypeScript track</a>
+                        <button type="button" class="link" aria-pressed="@(track === "ts" ? "true" : "false")" @onclick="@(() => choose("ts"))">Show its chapters</button>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="parts" aria-labelledby="parts-title">
+            <h2 id="parts-title">What you'll learn <span class="parts-track">— @TRACK_LABELS[track] track</span></h2>
+            <div class="part-list">
+                @foreach (const part of State.content.parts) {
+                    <article class="part">
+                        <h3>@part.title</h3>
+                        <ol class="chapters">
+                            @foreach (const chapter of part.chapters) {
+                                const start = State.chapterStart(track, chapter);
+                                if (start) {
+                                    <li>
+                                        <a href="@hrefOf(start, track)">@chapter.title</a>
+                                        <span class="count">@lessonCount(chapter.slug) @(lessonCount(chapter.slug) === 1 ? "lesson" : "lessons")</span>
+                                    </li>
+                                }
+                            }
+                        </ol>
+                    </article>
+                }
+            </div>
+            <p class="index-hint">Looking for something specific? The <a href="index">index</a> lists every lesson by keyword.</p>
+        </section>
+    </main>
+</div>
+
+@code {
+    private track: Track = "ts";
+    private resume?: LessonRef;
+    private resumeTrack: Track = "ts";
+
+    protected override onInitialized(): void {
+        this.track = this.State.preferredTrack;
+        this.resumeTrack = this.track;
+        this.resume = this.State.lastLesson(this.track);
+    }
+
+    private choose(track: Track): void {
+        this.track = track;
+    }
+
+    private startOf(track: Track): string {
+        const first = this.State.lessons(track)[0];
+        return first ? `${track}/${first.lesson.slug}` : "";
+    }
+
+    private hrefOf(ref: LessonRef, track: Track): string {
+        return `${track}/${ref.lesson.slug}`;
+    }
+
+    private lessonCount(chapterSlug: string): number {
+        return this.State.lessons(this.track).filter((ref) => ref.chapter.slug === chapterSlug).length;
+    }
+}

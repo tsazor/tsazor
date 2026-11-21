@@ -1,0 +1,51 @@
+/* RadioGroup — native radios with the brand accent, in a fieldset. */
+
+.fui-radio-group {
+  margin: 0 0 var(--fui-spacing-m);
+  padding: 0;
+  border: none;
+  font-family: var(--fui-font-family);
+}
+
+.fui-radio-group__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-gap-sm);
+}
+
+.fui-radio-group__options--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--fui-spacing-l);
+}
+
+.fui-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fui-gap-sm);
+}
+
+.fui-radio__native {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--fui-accent);
+  flex: none;
+  cursor: pointer;
+}
+
+.fui-radio-group--invalid .fui-radio__native {
+  outline: 2px solid var(--fui-color-red-1);
+  outline-offset: -1px;
+}
+
+.fui-radio:has(.fui-radio__native:disabled) .fui-checkbox__label {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-radio-group .fui-input__message {
+  display: block;
+  color: var(--fui-color-red-1);
+  font-size: var(--fui-font-size-caption);
+}

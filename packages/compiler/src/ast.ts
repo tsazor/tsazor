@@ -15,6 +15,10 @@ export interface DirectiveNode extends SourceSpan {
   name: string;
   /** Raw value text after the directive keyword (trimmed). Empty when absent. */
   value: string;
+  /** Source position of `value[0]` — `@import` values may span lines,
+   *  `@attribute` decorators are emitted mapped, diagnostics cover the value.
+   *  Set by the parser for every directive. */
+  valueStart?: { line: number; column: number };
 }
 
 export interface ElementNode extends SourceSpan {
@@ -34,10 +38,66 @@ export interface ExpressionNode extends SourceSpan {
 
 export interface CodeBlockNode extends SourceSpan {
   kind: "codeBlock";
-  /** Verbatim TS statements. */
+  /** Verbatim TS source between the braces. */
   code: string;
   /** True for @code/@functions blocks (class members); false for inline @{…}. */
   member?: boolean;
+  /** Absolute position of the code's first character (right after the `{`),
+   *  for exact source-map columns. */
+  codeStart?: SourceSpan["pos"];
+  /** Inline @{…} only: the block parsed code-first (statements + markup).
+   *  Razor semantics: the block opens no scope — its locals stay visible to
+   *  the markup that follows. */
+  children?: MarkupNode[];
+  /** @code only: its Razor templates (`@<tag>…</tag>`, a RenderFragment), in source order. */
+  templates?: RazorTemplate[];
+}
+
+/**
+ * A Razor template in `@code` (Blazor's templated delegate): `@<tag>…</tag>` is a `RenderFragment`, so
+ * `(item: T) => @<li>@item.name</li>` is a `RenderFragment<T>`. `start`/`end` are offsets in the block's code,
+ * from the `@` to the end of the element.
+ */
+export interface RazorTemplate extends SourceSpan {
+  start: number;
+  end: number;
+  /** The element, parsed as markup. */
+  children: MarkupNode[];
+}
+
+/**
+ * A code block's code with its Razor templates masked: each becomes `0` padded with spaces (line breaks kept),
+ * so TypeScript reads the members around them at their own offsets.
+ */
+export function maskedCode(block: Pick<CodeBlockNode, "code" | "templates">): string {
+  let code = block.code;
+  for (const template of block.templates ?? []) {
+    const span = code.slice(template.start, template.end).replace(/[^\n]/g, " ");
+    code = code.slice(0, template.start) + "0" + span.slice(1) + code.slice(template.end);
+  }
+  return code;
+}
+
+/**
+ * A run of TypeScript statements in a code context (`@{ }`, control-block
+ * bodies) — Razor's C# code span. Control statements and markup in statement
+ * position are separate nodes; everything else is verbatim code.
+ */
+export interface StatementNode extends SourceSpan {
+  kind: "statement";
+  code: string;
+  /** Names the run binds in its enclosing scope (const/let/var incl.
+   *  destructuring, function, class, enum) — later markup expressions in the
+   *  same scope must not rewrite them to `this.X`. */
+  declares: string[];
+  /** The subset of `declares` that cannot be assigned to — a `@bind` on one is an error. */
+  readonly?: Record<string, "const" | "function" | "class" | "enum">;
+}
+
+/** A plain `{ … }` block statement in a code context (opens a scope). */
+export interface BlockNode extends SourceSpan {
+  kind: "block";
+  children: MarkupNode[];
 }
 
 export interface TextTagNode extends SourceSpan {
@@ -47,6 +107,8 @@ export interface TextTagNode extends SourceSpan {
 
 export interface ConditionalBranch {
   condition: string | null; // null for @else
+  /** Absolute position of the condition's first character. */
+  conditionStart?: SourceSpan["pos"];
   children: MarkupNode[];
   span?: SourceSpan;
 }
@@ -60,20 +122,55 @@ export interface ForNode extends SourceSpan {
   kind: "for";
   /** Contents of @for (…) or @foreach (…), verbatim. */
   code: string;
+  /** Absolute position of the header code's first character. */
+  codeStart?: SourceSpan["pos"];
+  /** Position right after the header's closing `)` (`pos`…`headerEnd` = `@foreach (…)`). */
+  headerEnd?: SourceSpan["pos"];
   isForEach: boolean;
   children: MarkupNode[];
+}
+
+/** `while (…) { }` and `do { } while (…);`. */
+export interface WhileNode extends SourceSpan {
+  kind: "while";
+  condition: string;
+  conditionStart?: SourceSpan["pos"];
+  /** True for `do { } while (…);` (body runs before the first test). */
+  isDoWhile: boolean;
+  children: MarkupNode[];
+}
+
+export interface CatchClause {
+  /** Catch binding as written (`e`, `e: unknown`), null for `catch { }`. */
+  param: string | null;
+  /** The bound name (`e`), registered as a local of the catch body. */
+  paramName: string | null;
+  children: MarkupNode[];
+  span: SourceSpan;
+}
+
+export interface TryNode extends SourceSpan {
+  kind: "try";
+  children: MarkupNode[];
+  catchClause?: CatchClause;
+  finallyChildren?: MarkupNode[];
 }
 
 export interface SwitchCase {
   /** Case expression code (null for @default). */
   code: string | null;
+  codeStart?: SourceSpan["pos"];
+  /** Statements and markup of the section; empty for a stacked label
+   *  (`case 1:\ncase 2:` falls through, as in C# and TS). */
   children: MarkupNode[];
+  /** The label (`case X:` / `default:`). */
   span: SourceSpan;
 }
 
 export interface SwitchNode extends SourceSpan {
   kind: "switch";
   code: string;
+  codeStart?: SourceSpan["pos"];
   cases: SwitchCase[];
 }
 
@@ -83,13 +180,50 @@ export type MarkupNode =
   | ElementNode
   | ExpressionNode
   | CodeBlockNode
+  | StatementNode
+  | BlockNode
   | TextTagNode
   | IfNode
   | ForNode
+  | WhileNode
+  | TryNode
   | SwitchNode;
 
+/** Direct child nodes of a node in source order (all bodies, branches and
+ *  cases) — for tree walks that do not care about the statement structure. */
+export function childNodes(node: MarkupNode): MarkupNode[] {
+  switch (node.kind) {
+    case "element":
+    case "textTag":
+    case "block":
+    case "for":
+    case "while":
+      return node.children;
+    case "codeBlock":
+      return [...(node.children ?? []), ...(node.templates ?? []).flatMap((template) => template.children)];
+    case "if":
+      return node.branches.flatMap((branch) => branch.children);
+    case "switch":
+      return node.cases.flatMap((c) => c.children);
+    case "try":
+      return [...node.children, ...(node.catchClause?.children ?? []), ...(node.finallyChildren ?? [])];
+    default:
+      return [];
+  }
+}
+
+/** The motion directives: transitions (F4) and `@animate` (F5). */
+export type MotionDirective = "transition" | "in" | "out" | "animate";
+
 export type AttributeNode =
-  | (SourceSpan & { kind: "static"; name: string; value: string })
+  | (SourceSpan & {
+      kind: "static";
+      name: string;
+      value: string;
+      /** Bare attribute without a value (`<input disabled>`): Razor passes `true`. */
+      minimized?: boolean;
+      raw?: RawAttributeValue;
+    })
   | (SourceSpan & {
       kind: "expression";
       name: string;
@@ -103,39 +237,76 @@ export type AttributeNode =
       kind: "mixedValue";
       name: string;
       parts: Array<{ text?: string; code?: string; /** Abs. code first char, like codeStart. */ codeStart?: SourceSpan["pos"] }>;
+      raw?: RawAttributeValue;
     })
   | (SourceSpan & {
       kind: "eventHandler";
       name: string;
       code: string;
-      flags: number;
+      codeStart?: SourceSpan["pos"];
+    })
+  /** `@onclick:preventDefault` / `@onclick:stopPropagation` — a flag of the
+   *  element's `onclick` listener, not a handler (Blazor's
+   *  `__internal_preventDefault_onclick` attribute). `code` is the flag's
+   *  bool expression; absent for the valueless form (= true). */
+  | (SourceSpan & {
+      kind: "eventModifier";
+      name: string;
+      modifier: "preventDefault" | "stopPropagation";
+      code?: string;
       codeStart?: SourceSpan["pos"];
     })
   | (SourceSpan & { kind: "key"; code: string; codeStart?: SourceSpan["pos"] })
   | (SourceSpan & { kind: "ref"; code: string; codeStart?: SourceSpan["pos"] })
   | (SourceSpan & { kind: "attributes"; code: string; codeStart?: SourceSpan["pos"] })
+  /** `@attach="…"` (F2): `attachName` is `""`, or `name` of `@attach:name`
+   *  (several attachments per element, told apart by name). */
+  | (SourceSpan & { kind: "attach"; attachName: string; code: string; codeStart?: SourceSpan["pos"] })
+  /** `@transition`, `@in`, `@out` (F4) and `@animate` (F5) with their value. */
+  | (SourceSpan & { kind: "motion"; directive: MotionDirective; code: string; codeStart?: SourceSpan["pos"] })
+  /** The valueless `global` modifier of a transition: `@transition:global`, `@in:global`, `@out:global` (F4). */
+  | (SourceSpan & { kind: "motionGlobal"; directive: Exclude<MotionDirective, "animate"> })
   /** @bind and its modifiers. Modifier-only nodes (@bind:event etc.) carry exactly one detail field. */
   | (SourceSpan & {
       kind: "bind";
       /** Two-way expression (from @bind, @bind:get is stored separately). */
       expression?: string;
-      /** Component parameter target of @bind-Value (e.g. "Value"). */
+      /** Target of @bind-Value: a component parameter ("Value"), on an element the bound attribute ("value"). */
       bindTarget?: string;
       event?: string;
       format?: string;
+      /** The @bind:format value was plain attribute text (Razor: a string literal, e.g. "yyyy-MM-dd"); an @expression carries none. */
+      formatLiteral?: boolean;
+      /** E8: the @bind:culture expression (a CultureInfo, e.g. the injected CultureService's `current`). */
+      culture?: string;
       get?: string;
       set?: string;
       after?: string;
+      /** Source spans of the modifier attributes folded into this bind (diagnostic ranges). */
+      modifierSpans?: Partial<Record<BindModifier, SourceSpan>>;
+      /** Where the code of the bound expression and of each modifier starts (syntax diagnostics). */
+      codeStarts?: Partial<Record<"expression" | BindModifier, SourceSpan["pos"]>>;
     });
+
+/**
+ * An attribute value as written (between the quotes; `@@` and entities not
+ * decoded) and where it starts: on a non-string component parameter the value
+ * is a TypeScript expression (Razor's component attribute lowering, 2.2).
+ */
+export interface RawAttributeValue {
+  text: string;
+  start: SourceSpan["pos"];
+  /**
+   * On a component's attribute: each `@` in the value that no expression follows (TZS004), reported only where the
+   * value is read as text — a non-string parameter reads it as an expression, where `@4000` and `@!busy` are valid.
+   */
+  strayAt?: Array<SourceSpan & { detail: string; fix?: { title: string; edits: Array<SourceSpan & { text: string }> } }>;
+}
+
+export type BindModifier = "event" | "format" | "culture" | "get" | "set" | "after";
 
 export interface DocumentNode {
   directives: DirectiveNode[];
   body: MarkupNode[];
   codeBlocks: CodeBlockNode[];
 }
-
-/** Attribute flags for event handlers (mirrors runtime EventHandlerFlags). */
-export const EVENT_FLAGS = {
-  preventDefault: 1 << 0,
-  stopPropagation: 1 << 1,
-} as const;
