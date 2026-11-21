@@ -3040,6 +3040,23 @@ class Codegen {
     const resolve = this.options.resolveComponentMetadata;
     const metadata = resolve?.(tagName, this.metadata.usings, this.metadata.imports) ?? null;
     const target = componentTarget(tagName, metadata, resolve !== undefined);
+    // If the tag was imported from a non-relative .tsazor specifier (a path alias), the workspace
+    // resolver cannot see the external file and returns no metadata. Replace the generic
+    // "neither a source file nor a package manifest" message with one that names the alias and
+    // the fix (tsazor build-lib → package, file: dep). This is Bug 1 from the WerkstattNorm
+    // integration feedback (2026-11-21): aliased .tsazor imports give a confusing TZS026 cluster.
+    if (!metadata && resolve !== undefined) {
+      const aliasedImport = this.metadata.imports.find(
+        (imp) =>
+          imp.specifier.endsWith(".tsazor") &&
+          !imp.specifier.startsWith("./") &&
+          !imp.specifier.startsWith("../") &&
+          imp.bindings.some((b) => b.local === tagName),
+      );
+      if (aliasedImport) {
+        target.unavailable = `'${tagName}' is imported from '${aliasedImport.specifier}', a path alias that tsazor check does not follow — component parameters and types are unknown. Share components as packages: run \`tsazor build-lib\` in the shared project (creates \`tsazor-components.json\`), add it as a \`"file:"\` dependency, and import from the package name.`;
+      }
+    }
     this.componentTargets.set(tagName, target);
     return target;
   }

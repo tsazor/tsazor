@@ -143,6 +143,17 @@ describe("codegen", () => {
     expect(code).not.toContain("openComponent");
   });
 
+  it("when a component was imported from a non-relative .tsazor alias, TZS026 names the alias and the tsazor build-lib fix (Bug 1)", () => {
+    const { diagnostics } = gen('@import Widget from "@shared/Widget.tsazor"\n<Widget Title="x" />', {
+      resolveComponentMetadata: () => null,
+    });
+    const warn = diagnostics.all.find((d) => d.code === "TZS026");
+    expect(warn).toBeDefined();
+    expect(warn!.message).toContain("'@shared/Widget.tsazor'");
+    expect(warn!.message).toContain("tsazor build-lib");
+    expect(warn!.message).not.toContain("neither a source file nor a package manifest");
+  });
+
   it("emits routeTemplate and inject from directives", () => {
     const { code, metadata } = gen('@page "/users"\n@inject UserService Users\n', {
       resolveType: (name) => (name === "UserService" ? { specifier: "./services" } : null),
