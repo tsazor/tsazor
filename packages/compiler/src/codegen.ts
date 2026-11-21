@@ -14,7 +14,7 @@ import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
 import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement, type InheritedAuthorization } from "./attributes.js";
 import { firstInterpolatedSpan, interpolatedStringFix } from "./interpolated.js";
-import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
+import { importStatements, parseImportDirective, type ImportBinding, type ImportInfo } from "./imports.js";
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
 import { RUNTIME_MODULE, replaceIdentifiers } from "./metadata.js";
