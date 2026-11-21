@@ -82,6 +82,14 @@ beforeAll(async () => {
   await writeFile(path.join(src, "Typo.tsazor"), '@import { ComponentBase } from "@tszor/runtime"\n<p>typo</p>\n');
   // A C# string: one TZS024 that names the template literal, no type errors after it.
   await writeFile(path.join(src, "Greeting.tsazor"), '<p>@($"Hi {name}")</p>\n\n@code {\n    name = "x";\n}\n');
+  // An installed package whose exports has no entry for the imported subpath.
+  await mkdir(path.join(root, "node_modules", "@tsazor-test", "localui"), { recursive: true });
+  await writeFile(
+    path.join(root, "node_modules", "@tsazor-test", "localui", "package.json"),
+    JSON.stringify({ name: "@tsazor-test/localui", version: "0.1.0", exports: { ".": "./index.d.ts" } }),
+  );
+  await writeFile(path.join(root, "node_modules", "@tsazor-test", "localui", "index.d.ts"), "export type Foo = string;\n");
+  await writeFile(path.join(src, "SubpathImport.tsazor"), '@import type { Bar } from "@tsazor-test/localui/subpath"\n<p>text</p>\n');
   diagnostics = (await checkProject(root)).diagnostics;
 }, 60_000);
 
@@ -112,6 +120,13 @@ describe("tsazor check — no error lost on the way back to the source", () => {
 
   it("names the installed package a misspelled one is near", () => {
     expect(of("Typo.tsazor").find((d) => d.code === "TS2307")?.message).toContain("Hint: '@tszor/runtime' is not installed — '@tsazor/runtime' is: a typo?");
+  });
+
+  it("when a package is installed but its subpath is not in exports, hints about the exports entry rather than 'not installed'", () => {
+    const [diag] = of("SubpathImport.tsazor").filter((d) => d.code === "TS2307");
+    expect(diag).toBeDefined();
+    expect(diag!.message).toContain("'@tsazor-test/localui' is installed but the subpath '/subpath' was not found in its package exports");
+    expect(diag!.message).not.toContain("is not installed where this file looks for packages");
   });
 
   it("names the specifier in the file's own folder, a .ts source by its .js name, and a component's .tsazor from a .ts module", () => {

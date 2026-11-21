@@ -14,6 +14,7 @@ import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { findPackageDir } from "@tsazor/workspace";
 import {
   shadowOffsetToPos,
   TsazorTypeService,
@@ -663,6 +664,11 @@ export function withModuleHint(code: number, message: string, file: string): str
     // A near miss of an installed package: agents porting to Tsazor wrote `@tszor/lsp`.
     const near = nearPackage(dir, name);
     if (near !== undefined) return `${message} Hint: '${name}' is not installed — '${near}' is: a typo?`;
+    // Package installed but the subpath is not in its exports (pattern subpath without a 'types' condition, etc.).
+    if (specifier !== name && findPackageDir(name, dir) !== undefined) {
+      const subpath = specifier.slice(name.length);
+      return `${message} Hint: '${name}' is installed but the subpath '${subpath}' was not found in its package exports — add an entry with a 'types' condition, e.g. '"${subpath}": { "types": "...", "default": "..." }'.`;
+    }
     return `${message} Hint: '${name}' is not installed where this file looks for packages (a node_modules folder above ${folder}): add it to the app's dependencies.`;
   }
   const target = path.resolve(dir, specifier);
