@@ -802,6 +802,25 @@ describe("codegen — @import (A3)", () => {
     expect(code).toContain("private readonly NavigationManager = __tsazor_inject(NavigationManager);");
     expect(code).toContain("this.NavigationManager.uri");
   });
+
+  it("promotes an inherited @import type binding to a value import when @inject needs it (Bug A)", () => {
+    const { code } = gen("@inject CounterService Counter\n<p>@Counter.count</p>", {
+      className: "Demo",
+      inheritedImports: [{ specifier: "./CounterService", bindings: [{ local: "CounterService", imported: "CounterService", typeOnly: true }] }],
+    });
+    expect(code).toContain('import { CounterService } from "./CounterService";');
+    expect(code).not.toContain("import { type CounterService }");
+    expect(code).toContain("inject(CounterService)");
+  });
+
+  it("keeps an inherited @import type binding as type-only when not used by @inject", () => {
+    const { code } = gen("<p>text</p>", {
+      className: "Demo",
+      inheritedImports: [{ specifier: "./models", bindings: [{ local: "Order", imported: "Order", typeOnly: true }] }],
+    });
+    expect(code).toContain('import { type Order } from "./models";');
+    expect(code).not.toContain('import { Order }');
+  });
 });
 
 describe("empty attribute values (A7)", () => {
@@ -897,5 +916,27 @@ describe("@transition / @in / @out (F4) and @animate (F5)", () => {
     expect(errors(`<p @in></p>`)).toEqual([expect.stringMatching(/^TZS009 /)]);
     const component = gen(`<Child @transition="fade" />\n${members}`, { resolveComponent: () => ({ specifier: "./Child.tsazor" }) });
     expect(component.diagnostics.errors.map((d) => d.message)).toEqual([expect.stringContaining("'@transition' applies to elements, not to the component '<Child>'")]);
+  });
+});
+
+describe("explainTypeScriptError (ts-hints, Bug B)", () => {
+  it("adds a hint for TS2307 when the message contains a relative path", async () => {
+    const { explainTypeScriptError } = await import("../src/ts-hints.js");
+    const msg = "Cannot find module './SteuerStore' or its corresponding type declarations.";
+    const explained = explainTypeScriptError(2307, msg);
+    expect(explained).toContain("Hint:");
+    expect(explained).toContain("relative to the `.tsazor` file itself");
+  });
+
+  it("does not add a hint for TS2307 on a bare package name", async () => {
+    const { explainTypeScriptError } = await import("../src/ts-hints.js");
+    const msg = "Cannot find module 'some-package' or its corresponding type declarations.";
+    expect(explainTypeScriptError(2307, msg)).toBe(msg);
+  });
+
+  it("does not duplicate the hint if already present", async () => {
+    const { explainTypeScriptError } = await import("../src/ts-hints.js");
+    const msg = "Cannot find module './x' … Hint: already explained.";
+    expect(explainTypeScriptError(2307, msg)).toBe(msg);
   });
 });

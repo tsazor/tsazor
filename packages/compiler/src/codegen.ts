@@ -410,6 +410,8 @@ class Codegen {
   /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
   private readonly ownImportDirectives: Array<{ value: string; pos: SourcePos; valueStart: SourcePos }> = [];
   private readonly inheritedImportLines: string[] = [];
+  /** Inherited @import type bindings deferred until it's known if @inject/@inherits needs them as values. */
+  private readonly deferredTypeOnly = new Map<string, { specifier: string; imported: string; binding: ImportBinding; attributes?: string }>();
   /** Where each `@inject`'s type starts (parallel to metadata.injects): the member line maps onto it. */
   private readonly injectTypeStarts: Array<SourcePos | undefined> = [];
   private inheritsBase = "ComponentBase";
@@ -599,6 +601,12 @@ class Codegen {
       }
     }
     if (this.componentImports.size > 0) this.line("");
+
+    // Flush type-only inherited bindings that were never promoted (not needed as values): emit as import type.
+    for (const [, { specifier, binding, attributes }] of this.deferredTypeOnly) {
+      this.inheritedImportLines.push(...importStatements({ specifier, bindings: [binding], ...(attributes ? { attributes } : {}) }));
+    }
+    this.deferredTypeOnly.clear();
 
     // @import directives: the file's own verbatim (mapped for the LSP), then
     // the inherited ones that no nearer declaration shadows.
@@ -1153,11 +1161,22 @@ class Codegen {
       }
       // The component's own class is in scope as itself: an _Imports that imports it (for its siblings) doesn't
       // import it into its own module (it would clash with the class declaration).
-      const bindings = inherited.bindings.filter((binding) => !this.importedNames.has(binding.local) && binding.local !== this.options.className);
+      const bindings = inherited.bindings.filter((binding) => !this.importedNames.has(binding.local) && !this.deferredTypeOnly.has(binding.local) && binding.local !== this.options.className);
       if (bindings.length === 0) continue;
-      const info = { ...inherited, bindings };
-      bind(info);
-      this.inheritedImportLines.push(...importStatements(info));
+      // Value bindings are emitted immediately; type-only bindings are deferred until @inject/@inherits reveal
+      // whether they need to be promoted to value imports (feedback Bug A: an inherited `@import type { X }` must
+      // not suppress the resolveType path that makes @inject X Y work correctly).
+      const valueBindings = bindings.filter((b) => !b.typeOnly);
+      const typeOnlyBindings = bindings.filter((b) => b.typeOnly);
+      if (valueBindings.length > 0) {
+        const info = { ...inherited, bindings: valueBindings };
+        bind(info);
+        this.inheritedImportLines.push(...importStatements(info));
+      }
+      for (const b of typeOnlyBindings) {
+        this.importedNames.add(b.local); // free name, never baked to this.X
+        this.deferredTypeOnly.set(b.local, { specifier: inherited.specifier, imported: b.imported, binding: b, attributes: inherited.attributes });
+      }
     }
   }
 
@@ -1234,7 +1253,20 @@ class Codegen {
       return name;
     }
     // Explicitly imported (e.g. `@import { CounterService } from …`): already bound.
-    if (this.importedNames.has(root)) return name;
+    // A deferred type-only inherited binding is promoted to a value import when the code needs it at runtime
+    // (e.g. `@inject X Y`). Without promotion the generated code has `import { type X }` + `inject(X)` → TS1361
+    // and `this.Y: unknown`, with no Tsazor diagnostic pointing at the source (feedback Bug A).
+    if (this.importedNames.has(root)) {
+      if (value) {
+        const deferred = this.deferredTypeOnly.get(root);
+        if (deferred) {
+          this.inheritedImportLines.push(...importStatements({ specifier: deferred.specifier, bindings: [{ ...deferred.binding, typeOnly: false }], ...(deferred.attributes ? { attributes: deferred.attributes } : {}) }));
+          this.importedValues.add(root);
+          this.deferredTypeOnly.delete(root);
+        }
+      }
+      return name;
+    }
     const resolved = this.options.resolveType?.(root, this.metadata.usings) ?? null;
     if (resolved) {
       this.typeImports.set(root, root);

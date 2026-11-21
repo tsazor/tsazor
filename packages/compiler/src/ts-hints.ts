@@ -49,6 +49,10 @@ const OPEN_FRAGMENT_HINT =
  * explainExpressionValue) come back unchanged.
  */
 export function explainTypeScriptError(code: number, message: string): string {
+  if (code === 2307 && /'\.\.?\//u.test(message)) {
+    if (message.includes(" Note: ") || message.includes(" Hint: ")) return message;
+    return `${message} Hint: Module specifiers in \`@import\` resolve relative to the \`.tsazor\` file itself, not relative to the workspace root or \`_Imports.tsazor\`.`;
+  }
   const hint = code === 2345 && OPEN_FRAGMENT.test(message) ? OPEN_FRAGMENT_HINT : HINTS.get(code);
   if (hint === undefined || message.includes(" Note: ") || message.includes(" Hint: ")) return message;
   return `${message} Hint: ${hint}`;
