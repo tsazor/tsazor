@@ -98,11 +98,8 @@ describe("tsazor check — no error lost on the way back to the source", () => {
     expect(of("typo/Second.tsazor")).toEqual([]);
   });
 
-  it("reports an @inject of a type-only import at the directive's type, with the fix in the hint", () => {
-    const [problem, ...rest] = of("typeonly/Counter.tsazor");
-    expect([problem?.code, problem?.line, problem?.column]).toEqual(["TS1361", 1, 9]);
-    expect(problem?.message).toContain("import it without `type`");
-    expect(rest.map((d) => d.code)).not.toContain("TS1361");
+  it("promotes an inherited @import type binding to a value import when @inject needs it — no error", () => {
+    expect(of("typeonly/Counter.tsazor")).toEqual([]);
     expect(of("typeonly/_Imports.tsazor")).toEqual([]);
   });
 
