@@ -32,6 +32,8 @@ interchangeable with `.razor` files, so an app migrates route by route — see
 **Guiding principle:** markup is Razor (1:1 Blazor), code is clean TypeScript — see
 [docs/design-principles.md](docs/design-principles.md).
 
+**→ [Tutorial](https://tsazor.github.io/tsazor/)** — a step-by-step introduction in the browser, no setup needed.
+
 ## Feature overview
 
 - **Component model:** RenderTree, renderer/diff, component lifecycle, parameters
@@ -52,6 +54,23 @@ interchangeable with `.razor` files, so an app migrates route by route — see
   ([docs/debugging.md](docs/debugging.md)).
 
 ## Quickstart
+
+Your own app, in the shape of `dotnet new blazorwasm` (layout, nav menu, Home, Counter, Weather, a test):
+
+```bash
+npm create tsazor@next my-app                              # optional: -- --ui <any component library>
+cd my-app && npm run dev
+```
+
+By hand, in an existing Vite project:
+
+```bash
+npm install @tsazor/runtime@next @tsazor/vite-plugin@next
+```
+
+For a guided introduction: **[Tutorial](https://tsazor.github.io/tsazor/)**.
+
+## Contributing
 
 ```bash
 pnpm install
@@ -82,42 +101,6 @@ Tsazor frontend renders it live via SSE push:
 pnpm --filter sleipnir-ticker api    # API on :5310
 pnpm --filter sleipnir-ticker codegen   # regenerate the generated TS client in src/api/
 node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic feed, self-starting)
-```
-
-Your own app, in the shape of `dotnet new blazorwasm` (layout, nav menu, Home, Counter, Weather, a test):
-
-```bash
-npm create tsazor@latest my-app                            # optional: -- --ui <any component library>
-cd my-app && npm run dev
-```
-
-By hand, in an existing Vite project:
-
-```bash
-npm install @tsazor/runtime @tsazor/vite-plugin
-```
-
-```ts
-// vite.config.ts
-import { defineConfig } from "vite";
-import { tsazor } from "@tsazor/vite-plugin";
-
-export default defineConfig({ plugins: [tsazor()] });
-```
-
-```html
-<!-- index.html -->
-<div id="app"></div>
-<script type="module" src="/src/Program.ts"></script>
-```
-
-```ts
-// src/Program.ts
-import { createTsazorApp } from "@tsazor/runtime";
-import App from "./App.tsazor";
-import routes from "virtual:tsazor-routes"; // generated from all @page files
-
-createTsazorApp({ root: App, routes });
 ```
 
 ## Packages
